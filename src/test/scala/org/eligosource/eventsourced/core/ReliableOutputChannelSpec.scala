@@ -38,12 +38,12 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
 
     val successDestination =
       system.actorOf(Props(new ReliableOutputChannelTestDesination(queue)))
-    def failureDestination(failureCount: Int) =
-      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue, failureCount)))
+    def failureDestination(enqueueFailures: Boolean, failureCount: Int) =
+      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue, enqueueFailures, failureCount)))
 
     lazy val journaler = system.actorOf(Props(new Journaler(journalDir)))
     lazy val channel = {
-      val result = system.actorOf(Props(new ReliableOutputChannel(0, 1, journaler, 100 milliseconds)))
+      val result = system.actorOf(Props(new ReliableOutputChannel(0, 1, journaler, 50 milliseconds)))
       result ! SetDestination(successDestination)
       result
     }
@@ -52,8 +52,8 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
       Await.result(journaler ? WriteMsg(Key(0, 1, msg.sequenceNr, 0), msg), timeout.duration)
     }
 
-    def dequeueOutputMessage(): Message = {
-      queue.poll(5, TimeUnit.SECONDS)
+    def dequeueOutputMessage(timeout: Long = 5000): Message = {
+      queue.poll(timeout, TimeUnit.MILLISECONDS)
     }
   }
 
@@ -82,11 +82,11 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
         dequeueOutputMessage() must be (Message("c", None, None, 5L))
       }
     }
-    "delivering output messages" must {
+    "delivering a single output message" must {
       "recover from destination failures" in {
         val f = fixture; import f._
 
-        channel ! SetDestination(failureDestination(2))
+        channel ! SetDestination(failureDestination(true, 2))
         channel ! Message("a", None, None, 0L)
 
         dequeueOutputMessage() must be (Message("a", None, None, 1L))
@@ -94,18 +94,61 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
         dequeueOutputMessage() must be (Message("a", None, None, 1L)) // redelivery 2
       }
     }
+    "delivering multiple output messages" must {
+      "recover from destination failures" in {
+        val f = fixture; import f._
+
+        channel ! SetDestination(failureDestination(false, 2))
+
+        // first two messages will fail
+        1 to 4 foreach { i => channel ! Message(i, None, None, 0L) }
+
+        val msgs = List(
+          dequeueOutputMessage(),
+          dequeueOutputMessage(),
+          dequeueOutputMessage(),
+          dequeueOutputMessage(),
+          dequeueOutputMessage(100),
+          dequeueOutputMessage(100))
+
+          if (msgs(4) != null ||
+              msgs(5) != null) {
+            println("-------------------------------------")
+            println("recovery caused possible duplicate(s)")
+            println("-------------------------------------")
+          }
+
+          // the following assertions show the most likely order
+          // of messages (as they arrive at the destination)
+          msgs must contain(Message(3, None, None, 3L))
+          msgs must contain(Message(4, None, None, 4L))
+          msgs must contain(Message(1, None, None, 1L))
+          msgs must contain(Message(2, None, None, 2L))
+          // (messages can get out of order during a delivery failure but
+          // clients can re-order them based on the message sequence number)
+      }
+    }
   }
 }
 
-class ReliableOutputChannelTestDesination(blockingQueue: LinkedBlockingQueue[Message], var failureCount: Int = 0) extends Actor {
+class ReliableOutputChannelTestDesination(
+    // for interaction with test code
+    blockingQueue: LinkedBlockingQueue[Message],
+    // if failing messages should be added to queue
+    enqueueFailures: Boolean = false,
+    // number of messages that will fail
+    var failureCount: Int = 0) extends Actor {
+
   def receive = {
     case msg: Message => {
-      blockingQueue.put(msg)
+
       if (failureCount > 0) {
-        sender ! Status.Failure(new Exception("test-%d" format failureCount))
         failureCount = failureCount - 1
+        sender ! Status.Failure(new Exception("test"))
+        if (enqueueFailures) blockingQueue.put(msg)
       } else {
         sender ! ()
+        blockingQueue.put(msg)
       }
     }
   }

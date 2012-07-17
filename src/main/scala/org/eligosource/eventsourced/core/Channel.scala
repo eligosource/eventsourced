@@ -270,8 +270,11 @@ class ReliableOutputChannelSequencer(componentId: Int, id: Int, journaler: Actor
         case _ => journaler.!(DeleteMsg(Key(componentId, id, msg.sequenceNr, 0)))(null)
       }
 
+      val ctx = context
+      val slf = self
+
       future.onFailure {
-        case _ => context.stop(self)
+        case _ => ctx.stop(slf)
       }
     }
   }
