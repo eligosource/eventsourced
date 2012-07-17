@@ -58,7 +58,7 @@ trait Component {
    * destinations.
    */
   def deliver: Unit =
-    throw new UnsupportedOperationException("not implemented yet")
+    outputChannels.values.foreach(_ ! Deliver)
 
   /**
    * Delivers and replays event messages. Called when the component is initialized.
@@ -76,8 +76,8 @@ case class ComponentBuilder(
     inputChannel: ActorRef,
     outputChannels: Map[String, ActorRef])(implicit system: ActorSystem) { outer =>
 
-  def addReliableOutputChannel(name: String, destination: ActorRef): ComponentBuilder = {
-    val channel = system.actorOf(Props(new ReliableOutputChannel(componentId, outputChannels.size + 1, journaler)))
+  def addReliableOutputChannel(name: String, destination: ActorRef, redeliveryDelay: Duration = Channel.redeliveryDelay): ComponentBuilder = {
+    val channel = system.actorOf(Props(new ReliableOutputChannel(componentId, outputChannels.size + 1, journaler, redeliveryDelay)))
     channel ! Channel.SetDestination(destination)
     copy(outputChannels = outputChannels + (name -> channel))
   }

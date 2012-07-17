@@ -19,7 +19,7 @@ import akka.actor._
 import akka.dispatch._
 import akka.pattern.ask
 import akka.util.duration._
-import akka.util.Timeout
+import akka.util._
 
 import Message._
 
@@ -51,10 +51,16 @@ trait Channel extends Actor {
 
 object Channel {
   val inputChannelId = 0
+
   val destinationTimeout = Timeout(5 seconds)
+  val deliveryTimeout = Timeout(5 seconds)
+  val redeliveryDelay = 5 seconds
 
   case class SetProcessor(processor: ActorRef)
   case class SetDestination(processor: ActorRef)
+
+  case object Deliver
+  case object Recover
 }
 
 /**
@@ -166,6 +172,9 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
 
       counter = counter + 1
     }
+    case Deliver => {
+      // nothing to do
+    }
     case SetDestination(d) => {
       destination = Some(d)
     }
@@ -185,12 +194,16 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
  * @param id output channel id (used internally)
  * @param journaler
  */
-class ReliableOutputChannel(val componentId: Int, val id: Int, val journaler: ActorRef) extends OutputChannel {
+class ReliableOutputChannel(val componentId: Int, val id: Int, val journaler: ActorRef, redeliveryDelay: Duration) extends OutputChannel {
   import Channel._
   import Journaler._
   import Message._
 
   assert(id > 0)
+
+  override val supervisorStrategy = OneForOneStrategy() {
+    case e: Exception => SupervisorStrategy.Stop
+  }
 
   var sequencer: Option[ActorRef] = None
 
@@ -213,42 +226,53 @@ class ReliableOutputChannel(val componentId: Int, val id: Int, val journaler: Ac
 
       counter = counter + 1
     }
+    case Deliver => sequencer foreach { s =>
+      replayOutputMessages(s)
+    }
+    case Recover => destination foreach { d =>
+      sequencer = Some(createSequencer(d, counter - 1))
+      replayOutputMessages(sequencer.get)
+    }
     case cmd @ SetDestination(d) => {
-      sequencer.foreach(_ forward cmd)
+      sequencer = Some(createSequencer(d, counter - 1))
       destination = Some(d)
     }
+    case Terminated(s) => sequencer foreach { s =>
+      sequencer = None
+      context.system.scheduler.scheduleOnce(redeliveryDelay, self, Recover)
+    }
+  }
+
+  def replayOutputMessages(destination: ActorRef) {
+    val cmd = Replay(componentId, id, 0L, destination)
+    // wait for all stored messages to be added to the destination's mailbox
+    Await.result(journaler.ask(cmd)(deliveryTimeout), deliveryTimeout.duration)
+  }
+
+  def createSequencer(destination: ActorRef, lastSequenceNr: Long) = {
+    context.watch(context.actorOf(Props(new ReliableOutputChannelSequencer(componentId, id, journaler, destination, lastSequenceNr))))
   }
 
   override def preStart() {
-    val lsn = lastSequenceNr
-    val seq = context.actorOf(Props(new ReliableOutputChannelSequencer(componentId, id, journaler, lsn)))
-    sequencer = Some(seq)
-    counter = lsn + 1
+    counter = lastSequenceNr + 1L
   }
 }
 
-class ReliableOutputChannelSequencer(componentId: Int, id: Int, journaler: ActorRef, val lastSequenceNr: Long) extends Sequencer {
+class ReliableOutputChannelSequencer(componentId: Int, id: Int, journaler: ActorRef, destination: ActorRef, val lastSequenceNr: Long) extends Sequencer {
   import Channel._
   import Journaler._
 
-  var destination: Option[ActorRef] = None
-
   def receiveSequenced = {
     case msg: Message => {
-      destination.foreach { d =>
-        val future = d.ask(msg)(destinationTimeout)
+      val future = destination.ask(msg)(destinationTimeout)
 
-        future.onSuccess {
-          case _ => journaler.!(DeleteMsg(Key(componentId, id, msg.sequenceNr, 0)))(null)
-        }
-
-        future.onFailure {
-          case _ => // TODO: stop self and schedule retry
-        }
+      future.onSuccess {
+        case _ => journaler.!(DeleteMsg(Key(componentId, id, msg.sequenceNr, 0)))(null)
       }
-    }
-    case SetDestination(d) => {
-      destination = Some(d)
+
+      future.onFailure {
+        case _ => context.stop(self)
+      }
     }
   }
 }
