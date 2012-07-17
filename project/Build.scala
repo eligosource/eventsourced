@@ -54,6 +54,7 @@ object Dependency {
 }
 
 object EventsourcedBuild extends Build {
+  import java.io.File._
   import Resolvers._
   import Settings._
 
@@ -61,7 +62,28 @@ object EventsourcedBuild extends Build {
     id = "eventsourced",
     base = file("."),
     settings = defaultSettings ++ Seq(
-      libraryDependencies ++= Dependencies.core
+      libraryDependencies ++= Dependencies.core,
+      runNobootcpSetting,
+      testNobootcpSetting
     )
   )
+
+  val runNobootcp =
+    InputKey[Unit]("run-nobootcp", "Runs main classes without Scala library classes on the boot classpath")
+
+  val runNobootcpSetting = runNobootcp <<= inputTask { (argTask: TaskKey[Seq[String]]) => (argTask, streams, fullClasspath in Runtime) map { (at, st, cp) =>
+    val runCp = cp.map(_.data).mkString(pathSeparator)
+    val runOpts = Seq("-classpath", runCp) ++ at
+    val result = Fork.java.fork(None, runOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
+    if (result != 0) error("Run failed")
+  } }
+
+  val testNobootcpSetting = test <<= (scalaVersion, streams, fullClasspath in Test) map { (sv, st, cp) =>
+    val testCp = cp.map(_.data).mkString(pathSeparator)
+    val testExec = "org.scalatest.tools.Runner"
+    val testPath = "target/scala-%s/test-classes" format sv
+    val testOpts = Seq("-classpath", testCp, testExec, "-p", testPath, "-o")
+    val result = Fork.java.fork(None, testOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
+    if (result != 0) error("Tests failed")
+  }
 }
