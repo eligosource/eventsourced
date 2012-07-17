@@ -16,7 +16,7 @@
 package org.eligosource.eventsourced.core
 
 import java.io.File
-import java.util.concurrent.Exchanger
+import java.util.concurrent.{TimeUnit, Exchanger}
 
 import akka.actor._
 import akka.dispatch._
@@ -36,7 +36,7 @@ class Example extends WordSpec with MustMatchers with BeforeAndAfterEach with Be
   val journalDir1 = new File("target/journal-1")
   val journalDir2 = new File("target/journal-2")
 
-  override protected def afterEach() {
+  override protected def beforeEach() {
     FileUtils.deleteDirectory(journalDir1)
     FileUtils.deleteDirectory(journalDir2)
   }
@@ -49,61 +49,82 @@ class Example extends WordSpec with MustMatchers with BeforeAndAfterEach with Be
     ComponentBuilder(0, journalDir1)
       .addSelfOutputChannel("self")
       .addReliableOutputChannel("dest", destination)
-      .setProcessor(outputChannels => system.actorOf(Props(new ExampleProcessor(outputChannels))))
+      .setProcessor(outputChannels => system.actorOf(Props(new ExampleAggregator(outputChannels))))
   }
 
   "An event-sourced component" must {
-    "recover state from journaled event messages" in {
+    "recover state from stored event messages" in {
       val exchanger = new Exchanger[Message]
       val destination = system.actorOf(Props(new ExampleDestination(exchanger)))
       var component = createExampleComponent(destination)
 
-      // initial run
-      var response = component.producer ? "a"
-      var result = exchanger.exchange(null)
-      result.event must be("a-1-1")
-      result.senderMessageId must be(Some("example-2"))
-      Await.result(response, timeout.duration) must be("a-1-1")
+      // send InputAvailable event to event-sourced component
+      component.producer ! InputAvailable("category-a", "input-1") // no response expected
+      component.producer ! InputAvailable("category-a", "input-2") // no response expected
+      component.producer ! InputAvailable("category-b", "input-7") // no response expected
 
-      // create a fresh component and recover state
+      // await aggregation response by business logic to initial sender
+      var response = component.producer ? InputAvailable("category-a", "input-3")
+      Await.result(response, timeout.duration) must be("aggregated 3 messages of category-a")
+
+      // obtain output event message delivered to destination
+      var delivered = exchanger.exchange(null, 5, TimeUnit.SECONDS)
+      delivered.event must be(InputAggregated("category-a", List("input-1", "input-2", "input-3")))
+      delivered.senderMessageId must be(Some("aggregated-1"))
+
+      // now drop all in-memory state by creating a new component
       component = createExampleComponent(destination)
+
+      // recover in-memory state by replaying stored event messages
       Await.result(component.replay(), timeout.duration)
 
-      // run again (different output as it depends on component state)
-      component.producer ! "a"
-      result = exchanger.exchange(null)
-      result.event must be("a-1-1")
-      result.senderMessageId must be(Some("example-4"))
-    }
-    "replicate journaled events and in-memory state" in {
-      // ...
+      // now trigger the next aggregation (2 messages of category-b missing)
+      component.producer ! InputAvailable("category-b", "input-8") // no response expected
+      response = component.producer ? InputAvailable("category-b", "input-9")
+
+      // await next aggregation response by business logic to initial sender
+      Await.result(response, timeout.duration) must be("aggregated 3 messages of category-b")
+
+      // obtain next output event message delivered to destination
+      delivered = exchanger.exchange(null, 5, TimeUnit.SECONDS)
+      delivered.event must be(InputAggregated("category-b", List("input-7", "input-8", "input-9")))
+      delivered.senderMessageId must be(Some("aggregated-2"))
     }
   }
 }
 
-class ExampleProcessor(outputChannels: Map[String, ActorRef]) extends Actor {
-  var ctr = 0 // state: number of messages received (used to create sender message ids)
+// Example events
+case class InputAvailable(category: String, input: String)
+case class InputAggregated(category: String, inputs: List[String])
+
+// Example event-sourced processor
+class ExampleAggregator(outputChannels: Map[String, ActorRef]) extends Actor {
+  var inputAggregatedCounter = 0
+  var inputs = Map.empty[String, List[String]] // category -> inputs
 
   def receive = {
-    case msg: Message => {
-      ctr = ctr + 1
-
-      val transformedEvt = "%s-1" format msg.event
-      val transformedMsg = msg.copy(event = transformedEvt, senderMessageId = Some("example-%s" format ctr))
-
-      if (msg.event.toString.contains("-1")) {
-        outputChannels("dest") ! transformedMsg
-        msg.sender.foreach(_ ! transformedEvt)
-      } else {
-        outputChannels("self") ! transformedMsg
+    case msg: Message => msg.event match {
+      case InputAggregated(category, inputs) => {
+        // count number of InputAggregated receivced
+        inputAggregatedCounter = inputAggregatedCounter + 1
+        // emit InputAggregated event to destination with sender message id containing the counted aggregations
+        outputChannels("dest") ! msg.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter))
+        // reply to initial sender that message has been aggregated
+        msg.sender.foreach(_ ! "aggregated %d messages of %s".format(inputs.size, category))
+      }
+      case InputAvailable(category, input) => inputs = inputs.get(category) match {
+        case Some(List(i2, i1)) => {
+          // emit InputAggregated event to this processor's component (i.e. self) when 3 events of same category exist
+          outputChannels("self") ! msg.copy(event = InputAggregated(category, List(i1, i2, input))); inputs - category
+        }
+        case Some(is) => inputs + (category -> (input :: is))
+        case None     => inputs + (category -> List(input))
       }
     }
   }
 }
 
 class ExampleDestination(exchanger: Exchanger[Message]) extends Actor {
-  var resultReceiver: Option[ActorRef] = None
-
   def receive = {
     case msg: Message => { exchanger.exchange(msg); sender ! () }
   }
