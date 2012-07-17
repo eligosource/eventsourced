@@ -82,7 +82,7 @@ object EventsourcedBuild extends Build {
     val testCp = cp.map(_.data).mkString(pathSeparator)
     val testExec = "org.scalatest.tools.Runner"
     val testPath = "target/scala-%s/test-classes" format sv
-    val testOpts = Seq("-classpath", testCp, testExec, "-p", testPath, "-o")
+    val testOpts = Seq("-classpath", testCp, testExec, "-R", testPath, "-o")
     val result = Fork.java.fork(None, testOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
     if (result != 0) error("Tests failed")
   }
