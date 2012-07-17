@@ -42,22 +42,18 @@ class Journaler(dir: File) extends Actor {
 
   def receive = {
     case WriteAck(key) => {
-      println("write ack: key=%s" format key)
       write(key)
       sender ! ()
     }
     case WriteMsg(key, msg) => {
-      println("write msg: key=%s msg=%s" format (key, msg))
       write(key, msg.copy(sender = None))
       sender ! ()
     }
     case WriteAckAndMsg(ackKey, msgKey, msg) => {
-      println("write ack and msg: ack-key=%s msg-key=%s msg=%s" format (ackKey, msgKey, msg))
       write(ackKey, msgKey, msg.copy(sender = None))
       sender ! ()
     }
     case DeleteMsg(key) => {
-      println("delete msg: key=%s" format key)
       delete(key)
       sender ! ()
     }
