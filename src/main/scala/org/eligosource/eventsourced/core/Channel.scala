@@ -15,6 +15,8 @@
  */
 package org.eligosource.eventsourced.core
 
+import scala.collection.immutable.Queue
+
 import akka.actor._
 import akka.dispatch._
 import akka.pattern.ask
@@ -51,16 +53,10 @@ trait Channel extends Actor {
 
 object Channel {
   val inputChannelId = 0
-
   val destinationTimeout = Timeout(5 seconds)
-  val deliveryTimeout = Timeout(5 seconds)
-  val redeliveryDelay = 5 seconds
 
   case class SetProcessor(processor: ActorRef)
   case class SetDestination(processor: ActorRef)
-
-  case object Deliver
-  case object Recover
 }
 
 /**
@@ -94,8 +90,7 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
       }
 
       future.onFailure {
-        case e => { context.stop(self); println("journaling failure: %s caused by %s" format (e, msg)) }
-        // TODO: inform cluster manager to fail-over
+        case e => context.stop(self) // TODO: inform cluster manager to fail-over
       }
 
       counter = counter + 1
@@ -152,7 +147,7 @@ trait OutputChannel extends Channel {
  * with a successful result, a send confirmation is written to the journal.
  *
  * @param componentId id of the input channel owner
- * @param id output channel id (used internally)
+ * @param id output channel id
  * @param journaler
  */
 class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: ActorRef) extends OutputChannel {
@@ -172,9 +167,6 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
 
       counter = counter + 1
     }
-    case Deliver => {
-      // nothing to do
-    }
     case SetDestination(d) => {
       destination = Some(d)
     }
@@ -185,26 +177,30 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
   }
 }
 
+case class ReliableOutputChannelEnv(
+  componentId: Int,
+  journaler: ActorRef,
+  recoveryDelay: Duration,
+  retryDelay: Duration,
+  retryMax: Int
+)
+
 /**
  * An output channel that stores output messages in the journal before sending it to its
  * destination. If the destination responds with a successful result the stored output
  * message is removed from the journal, otherwise a re-send is attempted.
- *
- * @param componentId id of the input channel owner
- * @param id output channel id (used internally)
- * @param journaler
  */
-class ReliableOutputChannel(val componentId: Int, val id: Int, val journaler: ActorRef, redeliveryDelay: Duration) extends OutputChannel {
+class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends OutputChannel {
   import Channel._
+  import ReliableOutputChannel._
+
   import Journaler._
   import Message._
 
   assert(id > 0)
 
-  override val supervisorStrategy = OneForOneStrategy() {
-    case e: Exception => SupervisorStrategy.Stop
-  }
-
+  val componentId = env.componentId
+  val journaler = env.journaler
   var sequencer: Option[ActorRef] = None
 
   def receive = {
@@ -220,37 +216,32 @@ class ReliableOutputChannel(val componentId: Int, val id: Int, val journaler: Ac
       }
 
       future.onFailure {
-        case e => { context.stop(self); println("journaling failure: %s caused by %s" format (e, msg)) }
-        // TODO: inform cluster manager to fail-over
+        case e => context.stop(self) // TODO: inform cluster manager to fail-over
       }
 
       counter = counter + 1
     }
-    case Deliver => sequencer foreach { s =>
-      replayOutputMessages(s)
-    }
     case Recover => destination foreach { d =>
       sequencer = Some(createSequencer(d, counter - 1))
-      replayOutputMessages(sequencer.get)
-    }
-    case cmd @ SetDestination(d) => {
-      sequencer = Some(createSequencer(d, counter - 1))
-      destination = Some(d)
+      redeliverOutputMessages(sequencer.get)
     }
     case Terminated(s) => sequencer foreach { s =>
       sequencer = None
-      context.system.scheduler.scheduleOnce(redeliveryDelay, self, Recover)
+      context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Recover)
+    }
+    case cmd @ SetDestination(d) => if (destination.isEmpty) {
+      destination = Some(d)
     }
   }
 
-  def replayOutputMessages(destination: ActorRef) {
+  def redeliverOutputMessages(destination: ActorRef) {
     val cmd = Replay(componentId, id, 0L, destination)
     // wait for all stored messages to be added to the destination's mailbox
-    Await.result(journaler.ask(cmd)(deliveryTimeout), deliveryTimeout.duration)
+    Await.result(journaler.ask(cmd)(defaultReplayTimeout), defaultReplayTimeout.duration)
   }
 
   def createSequencer(destination: ActorRef, lastSequenceNr: Long) = {
-    context.watch(context.actorOf(Props(new ReliableOutputChannelSequencer(componentId, id, journaler, destination, lastSequenceNr))))
+    context.watch(context.actorOf(Props(new ReliableOutputChannelSequencer(id, destination, env, lastSequenceNr))))
   }
 
   override def preStart() {
@@ -258,24 +249,89 @@ class ReliableOutputChannel(val componentId: Int, val id: Int, val journaler: Ac
   }
 }
 
-class ReliableOutputChannelSequencer(componentId: Int, id: Int, journaler: ActorRef, destination: ActorRef, val lastSequenceNr: Long) extends Sequencer {
-  import Channel._
-  import Journaler._
+object ReliableOutputChannel {
+  val defaultReplayTimeout = Timeout(5 seconds)
+  val defaultRecoveryDelay = 5 seconds
+  val defaultRetryDelay = 1 second
+  val defaultRetryMax = 3
+
+  case class Next(retries: Int)
+  case class Retry(msg: Message)
+
+  case object Recover
+  case object Trigger
+  case object FeedMe
+}
+
+class ReliableOutputChannelSequencer(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv, val lastSequenceNr: Long) extends Sequencer {
+  import ReliableOutputChannel._
+
+  var rocSenderQueue = Queue.empty[Message]
+  var rocSenderBusy = false //
+
+  val rocSender = context.actorOf(Props(new ReliableOutputChannelSender(channelId, destination, env)))
 
   def receiveSequenced = {
     case msg: Message => {
-      val future = destination.ask(msg)(destinationTimeout)
+      rocSenderQueue = rocSenderQueue.enqueue(msg)
+      if (!rocSenderBusy) {
+        rocSenderBusy = true
+        rocSender ! Trigger
+      }
+    }
+    case FeedMe => {
+      if (rocSenderQueue.size == 0) {
+        rocSenderBusy = false
+      } else {
+        rocSender ! rocSenderQueue
+        rocSenderQueue = Queue.empty
+      }
+    }
+  }
+}
 
-      future.onSuccess {
-        case _ => journaler.!(DeleteMsg(Key(componentId, id, msg.sequenceNr, 0)))(null)
+class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv) extends Actor {
+  import Journaler._
+  import ReliableOutputChannel._
+
+  var sequencer: Option[ActorRef] = None
+  var queue = Queue.empty[Message]
+
+  var retries = 0
+
+  def receive = {
+    case Trigger => sender ! FeedMe
+    case q: Queue[Message] => { // food
+      sequencer = Some(sender)
+      queue = q
+      self ! Next(retries)
+    }
+    case Next(r) => if (queue.size > 0) {
+      val (msg, q) = queue.dequeue
+
+      retries = r
+      queue = q
+
+      val future = destination.ask(msg)(Channel.destinationTimeout)
+
+      future onSuccess {
+        case _ => {
+          env.journaler.!(DeleteMsg(Key(env.componentId, channelId, msg.sequenceNr, 0)))(null)
+          self ! Next(0)
+        }
       }
 
-      val ctx = context
-      val slf = self
-
-      future.onFailure {
-        case _ => ctx.stop(slf)
+      future onFailure {
+        case e => context.system.scheduler.scheduleOnce(env.retryDelay, self, Retry(msg))
       }
+    } else {
+      sequencer.foreach(_ ! FeedMe)
+    }
+    case Retry(msg) => {
+      // undo dequeue
+      queue = (msg +: queue)
+      // and try again ...
+      if (retries < env.retryMax) self ! Next(retries + 1) else sequencer.foreach(s => context.stop(s))
     }
   }
 }

@@ -7,7 +7,7 @@ import akka.actor._
 import akka.dispatch._
 import akka.pattern.ask
 import akka.util.duration._
-import akka.util.Timeout
+import akka.util.{Duration, Timeout}
 
 import org.apache.commons.io.FileUtils
 
@@ -34,98 +34,105 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
   import Message._
 
   def fixture = new {
-    val queue = new LinkedBlockingQueue[Message]
+    val queue = new LinkedBlockingQueue[Either[Message, Message]]
 
     val successDestination =
-      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue)))
-    def failureDestination(enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue, enqueueFailures, failureCount)))
+      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue, None)))
+    def failureDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
+      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue, Some(failAtEvent), enqueueFailures, failureCount)))
 
-    lazy val journaler = system.actorOf(Props(new Journaler(journalDir)))
-    lazy val channel = {
-      val result = system.actorOf(Props(new ReliableOutputChannel(0, 1, journaler, 50 milliseconds)))
-      result ! SetDestination(successDestination)
-      result
-    }
+    lazy val journaler =
+      system.actorOf(Props(new Journaler(journalDir)))
+    lazy val channel =
+      system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(0, journaler, 10 milliseconds, 10 milliseconds, 3))))
 
     def writeOutputMessage(msg: Message) {
       Await.result(journaler ? WriteMsg(Key(0, 1, msg.sequenceNr, 0), msg), timeout.duration)
     }
 
-    def dequeueOutputMessage(timeout: Long = 5000): Message = {
+    def dequeueOutputMessage(timeout: Long = 5000): Either[Message, Message] = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
     }
   }
 
   "A reliable output channel" when {
     "just created" must {
-      "derive its counter value from stored output messages" in {
-        val f = fixture; import f._
-        writeOutputMessage(Message("x", None, None, 7L))
-
-        channel ! Message("y", None, None, 0L)
-        channel ! Message("z", None, None, 0L)
-
-        dequeueOutputMessage() must be (Message("y", None, None, 8L))
-        dequeueOutputMessage() must be (Message("z", None, None, 9L))
-      }
-      "deliver stored output messaged on request" in {
+      "redeliver stored output messaged during recovery" in {
         val f = fixture; import f._
         writeOutputMessage(Message("a", None, None, 3L))
         writeOutputMessage(Message("b", None, None, 4L))
 
-        channel ! Deliver
-        channel ! Message("c", None, None, 0L)
+        channel ! SetDestination(successDestination)
+        channel ! ReliableOutputChannel.Recover
 
-        dequeueOutputMessage() must be (Message("a", None, None, 3L))
-        dequeueOutputMessage() must be (Message("b", None, None, 4L))
-        dequeueOutputMessage() must be (Message("c", None, None, 5L))
+        dequeueOutputMessage() must be (Right(Message("a", None, None, 3L)))
+        dequeueOutputMessage() must be (Right(Message("b", None, None, 4L)))
+      }
+      "derive its counter value from stored output messages" in {
+        val f = fixture; import f._
+        writeOutputMessage(Message("x", None, None, 7L))
+
+        channel ! SetDestination(successDestination)
+        channel ! ReliableOutputChannel.Recover
+
+        dequeueOutputMessage()
+
+        channel ! Message("y", None, None, 0L)
+        channel ! Message("z", None, None, 0L)
+
+        dequeueOutputMessage() must be (Right(Message("y", None, None, 8L)))
+        dequeueOutputMessage() must be (Right(Message("z", None, None, 9L)))
       }
     }
     "delivering a single output message" must {
       "recover from destination failures" in {
         val f = fixture; import f._
 
-        channel ! SetDestination(failureDestination(true, 2))
+        channel ! SetDestination(failureDestination("a", true, 2))
+        channel ! ReliableOutputChannel.Recover
         channel ! Message("a", None, None, 0L)
 
-        dequeueOutputMessage() must be (Message("a", None, None, 1L))
-        dequeueOutputMessage() must be (Message("a", None, None, 1L)) // redelivery 1
-        dequeueOutputMessage() must be (Message("a", None, None, 1L)) // redelivery 2
+        dequeueOutputMessage() must be (Left(Message("a", None, None, 1L)))
+        dequeueOutputMessage() must be (Left(Message("a", None, None, 1L)))  // redelivery 1
+        dequeueOutputMessage() must be (Right(Message("a", None, None, 1L))) // redelivery 2
       }
     }
     "delivering multiple output messages" must {
-      "recover from destination failures" in {
+      "recover from destination failures and preserve message order" in {
         val f = fixture; import f._
 
-        channel ! SetDestination(failureDestination(false, 2))
+        // number of failures generated by test destination
+        val failures = 5
 
-        // first two messages will fail
-        1 to 4 foreach { i => channel ! Message(i, None, None, 0L) }
+        // destination fails 3 times at event 5 and publishes failures
+        channel ! SetDestination(failureDestination(4, true, failures))
+        channel ! ReliableOutputChannel.Recover
 
-        val msgs = List(
-          dequeueOutputMessage(),
-          dequeueOutputMessage(),
-          dequeueOutputMessage(),
-          dequeueOutputMessage(),
-          dequeueOutputMessage(100),
-          dequeueOutputMessage(100))
+        // send 7 messages to reliable output channel
+        1 to 7 foreach { i => channel ! Message(i, None, None, 0L) }
 
-          if (msgs(4) != null ||
-              msgs(5) != null) {
-            println("-------------------------------------")
-            println("recovery caused possible duplicate(s)")
-            println("-------------------------------------")
-          }
+        val expected = List(
+          Right(Message(1, None, None, 1L)), // success    at event 1
+          Right(Message(2, None, None, 2L)), // success    at event 2
+          Right(Message(3, None, None, 3L)), // success    at event 3
+          Left( Message(4, None, None, 4L)), // failure #1 at event 4
+          Left( Message(4, None, None, 4L)), // failure #2 at event 4, retry #1 before recovery
+          Left( Message(4, None, None, 4L)), // failure #3 at event 4, retry #2 before recovery
+          Left( Message(4, None, None, 4L)), // failure #4 at event 4, retry #3 before recovery
+          Left( Message(4, None, None, 4L)), // failure #5 at event 4, retry #1 after recovery #1
+          Right(Message(4, None, None, 4L)), // success    at event 4, retry #2 after recovery #1
+          Right(Message(5, None, None, 5L)), // success    at event 5
+          Right(Message(6, None, None, 6L)), // success    at event 6
+          Right(Message(7, None, None, 7L))  // success    at event 7
+        )
 
-          // the following assertions show the most likely order
-          // of messages (as they arrive at the destination)
-          msgs must contain(Message(3, None, None, 3L))
-          msgs must contain(Message(4, None, None, 4L))
-          msgs must contain(Message(1, None, None, 1L))
-          msgs must contain(Message(2, None, None, 2L))
-          // (messages can get out of order during a delivery failure but
-          // clients can re-order them based on the message sequence number)
+        List.fill(12)(dequeueOutputMessage()) must be(expected)
+
+        // send another message to reliable output channel
+        channel ! Message(8, None, None, 0L)
+
+        // check that sequence number is updated appropriately
+        dequeueOutputMessage() must be(Right(Message(8, None, None, 8L)))
       }
     }
   }
@@ -133,7 +140,9 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
 
 class ReliableOutputChannelTestDesination(
     // for interaction with test code
-    blockingQueue: LinkedBlockingQueue[Message],
+    blockingQueue: LinkedBlockingQueue[Either[Message, Message]],
+    // event where first failure should occur
+    failAtEvent: Option[Any],
     // if failing messages should be added to queue
     enqueueFailures: Boolean = false,
     // number of messages that will fail
@@ -141,14 +150,13 @@ class ReliableOutputChannelTestDesination(
 
   def receive = {
     case msg: Message => {
-
-      if (failureCount > 0) {
+      if (failAtEvent.map(_ == msg.event).getOrElse(false) && failureCount > 0) {
         failureCount = failureCount - 1
         sender ! Status.Failure(new Exception("test"))
-        if (enqueueFailures) blockingQueue.put(msg)
+        if (enqueueFailures) blockingQueue.put(Left(msg))
       } else {
         sender ! ()
-        blockingQueue.put(msg)
+        blockingQueue.put(Right(msg))
       }
     }
   }

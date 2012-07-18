@@ -54,17 +54,21 @@ trait Component {
     journaler.ask(Replay(id, inputChannelId, fromSequenceNr, processor))(duration).mapTo[Unit]
 
   /**
-   * Delivers messages, which have been stored by reliable output channels, to their
-   * destinations.
+   * Recovers reliable output channels of this component. Recovery sends stored
+   * output messages to destinations if they haven't been successfully delivered
+   * before.
    */
-  def deliver: Unit =
-    outputChannels.values.foreach(_ ! Deliver)
+  def recover(): Unit =
+    outputChannels.values.foreach(_ ! ReliableOutputChannel.Recover)
 
   /**
-   * Delivers and replays event messages. Called when the component is initialized.
+   * Initializes this component by first recovering output channels and then restore
+   * processor state by replaying input events.
    */
-  def recover: Unit =
-    throw new UnsupportedOperationException("not implemented yet")
+  def init(fromSequenceNr: Long = 0L): Future[Unit] = {
+    recover()
+    replay(fromSequenceNr)
+  }
 }
 
 /**
@@ -76,8 +80,15 @@ case class ComponentBuilder(
     inputChannel: ActorRef,
     outputChannels: Map[String, ActorRef])(implicit system: ActorSystem) { outer =>
 
-  def addReliableOutputChannel(name: String, destination: ActorRef, redeliveryDelay: Duration = Channel.redeliveryDelay): ComponentBuilder = {
-    val channel = system.actorOf(Props(new ReliableOutputChannel(componentId, outputChannels.size + 1, journaler, redeliveryDelay)))
+  import ReliableOutputChannel.{
+    defaultRecoveryDelay => rcd,
+    defaultRetryDelay    => rtd,
+    defaultRetryMax      => rtm
+  }
+
+  def addReliableOutputChannel(name: String, destination: ActorRef, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): ComponentBuilder = {
+    val channelEnv = ReliableOutputChannelEnv(componentId, journaler, recoveryDelay, retryDelay, retryMax)
+    val channel = system.actorOf(Props(new ReliableOutputChannel(outputChannels.size + 1, channelEnv)))
     channel ! Channel.SetDestination(destination)
     copy(outputChannels = outputChannels + (name -> channel))
   }

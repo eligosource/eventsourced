@@ -58,6 +58,8 @@ class Example extends WordSpec with MustMatchers with BeforeAndAfterEach with Be
       val destination = system.actorOf(Props(new ExampleDestination(exchanger)))
       var component = createExampleComponent(destination)
 
+      component.init()
+
       // send InputAvailable event to event-sourced component
       component.producer ! InputAvailable("category-a", "input-1") // no response expected
       component.producer ! InputAvailable("category-a", "input-2") // no response expected
@@ -75,8 +77,8 @@ class Example extends WordSpec with MustMatchers with BeforeAndAfterEach with Be
       // now drop all in-memory state by creating a new component
       component = createExampleComponent(destination)
 
-      // recover in-memory state by replaying stored event messages
-      Await.result(component.replay(), timeout.duration)
+      // recover in-memory state by initializing the new component
+      Await.result(component.init(), timeout.duration)
 
       // now trigger the next aggregation (2 messages of category-b missing)
       component.producer ! InputAvailable("category-b", "input-8") // no response expected
