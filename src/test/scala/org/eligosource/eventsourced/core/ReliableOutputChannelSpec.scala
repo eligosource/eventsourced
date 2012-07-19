@@ -7,7 +7,7 @@ import akka.actor._
 import akka.dispatch._
 import akka.pattern.ask
 import akka.util.duration._
-import akka.util.{Duration, Timeout}
+import akka.util.Timeout
 
 import org.apache.commons.io.FileUtils
 
@@ -19,7 +19,6 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
   implicit val timeout = Timeout(5 seconds)
 
   val journalDir = new File("target/journal")
-
 
   override protected def beforeEach() {
     FileUtils.deleteDirectory(journalDir)
@@ -46,11 +45,11 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
     lazy val channel =
       system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(0, journaler, 10 milliseconds, 10 milliseconds, 3))))
 
-    def writeOutputMessage(msg: Message) {
+    def write(msg: Message) {
       Await.result(journaler ? WriteMsg(Key(0, 1, msg.sequenceNr, 0), msg), timeout.duration)
     }
 
-    def dequeueOutputMessage(timeout: Long = 5000): Either[Message, Message] = {
+    def dequeue(timeout: Long = 5000): Either[Message, Message] = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
     }
   }
@@ -59,29 +58,29 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
     "just created" must {
       "redeliver stored output messaged during recovery" in {
         val f = fixture; import f._
-        writeOutputMessage(Message("a", None, None, 3L))
-        writeOutputMessage(Message("b", None, None, 4L))
+        write(Message("a", None, None, 3L))
+        write(Message("b", None, None, 4L))
 
         channel ! SetDestination(successDestination)
-        channel ! ReliableOutputChannel.Recover
+        channel ! Deliver
 
-        dequeueOutputMessage() must be (Right(Message("a", None, None, 3L)))
-        dequeueOutputMessage() must be (Right(Message("b", None, None, 4L)))
+        dequeue() must be (Right(Message("a", None, None, 3L)))
+        dequeue() must be (Right(Message("b", None, None, 4L)))
       }
       "derive its counter value from stored output messages" in {
         val f = fixture; import f._
-        writeOutputMessage(Message("x", None, None, 7L))
+        write(Message("x", None, None, 7L))
 
         channel ! SetDestination(successDestination)
-        channel ! ReliableOutputChannel.Recover
+        channel ! Deliver
 
-        dequeueOutputMessage()
+        dequeue()
 
         channel ! Message("y", None, None, 0L)
         channel ! Message("z", None, None, 0L)
 
-        dequeueOutputMessage() must be (Right(Message("y", None, None, 8L)))
-        dequeueOutputMessage() must be (Right(Message("z", None, None, 9L)))
+        dequeue() must be (Right(Message("y", None, None, 8L)))
+        dequeue() must be (Right(Message("z", None, None, 9L)))
       }
     }
     "delivering a single output message" must {
@@ -89,12 +88,12 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
         val f = fixture; import f._
 
         channel ! SetDestination(failureDestination("a", true, 2))
-        channel ! ReliableOutputChannel.Recover
+        channel ! Deliver
         channel ! Message("a", None, None, 0L)
 
-        dequeueOutputMessage() must be (Left(Message("a", None, None, 1L)))
-        dequeueOutputMessage() must be (Left(Message("a", None, None, 1L)))  // redelivery 1
-        dequeueOutputMessage() must be (Right(Message("a", None, None, 1L))) // redelivery 2
+        dequeue() must be (Left(Message("a", None, None, 1L)))
+        dequeue() must be (Left(Message("a", None, None, 1L)))  // redelivery 1
+        dequeue() must be (Right(Message("a", None, None, 1L))) // redelivery 2
       }
     }
     "delivering multiple output messages" must {
@@ -106,7 +105,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
 
         // destination fails 3 times at event 5 and publishes failures
         channel ! SetDestination(failureDestination(4, true, failures))
-        channel ! ReliableOutputChannel.Recover
+        channel ! Deliver
 
         // send 7 messages to reliable output channel
         1 to 7 foreach { i => channel ! Message(i, None, None, 0L) }
@@ -126,13 +125,13 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
           Right(Message(7, None, None, 7L))  // success    at event 7
         )
 
-        List.fill(12)(dequeueOutputMessage()) must be(expected)
+        List.fill(12)(dequeue()) must be(expected)
 
         // send another message to reliable output channel
         channel ! Message(8, None, None, 0L)
 
         // check that sequence number is updated appropriately
-        dequeueOutputMessage() must be(Right(Message(8, None, None, 8L)))
+        dequeue() must be(Right(Message(8, None, None, 8L)))
       }
     }
   }

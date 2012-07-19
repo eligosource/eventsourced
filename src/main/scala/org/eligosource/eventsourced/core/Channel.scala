@@ -57,6 +57,8 @@ object Channel {
 
   case class SetProcessor(processor: ActorRef)
   case class SetDestination(processor: ActorRef)
+
+  case object Deliver
 }
 
 /**
@@ -157,18 +159,31 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
 
   assert(id > 0)
 
+  var retain = true
+  var buffer = List.empty[(Long, Message)]
+
   def receive = {
     case Message(evt, sdr, sdrmid, seqnr, acks, _, replicated) if (!acks.contains(id) && !replicated) => {
       val msg = Message(evt, sdr, sdrmid, counter, Nil, Nil)
 
-      destination.foreach(_.ask(msg)(destinationTimeout) onSuccess {
-        case r => journaler.!(WriteAck(Key(componentId, inputChannelId, seqnr, id)))(null)
-      })
+      if (retain) buffer = (seqnr, msg) :: buffer
+      else sendOutputMessage(msg, seqnr)
 
       counter = counter + 1
     }
+    case Deliver => {
+      retain = false
+      buffer.reverse.foreach(t => sendOutputMessage(t._2, t._1))
+      buffer = Nil
+    }
     case SetDestination(d) => {
       destination = Some(d)
+    }
+  }
+
+  def sendOutputMessage(msg: Message, ackSequenceNr: Long) = destination foreach{ d =>
+    d.ask(msg)(destinationTimeout) onSuccess {
+      case r => journaler.!(WriteAck(Key(componentId, inputChannelId, ackSequenceNr, id)))(null)
     }
   }
 
@@ -221,20 +236,20 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
 
       counter = counter + 1
     }
-    case Recover => destination foreach { d =>
+    case Deliver => destination foreach { d =>
       sequencer = Some(createSequencer(d, counter - 1))
-      redeliverOutputMessages(sequencer.get)
+      deliverPendingMessages(sequencer.get)
     }
     case Terminated(s) => sequencer foreach { s =>
       sequencer = None
-      context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Recover)
+      context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Deliver)
     }
     case cmd @ SetDestination(d) => if (destination.isEmpty) {
       destination = Some(d)
     }
   }
 
-  def redeliverOutputMessages(destination: ActorRef) {
+  def deliverPendingMessages(destination: ActorRef) {
     val cmd = Replay(componentId, id, 0L, destination)
     // wait for all stored messages to be added to the destination's mailbox
     Await.result(journaler.ask(cmd)(defaultReplayTimeout), defaultReplayTimeout.duration)
@@ -258,7 +273,6 @@ object ReliableOutputChannel {
   case class Next(retries: Int)
   case class Retry(msg: Message)
 
-  case object Recover
   case object Trigger
   case object FeedMe
 }

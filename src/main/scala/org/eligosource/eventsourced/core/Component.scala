@@ -27,58 +27,12 @@ import akka.util.duration._
  * An event-sourced component that uses an application-defined actor (processor)
  * for managing state. Applications use the component's input channel to send
  * event messages to that actor. The actor uses the component's output channel
- * to communicate with other parts of the application.
+ * to communicate with other parts of the application. Components can be composed
+ * to directed, cyclic graphs.
  */
-trait Component {
+class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSystem) extends Iterable[Component] {
   import Channel._
   import Journaler._
-
-  def id: Int
-
-  def inputChannel: ActorRef
-  def outputChannels: Map[String, ActorRef]
-
-  val producer: ActorRef
-
-  def processor: ActorRef
-  def journaler: ActorRef
-
-  /**
-   * Replays event messages that have been sent to this component. Messages that
-   * have already been sent to destinations via output channels are not sent again
-   * during replay. Messages that have not yet been sent to destinations will be
-   * sent during replay. The returned Future completes when all messages to be
-   * replayed have been added to the processor's mailbox.
-   */
-  def replay(fromSequenceNr: Long = 0L, duration: Duration = 5 seconds): Future[Unit] =
-    journaler.ask(Replay(id, inputChannelId, fromSequenceNr, processor))(duration).mapTo[Unit]
-
-  /**
-   * Recovers reliable output channels of this component. Recovery sends stored
-   * output messages to destinations if they haven't been successfully delivered
-   * before.
-   */
-  def recover(): Unit =
-    outputChannels.values.foreach(_ ! ReliableOutputChannel.Recover)
-
-  /**
-   * Initializes this component by first recovering output channels and then restore
-   * processor state by replaying input events.
-   */
-  def init(fromSequenceNr: Long = 0L): Future[Unit] = {
-    recover()
-    replay(fromSequenceNr)
-  }
-}
-
-/**
- * A Component builder.
- */
-case class ComponentBuilder(
-    componentId: Int,
-    journaler: ActorRef,
-    inputChannel: ActorRef,
-    outputChannels: Map[String, ActorRef])(implicit system: ActorSystem) { outer =>
 
   import ReliableOutputChannel.{
     defaultRecoveryDelay => rcd,
@@ -86,51 +40,113 @@ case class ComponentBuilder(
     defaultRetryMax      => rtm
   }
 
-  def addReliableOutputChannel(name: String, destination: ActorRef, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): ComponentBuilder = {
-    val channelEnv = ReliableOutputChannelEnv(componentId, journaler, recoveryDelay, retryDelay, retryMax)
-    val channel = system.actorOf(Props(new ReliableOutputChannel(outputChannels.size + 1, channelEnv)))
-    channel ! Channel.SetDestination(destination)
-    copy(outputChannels = outputChannels + (name -> channel))
+  val inputChannel = system.actorOf(Props(new InputChannel(id, journaler)))
+  val inputProducer = system.actorOf(Props(new InputChannelProducer(inputChannel)))
+
+  private var outputChannels = Map.empty[String, ActorRef]
+  private var outputDependencies = List.empty[Component]
+  private var processor: Option[ActorRef] = None
+
+  def addReliableOutputChannelToSelf(name: String): Component = {
+    addReliableOutputChannelToActor(name, inputChannel)
   }
 
-  def addDefaultOutputChannel(name: String, destination: ActorRef): ComponentBuilder = {
-    val channel = system.actorOf(Props(new DefaultOutputChannel(componentId, outputChannels.size + 1, journaler)))
-    channel ! Channel.SetDestination(destination)
-    copy(outputChannels = outputChannels + (name -> channel))
+  def addDefaultOutputChannelToSelf(name: String): Component = {
+    addDefaultOutputChannelToActor(name, inputChannel)
   }
 
-  def addDefaultOutputChannel(name: String, component: Component): ComponentBuilder = {
-    addDefaultOutputChannel(name, component.inputChannel)
+  def addReliableOutputChannelToActor(name: String, destination: ActorRef, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+    checkAddChannelPreconditions()
+    outputChannels = outputChannels + (name -> createReliableOutputChannel(destination, recoveryDelay, retryDelay, retryMax))
+    this
   }
 
-  def addSelfOutputChannel(name: String): ComponentBuilder = {
-    addDefaultOutputChannel(name, inputChannel)
+  def addReliableOutputChannelToComponent(name: String, component: Component, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+    checkAddChannelPreconditions()
+    outputChannels = outputChannels + (name -> createReliableOutputChannel(component.inputChannel, recoveryDelay, retryDelay, retryMax))
+    outputDependencies = component :: outputDependencies
+    this
+  }
+
+  def addDefaultOutputChannelToActor(name: String, destination: ActorRef): Component = {
+    checkAddChannelPreconditions()
+    outputChannels = outputChannels + (name -> createDefaultOutputChannel(destination))
+    this
+  }
+
+  def addDefaultOutputChannelToComponent(name: String, component: Component): Component = {
+    checkAddChannelPreconditions()
+    outputChannels = outputChannels + (name -> createDefaultOutputChannel(component.inputChannel))
+    outputDependencies = component :: outputDependencies
+    this
   }
 
   def setProcessor(processorFactory: Map[String, ActorRef] => ActorRef): Component = {
-    val proc = processorFactory(outputChannels)
-    inputChannel ! Channel.SetProcessor(proc)
-    new Component {
-      val id = componentId
+    checkSetProcessorPreconditions()
+    processor = Some(processorFactory(outputChannels))
+    inputChannel ! Channel.SetProcessor(processor.get)
+    this
+  }
 
-      val inputChannel = outer.inputChannel
-      val outputChannels = outer.outputChannels
+  /**
+   * Recovers processor state by replaying input events.
+   */
+  def replay(fromSequenceNr: Long = 0L, duration: Duration = 5 seconds): Unit = processor foreach { p =>
+    Await.result(journaler.ask(Replay(id, inputChannelId, fromSequenceNr, p))(duration), duration)
+  }
 
-      val producer = system.actorOf(Props(new InputChannelProducer(inputChannel)))
+  /**
+   * Delivers pending messages from output channels.
+   */
+  def deliver(): Unit = processor foreach { _ =>
+    outputChannels.values.foreach(_ ! Deliver)
+  }
 
-      val processor = proc
-      val journaler = outer.journaler
+  /**
+   * Returns an iterator for this component's dependency graph. Dependent components
+   * are visited once even if the dependency graph is cyclic.
+   */
+  def iterator: Iterator[Component] = {
+    traverse(this, Nil).reverse.iterator
+  }
+
+  private def traverse(component: Component, visited: List[Component]): List[Component] = {
+    component.outputDependencies.foldLeft(component :: visited){ (a, d) =>
+    // small number of dependencies i.e. O(n) 'contains' is ok here
+      if (!a.contains(d)) traverse(d, a) else a
     }
+  }
+
+  private def createDefaultOutputChannel(destination: ActorRef) = {
+    val channelId = outputChannels.size + 1
+    val channel = system.actorOf(Props(new DefaultOutputChannel(id, channelId, journaler)))
+    channel ! Channel.SetDestination(destination)
+    channel
+  }
+
+  private def createReliableOutputChannel(destination: ActorRef, recoveryDelay: Duration, retryDelay: Duration, retryMax: Int) = {
+    val channelId = outputChannels.size + 1
+    val channelEnv = ReliableOutputChannelEnv(id, journaler, recoveryDelay, retryDelay, retryMax)
+    val channel = system.actorOf(Props(new ReliableOutputChannel(channelId, channelEnv)))
+    channel ! Channel.SetDestination(destination)
+    channel
+  }
+
+  private def checkAddChannelPreconditions() {
+    if (processor.isDefined) throw new IllegalStateException("output channels cannot be added after processor has been set")
+  }
+
+  private def checkSetProcessorPreconditions() {
+    if (processor.isDefined) throw new IllegalStateException("processor can only be set once")
   }
 }
 
-object ComponentBuilder {
-  def apply(componentId: Int, journalDir: File)(implicit system: ActorSystem): ComponentBuilder = {
-    val journaler = system.actorOf(Props(new Journaler(journalDir)))
-    apply(componentId, journaler)
-  }
-  def apply(componentId: Int, journaler: ActorRef)(implicit system: ActorSystem): ComponentBuilder = {
-    val inputChannel = system.actorOf(Props(new InputChannel(componentId, journaler)))
-    ComponentBuilder(componentId, journaler, inputChannel, Map.empty)
-  }
+object Component {
+  def apply(id: Int, journaler: ActorRef)(implicit system: ActorSystem): Component =
+    new Component(id, journaler)
+
+  def apply(id: Int, journalDir: File)(implicit system: ActorSystem): Component =
+    apply(id, system.actorOf(Props(new Journaler(journalDir))))
+
+  val invalidStateMessage = "output channels cannot be added after processor has been set"
 }

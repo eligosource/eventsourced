@@ -33,40 +33,44 @@ class Example extends WordSpec with MustMatchers with BeforeAndAfterEach with Be
   implicit val system = ActorSystem("test")
   implicit val timeout = Timeout(5 seconds)
 
-  val journalDir1 = new File("target/journal-1")
-  val journalDir2 = new File("target/journal-2")
+  val journalDir = new File("target/journal")
 
   override protected def beforeEach() {
-    FileUtils.deleteDirectory(journalDir1)
-    FileUtils.deleteDirectory(journalDir2)
+    FileUtils.deleteDirectory(journalDir)
   }
 
   override protected def afterAll() {
     system.shutdown()
   }
 
-  def createExampleComponent(destination: ActorRef) = {
-    ComponentBuilder(0, journalDir1)
-      .addSelfOutputChannel("self")
-      .addReliableOutputChannel("dest", destination)
+  def fixture = new {
+    val journaler = system.actorOf(Props(new Journaler(journalDir)))
+  }
+
+  def createExampleComponent(journaler: ActorRef, destination: ActorRef) = {
+    Component(0, journaler)
+      .addDefaultOutputChannelToSelf("self")
+      .addReliableOutputChannelToActor("dest", destination)
       .setProcessor(outputChannels => system.actorOf(Props(new ExampleAggregator(outputChannels))))
   }
 
   "An event-sourced component" must {
     "recover state from stored event messages" in {
+      val f = fixture; import f._
+
       val exchanger = new Exchanger[Message]
       val destination = system.actorOf(Props(new ExampleDestination(exchanger)))
-      var component = createExampleComponent(destination)
+      var component = createExampleComponent(journaler, destination)
 
-      component.init()
+      component.deliver()
 
       // send InputAvailable event to event-sourced component
-      component.producer ! InputAvailable("category-a", "input-1") // no response expected
-      component.producer ! InputAvailable("category-a", "input-2") // no response expected
-      component.producer ! InputAvailable("category-b", "input-7") // no response expected
+      component.inputProducer ! InputAvailable("category-a", "input-1") // no response expected
+      component.inputProducer ! InputAvailable("category-a", "input-2") // no response expected
+      component.inputProducer ! InputAvailable("category-b", "input-7") // no response expected
 
       // await aggregation response by business logic to initial sender
-      var response = component.producer ? InputAvailable("category-a", "input-3")
+      var response = component.inputProducer ? InputAvailable("category-a", "input-3")
       Await.result(response, timeout.duration) must be("aggregated 3 messages of category-a")
 
       // obtain output event message delivered to destination
@@ -75,14 +79,15 @@ class Example extends WordSpec with MustMatchers with BeforeAndAfterEach with Be
       delivered.senderMessageId must be(Some("aggregated-1"))
 
       // now drop all in-memory state by creating a new component
-      component = createExampleComponent(destination)
+      component = createExampleComponent(journaler, destination)
 
       // recover in-memory state by initializing the new component
-      Await.result(component.init(), timeout.duration)
+      component.replay()
+      component.deliver()
 
       // now trigger the next aggregation (2 messages of category-b missing)
-      component.producer ! InputAvailable("category-b", "input-8") // no response expected
-      response = component.producer ? InputAvailable("category-b", "input-9")
+      component.inputProducer ! InputAvailable("category-b", "input-8") // no response expected
+      response = component.inputProducer ? InputAvailable("category-b", "input-9")
 
       // await next aggregation response by business logic to initial sender
       Await.result(response, timeout.duration) must be("aggregated 3 messages of category-b")
