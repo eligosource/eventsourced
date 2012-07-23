@@ -54,7 +54,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(0, journaler, 10 milliseconds, 10 milliseconds, 3))))
 
     def write(msg: Message) {
-      Await.result(journaler ? WriteMsg(Key(0, 1, msg.sequenceNr, 0), msg), timeout.duration)
+      Await.result(journaler ? WriteMsg(Key(0, 1, msg.sequenceNr, 0), msg, system.deadLetters), timeout.duration)
     }
 
     def dequeue(timeout: Long = 5000): Either[Message, Message] = {

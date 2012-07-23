@@ -44,12 +44,14 @@ class Journaler(dir: File) extends Actor {
       write(key)
       sender ! ()
     }
-    case WriteMsg(key, msg) => {
+    case WriteMsg(key, msg, target) => {
       write(key, msg.copy(sender = None))
+      target ! msg
       sender ! ()
     }
-    case WriteAckAndMsg(ackKey, msgKey, msg) => {
+    case WriteAckAndMsg(ackKey, msgKey, msg, target) => {
       write(ackKey, msgKey, msg.copy(sender = None))
+      target ! msg
       sender ! ()
     }
     case DeleteMsg(key) => {
@@ -160,9 +162,9 @@ class Journaler(dir: File) extends Actor {
 
 object Journaler {
   case class DeleteMsg(key: Key)
-  case class WriteMsg(key: Key, msg: Message)
+  case class WriteMsg(key: Key, msg: Message, target: ActorRef)
+  case class WriteAckAndMsg(ackKey: Key, msgKey: Key, msg: Message, target: ActorRef)
   case class WriteAck(key: Key)
-  case class WriteAckAndMsg(ackKey: Key, msgKey: Key, msg: Message)
   case class Replay(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
 
   case class GetLastSequenceNr(componentId: Int, channelId: Int)
@@ -262,7 +264,7 @@ class Replicator(journaler: ActorRef) extends Actor {
     case RegisterInputChannel(componentId, inputChannel) => {
       inputChannels = inputChannels + (componentId -> inputChannel)
     }
-    case cmd @ WriteMsg(key, msg) => {
+    case cmd @ WriteMsg(key, msg, target) => {
       journal(cmd, sender) { inputChannels.get(key.componentId).foreach(_ ! msg.copy(replicated = true)) }
     }
     case cmd => {

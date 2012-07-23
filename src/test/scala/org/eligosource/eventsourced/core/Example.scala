@@ -72,8 +72,8 @@ class Example extends WordSpec with MustMatchers {
       component.inputProducer ! InputAvailable("category-b", "input-7") // no response expected
 
       // await aggregation response by business logic to initial sender
-      var response = component.inputProducer ? InputAvailable("category-a", "input-3")
-      Await.result(response, timeout.duration) must be("aggregated 3 messages of category-a")
+      var future = component.inputProducer ? InputAvailable("category-a", "input-3")
+      Await.result(future, timeout.duration) must be("aggregated 3 messages of category-a")
 
       // obtain output event message delivered to destination
       var delivered = exchanger.exchange(null, 5, TimeUnit.SECONDS)
@@ -89,10 +89,10 @@ class Example extends WordSpec with MustMatchers {
 
       // now trigger the next aggregation (2 messages of category-b missing)
       component.inputProducer ! InputAvailable("category-b", "input-8") // no response expected
-      response = component.inputProducer ? InputAvailable("category-b", "input-9")
+      future = component.inputProducer ? InputAvailable("category-b", "input-9")
 
       // await next aggregation response by business logic to initial sender
-      Await.result(response, timeout.duration) must be("aggregated 3 messages of category-b")
+      Await.result(future, timeout.duration) must be("aggregated 3 messages of category-b")
 
       // obtain next output event message delivered to destination
       delivered = exchanger.exchange(null, 5, TimeUnit.SECONDS)

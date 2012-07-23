@@ -44,6 +44,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     val queue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Receiver(queue)))
 
+    val dl = system.deadLetters
+
     def createExampleComposite(journaler: ActorRef, destination: ActorRef, reliable: Boolean): Component = {
       val c1 = Component(0, journaler)
       val c2 = Component(1, journaler)
@@ -62,7 +64,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
       c1.setProcessor(outputChannels => system.actorOf(Props(new C1Processor(outputChannels))))
     }
 
-    def write(cmd: Any) {
+    def journal(cmd: Any) {
       Await.result(journaler ? cmd, timeout.duration)
     }
 
@@ -92,21 +94,21 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        write(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1)))
+        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
         // 2.) input message 2 written by input channel of component 2
-        write(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2))) // input message 2
+        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
         // 3.) ACK that input message 1 has been processed by processor 1 (and stored by out-channel)
-        write(WriteAck(Key(0, 0, 1, 1)))
+        journal(WriteAck(Key(0, 0, 1, 1)))
         // 4.) output message from processor 1 written by 'next' output channel of component 1 (deleted after delivery)
-        //write(WriteMsg(Key(0, 1, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        //journal(WriteMsg(Key(0, 1, 1, 0), Message(InputModified("a-0"), None, None, 1)))
         // 5.) output message from processor 1 is now input message 1' of component 2
-        write(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
         // 6.) ACK that input message 1' has been processed by processor 2 (and stored by out-channel)
-        write(WriteAck(Key(1, 0, 1, 1))) // instead
+        journal(WriteAck(Key(1, 0, 1, 1))) // instead
         // 7.) output message from processor 2 written by 'next' output channel of component 2
-        //write(WriteMsg(Key(1, 1, 1, 0), Message(InputModified("a-0-0"), None, Some("1"), 1)))
+        //journal(WriteMsg(Key(1, 1, 1, 0), Message(InputModified("a-0-0"), None, Some("1"), 1)))
         // 8.) output message from processor 2 is again input message 1'' of component 1
-        write(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3)))
+        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
 
         val composite = createExampleComposite(journaler, destination, true)
 
@@ -124,23 +126,23 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        write(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1)))
+        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
         // 2.) input message 2 written by input channel of component 2
-        write(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2))) // input message 2
+        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
         // 3.) ACK that input message 1 has been processed by processor 1 (and stored by out-channel)
-        write(WriteAck(Key(0, 0, 1, 1)))
+        journal(WriteAck(Key(0, 0, 1, 1)))
         // 4.) output message from processor 1 written by 'next' output channel of component 1 (deleted after delivery)
-        //write(WriteMsg(Key(0, 1, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        //journal(WriteMsg(Key(0, 1, 1, 0), Message(InputModified("a-0"), None, None, 1)))
         // 5.) output message from processor 1 is now input message 1' of component 2
-        write(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
         // 6.) ACK that input message 1' has been processed by processor 2 (and stored by out-channel)
-        write(WriteAck(Key(1, 0, 1, 1))) // instead
+        journal(WriteAck(Key(1, 0, 1, 1))) // instead
         // 7.) output message from processor 2 written by 'next' output channel of component 2
         // DELIVERED TO NEXT COMPONENT BUT NOT YET DELETED FROM RELIABLE OUTPUT CHANNEL:
         // WILL CAUSE A DUPLICATE (which can be detected via senderMessageId and ignored, if needed)
-        write(WriteMsg(Key(1, 1, 1, 0), Message(InputModified("a-0-0"), None, Some("1"), 1)))
+        journal(WriteMsg(Key(1, 1, 1, 0), Message(InputModified("a-0-0"), None, Some("1"), 1), dl))
         // 8.) output message from processor 2 is again input message 1'' of component 1
-        write(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3)))
+        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
 
         val composite = createExampleComposite(journaler, destination, true)
 
@@ -161,17 +163,17 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        write(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1)))
+        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
         // 2.) input message 2 written by input channel of component 2
-        write(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2))) // input message 2
+        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
         // 3.) output message from processor 1 is now input message 1' of component 2
-        write(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
         // 4.) ACK that input message 1 has been processed by processor 1 (and stored by component 2)
-        write(WriteAck(Key(0, 0, 1, 1)))
+        journal(WriteAck(Key(0, 0, 1, 1)))
         // 5.) output message from processor 2 is again input message 1'' of component 1
-        write(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3)))
+        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
         // 6.) ACK that input message 1' has been processed by processor 2
-        write(WriteAck(Key(1, 0, 1, 1)))
+        journal(WriteAck(Key(1, 0, 1, 1)))
 
         val composite = createExampleComposite(journaler, destination, false)
 
@@ -189,18 +191,18 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        write(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1)))
+        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
         // 2.) input message 2 written by input channel of component 2
-        write(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2))) // input message 2
+        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
         // 3.) output message from processor 1 is now input message 1' of component 2
-        write(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
         // 4.) ACK that input message 1 has been processed by processor 1 (and stored by component 2)
-        write(WriteAck(Key(0, 0, 1, 1)))
+        journal(WriteAck(Key(0, 0, 1, 1)))
         // 5.) output message from processor 2 is again input message 1'' of component 1
-        write(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3)))
+        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
         // 6.) ACK that input message 1' has been processed by processor 2
         // NOT YET ACKNOWLEDGED: WILL CAUSE A DUPLICATE (which is detected)
-        //write(WriteAck(Key(1, 0, 1, 1)))
+        //journal(WriteAck(Key(1, 0, 1, 1)))
 
         val composite = createExampleComposite(journaler, destination, false)
 

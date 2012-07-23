@@ -40,9 +40,6 @@ trait Channel extends Actor {
 
   var counter = 0L
 
-  def journal(cmd: Any): Future[Any] =
-    journaler.ask(cmd)(journalerTimeout)
-
   def lastSequenceNr: Long = {
     val future = journaler.ask(GetLastSequenceNr(componentId, id))(journalerTimeout).mapTo[Long]
     Await.result(future, journalerTimeout.duration)
@@ -73,7 +70,6 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
 
   val id = inputChannelId
 
-  var sequencer: Option[ActorRef] = None
   var processor: Option[ActorRef] = None
 
   def receive = {
@@ -81,49 +77,20 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
       val msg = Message(evt, sdr, sdrmid, counter, Nil, Nil)
       val key = Key(componentId, id, msg.sequenceNr, 0)
 
-      val future = journal(WriteMsg(key, msg))
-
-      val s = sender
-
-      future.onSuccess {
-        case _ => { sequencer.foreach(_ ! (msg.sequenceNr, msg)); s ! key }
-      }
-
-      future.onFailure {
-        case e => context.stop(self) // TODO: inform cluster manager to fail-over
-      }
-
+      processor foreach { p => journaler forward WriteMsg(key, msg, p) }
       counter = counter + 1
     }
     case msg @ Message(_, _, _, _, _, _, true) => {
       processor.foreach(_.!(msg.copy(sender = None))(null))
     }
     case cmd @ SetProcessor(p) => {
-      sequencer.foreach(_ forward cmd)
       processor = Some(p)
     }
   }
 
   override def preStart() {
     val lsn = lastSequenceNr
-    val seq = context.actorOf(Props(new InputChannelSequencer(lsn)))
-    sequencer = Some(seq)
     counter = lsn + 1
-  }
-}
-
-private class InputChannelSequencer(val lastSequenceNr: Long) extends Sequencer {
-  import Channel._
-
-  var processor: Option[ActorRef] = None
-
-  def receiveSequenced = {
-    case msg: Message => {
-      processor.foreach(_ ! msg)
-    }
-    case SetProcessor(p) => {
-      processor = Some(p)
-    }
   }
 }
 
@@ -211,7 +178,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
 
   val componentId = env.componentId
   val journaler = env.journaler
-  var sequencer: Option[ActorRef] = None
+  var buffer: Option[ActorRef] = None
 
   def receive = {
     case Message(evt, sdr, sdrmid, seqnr, acks, _, replicated)  if (!acks.contains(id) && !replicated) => {
@@ -219,24 +186,15 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
       val msgKey = Key(componentId, id, msg.sequenceNr, 0)
       val ackKey = Key(componentId, inputChannelId, seqnr, id)
 
-      val future = journal(WriteAckAndMsg(ackKey, msgKey, msg))
-
-      future.onSuccess {
-        case _ => sequencer.foreach(_ ! (msg.sequenceNr, msg))
-      }
-
-      future.onFailure {
-        case e => context.stop(self) // TODO: inform cluster manager to fail-over
-      }
-
+      journaler forward WriteAckAndMsg(ackKey, msgKey, msg, buffer.getOrElse(context.system.deadLetters))
       counter = counter + 1
     }
     case Deliver => destination foreach { d =>
-      sequencer = Some(createSequencer(d, counter - 1))
-      deliverPendingMessages(sequencer.get)
+      buffer = Some(createBuffer(d))
+      deliverPendingMessages(buffer.get)
     }
-    case Terminated(s) => sequencer foreach { s =>
-      sequencer = None
+    case Terminated(s) => buffer foreach { s =>
+      buffer = None
       context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Deliver)
     }
     case cmd @ SetDestination(d) => if (destination.isEmpty) {
@@ -250,8 +208,8 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
     Await.result(journaler.ask(cmd)(defaultReplayTimeout), defaultReplayTimeout.duration)
   }
 
-  def createSequencer(destination: ActorRef, lastSequenceNr: Long) = {
-    context.watch(context.actorOf(Props(new ReliableOutputChannelSequencer(id, destination, env, lastSequenceNr))))
+  def createBuffer(destination: ActorRef) = {
+    context.watch(context.actorOf(Props(new ReliableOutputChannelBuffer(id, destination, env, lastSequenceNr))))
   }
 
   override def preStart() {
@@ -272,7 +230,7 @@ object ReliableOutputChannel {
   case object FeedMe
 }
 
-class ReliableOutputChannelSequencer(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv, val lastSequenceNr: Long) extends Sequencer {
+class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv, val lastSequenceNr: Long) extends Actor {
   import ReliableOutputChannel._
 
   var rocSenderQueue = Queue.empty[Message]
@@ -280,7 +238,7 @@ class ReliableOutputChannelSequencer(channelId: Int, destination: ActorRef, env:
 
   val rocSender = context.actorOf(Props(new ReliableOutputChannelSender(channelId, destination, env)))
 
-  def receiveSequenced = {
+  def receive = {
     case msg: Message => {
       rocSenderQueue = rocSenderQueue.enqueue(msg)
       if (!rocSenderBusy) {
@@ -322,6 +280,8 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: Re
       queue = q
 
       val future = destination.ask(msg)(Channel.destinationTimeout)
+      val ctx = context
+
 
       future onSuccess {
         case _ => {
@@ -331,7 +291,7 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: Re
       }
 
       future onFailure {
-        case e => context.system.scheduler.scheduleOnce(env.retryDelay, self, Retry(msg))
+        case e => ctx.system.scheduler.scheduleOnce(env.retryDelay, self, Retry(msg))
       }
     } else {
       sequencer.foreach(_ ! FeedMe)
