@@ -33,7 +33,7 @@ class Journaler(dir: File) extends Actor {
   import Journaler._
 
   // TODO: make configurable
-  val serializer = new JavaSerializer[Message]
+  val serializer = new JavaSerializer[Value]
 
   val levelDbReadOptions = new ReadOptions
   val levelDbWriteOptions = new WriteOptions().sync(false)
@@ -66,16 +66,16 @@ class Journaler(dir: File) extends Actor {
   }
 
   def write(key: Key): Unit =
-    leveldb.put(key.bytes, Array.empty[Byte], levelDbWriteOptions)
+    leveldb.put(key.bytes, serializer.toBytes(Value()), levelDbWriteOptions)
 
   def write(key: Key, message: Message): Unit =
-    leveldb.put(key.bytes, serializer.toBytes(message), levelDbWriteOptions)
+    leveldb.put(key.bytes, serializer.toBytes(Value(message = message)), levelDbWriteOptions)
 
   def write(ackKey: Key, msgKey: Key, message: Message): Unit = {
     val batch = leveldb.createWriteBatch()
     try {
-      batch.put(ackKey.bytes, Array.empty[Byte])
-      batch.put(msgKey.bytes, serializer.toBytes(message))
+      batch.put(ackKey.bytes, serializer.toBytes(Value()))
+      batch.put(msgKey.bytes, serializer.toBytes(Value(message = message)))
       leveldb.write(batch, levelDbWriteOptions)
     } finally {
       batch.close()
@@ -108,7 +108,7 @@ class Journaler(dir: File) extends Actor {
       assert(nextKey.confirmingChannelId == 0)
       if (key.componentId         == nextKey.componentId &&
           key.initiatingChannelId == nextKey.initiatingChannelId) {
-        val msg = serializer.fromBytes(nextEntry.getValue)
+        val msg = serializer.fromBytes(nextEntry.getValue).message
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(msg.copy(acks = channelIds))
         replay(iter, nextKey, p)
@@ -193,6 +193,8 @@ object Journaler {
       new Key(componentId, initiatingChannelId, sequenceNumber, confirmingChannelId)
     }
   }
+
+  case class Value(timestamp: Long = System.currentTimeMillis(), message: Message = null)
 }
 
 class ReplicatingJournaler(dir: File) extends Actor {
