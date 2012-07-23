@@ -26,37 +26,39 @@ import akka.util.Timeout
 
 import org.apache.commons.io.FileUtils
 
-import org.scalatest._
+import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
-class Example extends WordSpec with MustMatchers with BeforeAndAfterEach with BeforeAndAfterAll {
-  implicit val system = ActorSystem("test")
-  implicit val timeout = Timeout(5 seconds)
+class Example extends WordSpec with MustMatchers {
+  type FixtureParam = Fixture
 
-  val journalDir = new File("target/journal")
+  class Fixture {
+    implicit val system = ActorSystem("test")
+    implicit val timeout = Timeout(5 seconds)
 
-  override protected def beforeEach() {
-    FileUtils.deleteDirectory(journalDir)
-  }
-
-  override protected def afterAll() {
-    system.shutdown()
-  }
-
-  def fixture = new {
+    val journalDir = new File("target/journal")
     val journaler = system.actorOf(Props(new Journaler(journalDir)))
-  }
 
-  def createExampleComponent(journaler: ActorRef, destination: ActorRef) = {
-    Component(0, journaler)
+    def createExampleComponent(journaler: ActorRef, destination: ActorRef) = Component(0, journaler)
       .addDefaultOutputChannelToSelf("self")
       .addReliableOutputChannelToActor("dest", destination)
       .setProcessor(outputChannels => system.actorOf(Props(new ExampleAggregator(outputChannels))))
+
+    def shutdown() {
+      system.shutdown()
+      system.awaitTermination(5 seconds)
+      FileUtils.deleteDirectory(journalDir)
+    }
+  }
+
+  def withFixture(test: OneArgTest) {
+    val fixture = new Fixture
+    try { test(fixture) } finally { fixture.shutdown() }
   }
 
   "An event-sourced component" must {
-    "recover state from stored event messages" in {
-      val f = fixture; import f._
+    "recover state from stored event messages" in { fixture =>
+      import fixture._
 
       val exchanger = new Exchanger[Message]
       val destination = system.actorOf(Props(new ExampleDestination(exchanger)))

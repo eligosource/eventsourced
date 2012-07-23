@@ -26,48 +26,41 @@ import akka.util.Timeout
 
 import org.apache.commons.io.FileUtils
 
-import org.scalatest._
+import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
-import akka.dispatch.Await
 
-class CompositeRecoverySpec extends WordSpec with MustMatchers with BeforeAndAfterEach with BeforeAndAfterAll {
-  implicit val system = ActorSystem("test")
-  implicit val timeout = Timeout(5 seconds)
+class CompositeRecoverySpec extends WordSpec with MustMatchers {
+  import Journaler._
 
-  val journalDir = new File("target/journal")
+  type FixtureParam = Fixture
 
-  override protected def beforeEach() {
-    FileUtils.deleteDirectory(journalDir)
-  }
+  class Fixture {
+    implicit val system = ActorSystem("test")
+    implicit val timeout = Timeout(5 seconds)
 
-  override protected def afterAll() {
-    system.shutdown()
-  }
-
-  def createExampleComposite(journaler: ActorRef, destination: ActorRef, reliable: Boolean): Component = {
-    val c1 = Component(0, journaler)
-    val c2 = Component(1, journaler)
-
-    // create directed, cyclic graph
-    if (reliable) {
-      c1.addReliableOutputChannelToComponent("next", c2)
-      c2.addReliableOutputChannelToComponent("next", c1)
-      c1.addReliableOutputChannelToActor("dest", destination)
-    } else {
-      c1.addDefaultOutputChannelToComponent("next", c2)
-      c2.addDefaultOutputChannelToComponent("next", c1)
-      c1.addDefaultOutputChannelToActor("dest", destination)
-    }
-
-    c2.setProcessor(outputChannels => system.actorOf(Props(new C2Processor(outputChannels))))
-    c1.setProcessor(outputChannels => system.actorOf(Props(new C1Processor(outputChannels))))
-  }
-
-  def fixture = new {
-    val queue = new LinkedBlockingQueue[Message]
-
+    val journalDir = new File("target/journal")
     val journaler = system.actorOf(Props(new Journaler(journalDir)))
+
+    val queue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Receiver(queue)))
+
+    def createExampleComposite(journaler: ActorRef, destination: ActorRef, reliable: Boolean): Component = {
+      val c1 = Component(0, journaler)
+      val c2 = Component(1, journaler)
+
+      if (reliable) {
+        c1.addReliableOutputChannelToComponent("next", c2)
+        c2.addReliableOutputChannelToComponent("next", c1)
+        c1.addReliableOutputChannelToActor("dest", destination)
+      } else {
+        c1.addDefaultOutputChannelToComponent("next", c2)
+        c2.addDefaultOutputChannelToComponent("next", c1)
+        c1.addDefaultOutputChannelToActor("dest", destination)
+      }
+
+      c2.setProcessor(outputChannels => system.actorOf(Props(new C2Processor(outputChannels))))
+      c1.setProcessor(outputChannels => system.actorOf(Props(new C1Processor(outputChannels))))
+    }
 
     def write(cmd: Any) {
       Await.result(journaler ? cmd, timeout.duration)
@@ -76,14 +69,23 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers with BeforeAndAft
     def dequeue(timeout: Long = 5000): Message = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
     }
+
+    def shutdown() {
+      system.shutdown()
+      system.awaitTermination(5 seconds)
+      FileUtils.deleteDirectory(journalDir)
+    }
   }
 
-  import Journaler._
+  def withFixture(test: OneArgTest) {
+    val fixture = new Fixture
+    try { test(fixture) } finally { fixture.shutdown() }
+  }
 
   "An event-sourced composite (directed cyclic component graph)" when {
     "using reliable output channels" must {
-      "recover from failures" in {
-        val f = fixture; import f._
+      "recover from failures" in { fixture =>
+        import fixture._
 
         // ----------------------------------
         // Example journal state after crash
@@ -114,8 +116,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers with BeforeAndAft
         dequeue() must be(Message(InputModified("a-0-0-2"), None, Some("1"), 1))
         dequeue() must be(Message(InputModified("b-1-1-3"), None, Some("2"), 2))
       }
-      "recover from failures and support duplicate detection" in {
-        val f = fixture; import f._
+      "recover from failures and support duplicate detection" in { fixture =>
+        import fixture._
 
         // ----------------------------------
         // Example journal state after crash
@@ -151,8 +153,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers with BeforeAndAft
       }
     }
     "using default output channels" must {
-      "recover from failures" in {
-        val f = fixture; import f._
+      "recover from failures" in { fixture =>
+        import fixture._
 
         // ----------------------------------
         // Example journal state after crash
@@ -179,8 +181,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers with BeforeAndAft
         dequeue() must be(Message(InputModified("a-0-0-2"), None, Some("1"), 1))
         dequeue() must be(Message(InputModified("b-1-1-3"), None, Some("2"), 2))
       }
-      "recover from failures and support duplicate detection" in {
-        val f = fixture; import f._
+      "recover from failures and support duplicate detection" in { fixture =>
+        import fixture._
 
         // ----------------------------------
         // Example journal state after crash
