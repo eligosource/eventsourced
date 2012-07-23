@@ -23,8 +23,6 @@ import akka.pattern.ask
 import akka.util.duration._
 import akka.util._
 
-import Message._
-
 /**
  * A communication channel used by an event-sourced Component to interact with
  * its environment. A channel is used to communicate via event messages.
@@ -155,7 +153,6 @@ trait OutputChannel extends Channel {
 class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: ActorRef) extends OutputChannel {
   import Channel._
   import Journaler._
-  import Message._
 
   assert(id > 0)
 
@@ -207,10 +204,8 @@ case class ReliableOutputChannelEnv(
  */
 class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends OutputChannel {
   import Channel._
-  import ReliableOutputChannel._
-
   import Journaler._
-  import Message._
+  import ReliableOutputChannel._
 
   assert(id > 0)
 

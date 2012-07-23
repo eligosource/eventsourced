@@ -45,7 +45,6 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers with BeforeAn
 
   import Channel._
   import Journaler._
-  import Message._
 
   def fixture = new {
     val queue = new LinkedBlockingQueue[Either[Message, Message]]

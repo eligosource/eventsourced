@@ -79,7 +79,6 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers with BeforeAndAft
   }
 
   import Journaler._
-  import Message._
 
   "An event-sourced composite (directed cyclic component graph)" when {
     "using reliable output channels" must {
