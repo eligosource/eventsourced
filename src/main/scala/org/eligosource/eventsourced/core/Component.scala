@@ -43,9 +43,9 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   val inputChannel = system.actorOf(Props(new InputChannel(id, journaler)))
   val inputProducer = system.actorOf(Props(new InputChannelProducer(inputChannel)))
 
+  private var inputProcessor: Option[ActorRef] = None
   private var outputChannels = Map.empty[String, ActorRef]
   private var outputDependencies = List.empty[Component]
-  private var processor: Option[ActorRef] = None
 
   def addReliableOutputChannelToSelf(name: String): Component = {
     addReliableOutputChannelToActor(name, inputChannel)
@@ -83,22 +83,32 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
 
   def setProcessor(processorFactory: Map[String, ActorRef] => ActorRef): Component = {
     checkSetProcessorPreconditions()
-    processor = Some(processorFactory(outputChannels))
-    inputChannel ! Channel.SetProcessor(processor.get)
+    inputProcessor = Some(processorFactory(outputChannels))
+    inputChannel ! Channel.SetProcessor(inputProcessor.get)
     this
+  }
+
+  def processor: Option[ActorRef] =
+    inputProcessor
+
+  /**
+   * Synchronizes message counters of channels with the journal.
+   */
+  def recount(): Unit = {
+    outputChannels.values.foreach(_ ! Recount)
   }
 
   /**
    * Recovers processor state by replaying input events.
    */
-  def replay(fromSequenceNr: Long = 0L, duration: Duration = 5 seconds): Unit = processor foreach { p =>
+  def replay(fromSequenceNr: Long = 0L, duration: Duration = 5 seconds): Unit = inputProcessor foreach { p =>
     Await.result(journaler.ask(Replay(id, inputChannelId, fromSequenceNr, p))(duration), duration)
   }
 
   /**
-   * Delivers pending messages from output channels.
+   * Initializes output channels and delivers pending messages, if needed.
    */
-  def deliver(): Unit = processor foreach { _ =>
+  def deliver(): Unit = inputProcessor foreach { _ =>
     outputChannels.values.foreach(_ ! Deliver)
   }
 
@@ -133,11 +143,11 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   }
 
   private def checkAddChannelPreconditions() {
-    if (processor.isDefined) throw new IllegalStateException("output channels cannot be added after processor has been set")
+    if (inputProcessor.isDefined) throw new IllegalStateException("output channels cannot be added after processor has been set")
   }
 
   private def checkSetProcessorPreconditions() {
-    if (processor.isDefined) throw new IllegalStateException("processor can only be set once")
+    if (inputProcessor.isDefined) throw new IllegalStateException("processor can only be set once")
   }
 }
 
@@ -149,4 +159,15 @@ object Component {
     apply(id, system.actorOf(Props(new Journaler(journalDir))))
 
   val invalidStateMessage = "output channels cannot be added after processor has been set"
+}
+
+object Composite {
+  def recount(composite: Component): Unit =
+    composite.foreach(_.recount())
+
+  def replay(composite: Component, duration: Duration = 5 seconds): Unit =
+    composite.foreach(_.replay())
+
+  def deliver(composite: Component): Unit =
+    composite.foreach(_.deliver())
 }

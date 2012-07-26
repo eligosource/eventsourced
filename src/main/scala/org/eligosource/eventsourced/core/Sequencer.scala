@@ -23,14 +23,11 @@ import akka.actor.Actor
 trait Sequencer extends Actor {
   import scala.collection.mutable.Map
 
-  /** Sequence number of last message that has been delivered by this sequencer. */
-  def lastSequenceNr: Long
+  val delayed = Map.empty[Long, Any]
+  var delivered = 0L
 
   /** Implemented by subclasses to received sequenced messages. */
   def receiveSequenced: Receive
-
-  val delayed = Map.empty[Long, Any]
-  var delivered = lastSequenceNr
 
   def receive = {
     case (seqnr: Long, msg) => {

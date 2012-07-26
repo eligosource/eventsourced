@@ -29,8 +29,7 @@ import akka.actor.ActorRef
  *        fail-over).
  * @param sequenceNr a message sequence number assigned by a component's input channel.
  * @param acks list of output channel ids that have acknowledged a message-send. This
- *        list can only-be non-empty during a replay.
- * @param naks not used at the moment.
+ *        list is only non-empty during a replay.
  * @param replicated true if this is a replicated message.
  */
 case class Message(
@@ -38,7 +37,6 @@ case class Message(
   sender: Option[ActorRef] = None,
   senderMessageId: Option[String] = None,
   sequenceNr: Long = 0L,
-  acks: List[Int] = Nil, // list of output channel ids which ACKed input message (set by replayer)
-  naks: List[Int] = Nil, // list of output channel ids which NAKed input message (set by replayer)
+  acks: List[Int] = Nil,
   replicated: Boolean = false
 )

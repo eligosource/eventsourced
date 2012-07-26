@@ -18,11 +18,13 @@ package org.eligosource.eventsourced.core
 import java.io.File
 import java.nio.ByteBuffer
 
+import collection.immutable.Queue
+
 import akka.actor._
 import akka.dispatch._
 import akka.pattern.ask
 import akka.util.duration._
-import akka.util.Timeout
+import akka.util.{Duration, Timeout}
 
 import org.fusesource.leveldbjni.JniDBFactory._
 import org.iq80.leveldb._
@@ -33,7 +35,7 @@ class Journaler(dir: File) extends Actor {
   import Journaler._
 
   // TODO: make configurable
-  val serializer = new JavaSerializer[Value]
+  private val serializer = new JavaSerializer[Value]
 
   val levelDbReadOptions = new ReadOptions
   val levelDbWriteOptions = new WriteOptions().sync(false)
@@ -46,12 +48,12 @@ class Journaler(dir: File) extends Actor {
     }
     case WriteMsg(key, msg, target) => {
       write(key, msg.copy(sender = None))
-      target ! msg
+      if (target != context.system.deadLetters) { target ! msg }
       sender ! ()
     }
     case WriteAckAndMsg(ackKey, msgKey, msg, target) => {
       write(ackKey, msgKey, msg.copy(sender = None))
-      target ! msg
+      if (target != context.system.deadLetters) { target ! msg }
       sender ! ()
     }
     case DeleteMsg(key) => {
@@ -196,17 +198,24 @@ object Journaler {
     }
   }
 
-  case class Value(timestamp: Long = System.currentTimeMillis(), message: Message = null)
+  private case class Value(timestamp: Long = System.currentTimeMillis(), message: Message = null)
 }
 
-class ReplicatingJournaler(dir: File) extends Actor {
+class ReplicatingJournaler(journaler: ActorRef) extends Actor {
   import Journaler._
   import Replicator._
 
   implicit val executor = context.dispatcher
 
+  var counter = 1L
   var replicator: Option[ActorRef] = None
-  var journaler: ActorRef = context.actorOf(Props(new Journaler(dir)))
+  val sequencer: ActorRef = context.actorOf(Props(new Sequencer {
+    delivered = 0L
+
+    def receiveSequenced = {
+      case (target: ActorRef, message) => target ! message
+    }
+  }))
 
   def receive = {
     case SetReplicator(r) => {
@@ -218,35 +227,52 @@ class ReplicatingJournaler(dir: File) extends Actor {
     case cmd: GetLastSequenceNr => {
       journaler forward cmd
     }
-    case cmd => {
-      val f1 = journaler.ask(cmd)(journalerTimeout)
-      val f2 = if (replicator.isDefined) replicator.get.ask(cmd)(replicatorTimeout) else Promise.successful(())
-      val f3 = Future.sequence(List(f1, f2))
-
-      val s = sender
-
-      f3 onSuccess {
-        case r => s ! r
+    case cmd: WriteMsg => {
+      val c = counter
+      journalAndReplicate(cmd.copy(target = context.system.deadLetters)) {
+        sequencer ! (c, (cmd.target, cmd.msg))
       }
+      counter = counter + 1
+    }
+    case cmd: WriteAckAndMsg => {
+      val c = counter
+      journalAndReplicate(cmd.copy(target = context.system.deadLetters)) {
+        sequencer ! (c, (cmd.target, cmd.msg))
+      }
+      counter = counter + 1
+    }
+    case cmd => {
+      journalAndReplicate(cmd)(())
+    }
+  }
 
-      f3 onFailure {
-        case e => {
-          val f1Success = f1.value.map(_.isRight).getOrElse(false)
-          val f2Success = f2.value.map(_.isRight).getOrElse(false)
-          (f1Success, f2Success) match {
-            case (true, false) => {
-              // continue at risk without replication
-              self ! SetReplicator(None)
+  def journalAndReplicate(cmd: Any)(success: => Unit) {
+    val jf = journaler.ask(cmd)(journalerTimeout)
+    val rf = if (replicator.isDefined) replicator.get.ask(cmd)(replicatorTimeout) else Promise.successful(())
+    val cf = Future.sequence(List(jf, rf))
 
-              // inform sender about journaling result
-              s ! f1.value.get.right.get
+    val s = sender
 
-              // TODO: inform cluster manager to re-attach slave
-              // ...
-            }
-            case other => {
-              sender ! Status.Failure(e)
-            }
+    cf onSuccess {
+      case r => { success; s ! () }
+    }
+
+    cf onFailure {
+      case e => {
+        val jfSuccess = jf.value.map(_.isRight).getOrElse(false)
+        val rfSuccess = rf.value.map(_.isRight).getOrElse(false)
+
+        (jfSuccess, rfSuccess) match {
+          case (true, false) => {
+            // continue at risk without replication
+            self ! SetReplicator(None)
+            // inform sender about journaling result
+            s ! jf.value.get.right.get
+            // ...
+            // TODO: inform cluster manager to re-attach slave
+          }
+          case other => {
+            sender ! Status.Failure(e)
           }
         }
       }
@@ -258,29 +284,76 @@ class Replicator(journaler: ActorRef) extends Actor {
   import Journaler._
   import Replicator._
 
-  var inputChannels = Map.empty[Int, ActorRef] // componentId -> inputChannel
+  var components = Map.empty[Int, Component] // TODO: map to components
+
+  var inputBuffer = Queue.empty[(Int, Message)]
+  var inputBufferSize = 0
+
+  //var completionStarted = false
+
+  /**
+   * EXPERIMENTAL:
+   *
+   * Use an input buffer instead of directly sending messages to input channels.
+   * This may compensate for situations where input messages are replicated but
+   * replicating the corresponding ACKs did not occur during a master failure.
+   *
+   * TODO: make inputBufferLimit configurable.
+   */
+  val inputBufferLimit = 10
 
   def receive = {
-    case RegisterInputChannel(componentId, inputChannel) => {
-      inputChannels = inputChannels + (componentId -> inputChannel)
+    case RegisterComponents(composite) => {
+      components = composite.foldLeft(components) { (a, c) =>
+        if (c.processor.isDefined) a + (c.id -> c) else a
+      }
+    }
+    case CompleteReplication => {
+      // synchronize channel counters with journal
+      components.values.foreach(_.recount())
+
+      // compute replay starting position for components referenced in input buffer
+      val replayFrom = inputBuffer.reverse.foldLeft(Map.empty[Int, Long]) { (a, e) =>
+        val (cid, m) = e
+        a + (cid -> m.sequenceNr)
+      }
+
+      // then replay ...
+      for {
+        (cid, snr) <- replayFrom
+        component  <- components.get(cid)
+      } component.replay(snr)
+
+      // and deliver pending messages
+      components.values.foreach(_.deliver())
+
+      // reply that components are recovered
+      sender ! ()
+
+      // will not receive further messages
+      context.stop(self)
     }
     case cmd @ WriteMsg(key, msg, target) => {
-      journal(cmd, sender) { inputChannels.get(key.componentId).foreach(_ ! msg.copy(replicated = true)) }
+      inputBuffer = inputBuffer.enqueue(key.componentId, msg.copy(replicated = true))
+      inputBufferSize = inputBufferSize + 1
+
+      if (inputBufferSize > inputBufferLimit) {
+        val ((cid, m), b) = inputBuffer.dequeue
+        inputBuffer = b
+        inputBufferSize = inputBufferSize -1
+        for {
+          c <- components.get(cid)
+          p <- c.processor
+        } p ! m
+      }
+
+      journaler forward cmd.copy(target = context.system.deadLetters)
+    }
+    case cmd: WriteAckAndMsg => {
+      journaler forward cmd.copy(target = context.system.deadLetters)
     }
     case cmd => {
-      journal(cmd, sender)(())
-    }
-  }
-
-  def journal(cmd: Any, sender: ActorRef)(success: => Unit) {
-    val future = journaler.ask(cmd)(journalerTimeout)
-
-    future onSuccess {
-      case r => { sender ! r; success }
-    }
-
-    future onFailure {
-      case e => sender ! Status.Failure(e)
+      journaler forward cmd
     }
   }
 }
@@ -290,5 +363,11 @@ object Replicator {
   val journalerTimeout = Timeout(5 seconds)
 
   case class SetReplicator(replicator: Option[ActorRef])
-  case class RegisterInputChannel(componentId: Int, inputChannel: ActorRef)
+  case class RegisterComponents(composite: Component)
+
+  case object CompleteReplication
+
+  def complete(replicator: ActorRef, duration: Duration) {
+    Await.result(replicator.ask(CompleteReplication)(duration), duration)
+  }
 }

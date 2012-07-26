@@ -54,6 +54,7 @@ object Channel {
   case class SetDestination(processor: ActorRef)
 
   case object Deliver
+  case object Recount
 }
 
 /**
@@ -73,24 +74,27 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
   var processor: Option[ActorRef] = None
 
   def receive = {
-    case Message(evt, sdr, sdrmid, _, _, _, false) => {
-      val msg = Message(evt, sdr, sdrmid, counter, Nil, Nil)
+    case Message(evt, sdr, sdrmid, _, _, false) => {
+      val msg = Message(evt, sdr, sdrmid, counter)
       val key = Key(componentId, id, msg.sequenceNr, 0)
 
       processor foreach { p => journaler forward WriteMsg(key, msg, p) }
       counter = counter + 1
     }
-    case msg @ Message(_, _, _, _, _, _, true) => {
-      processor.foreach(_.!(msg.copy(sender = None))(null))
+    case Recount => {
+      recount
     }
     case cmd @ SetProcessor(p) => {
       processor = Some(p)
     }
   }
 
+  def recount() {
+    counter = lastSequenceNr + 1
+  }
+
   override def preStart() {
-    val lsn = lastSequenceNr
-    counter = lsn + 1
+    recount
   }
 }
 
@@ -127,8 +131,8 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
   var buffer = List.empty[(Long, Message)]
 
   def receive = {
-    case Message(evt, sdr, sdrmid, seqnr, acks, _, replicated) if (!acks.contains(id) && !replicated) => {
-      val msg = Message(evt, sdr, sdrmid, counter, Nil, Nil)
+    case Message(evt, sdr, sdrmid, seqnr, acks, replicated) if (!acks.contains(id) && !replicated) => {
+      val msg = Message(evt, sdr, sdrmid, counter)
 
       if (retain) buffer = (seqnr, msg) :: buffer
       else sendOutputMessage(msg, seqnr)
@@ -145,7 +149,7 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
     }
   }
 
-  def sendOutputMessage(msg: Message, ackSequenceNr: Long) = destination foreach{ d =>
+  def sendOutputMessage(msg: Message, ackSequenceNr: Long) = destination foreach { d =>
     d.ask(msg)(destinationTimeout) onSuccess {
       case r => journaler.!(WriteAck(Key(componentId, inputChannelId, ackSequenceNr, id)))(null)
     }
@@ -181,13 +185,16 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   var buffer: Option[ActorRef] = None
 
   def receive = {
-    case Message(evt, sdr, sdrmid, seqnr, acks, _, replicated)  if (!acks.contains(id) && !replicated) => {
-      val msg = Message(evt, sdr, sdrmid, counter, Nil, Nil)
+    case Message(evt, sdr, sdrmid, seqnr, acks, replicated)  if (!acks.contains(id) && !replicated) => {
+      val msg = Message(evt, sdr, sdrmid, counter)
       val msgKey = Key(componentId, id, msg.sequenceNr, 0)
       val ackKey = Key(componentId, inputChannelId, seqnr, id)
 
-      journaler forward WriteAckAndMsg(ackKey, msgKey, msg, buffer.getOrElse(context.system.deadLetters))
+      journaler.!(WriteAckAndMsg(ackKey, msgKey, msg, buffer.getOrElse(context.system.deadLetters)))(null)
       counter = counter + 1
+    }
+    case Recount => {
+      recount()
     }
     case Deliver => destination foreach { d =>
       buffer = Some(createBuffer(d))
@@ -212,8 +219,12 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
     context.watch(context.actorOf(Props(new ReliableOutputChannelBuffer(id, destination, env, lastSequenceNr))))
   }
 
-  override def preStart() {
+  def recount() {
     counter = lastSequenceNr + 1L
+  }
+
+  override def preStart() {
+    recount()
   }
 }
 
@@ -267,8 +278,10 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: Re
   var retries = 0
 
   def receive = {
-    case Trigger => sender ! FeedMe
-    case q: Queue[Message] => { // food
+    case Trigger => {
+      sender ! FeedMe
+    }
+    case q: Queue[Message] => {
       sequencer = Some(sender)
       queue = q
       self ! Next(retries)
