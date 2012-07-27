@@ -281,27 +281,23 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
   }
 }
 
-class Replicator(journaler: ActorRef) extends Actor {
+class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor {
   import Journaler._
   import Replicator._
 
-  var components = Map.empty[Int, Component] // TODO: map to components
+  var components = Map.empty[Int, Component]
+
+  /**
+   * EXPERIMENTAL
+   *
+   * Use an input buffer instead of directly sending messages to processor.
+   * This may compensate for situations where input messages are replicated
+   * but replicating the corresponding ACKs did not (or only partially) occur
+   * during a master failure.
+   */
 
   var inputBuffer = Queue.empty[(Int, Message)]
   var inputBufferSize = 0
-
-  //var completionStarted = false
-
-  /**
-   * EXPERIMENTAL:
-   *
-   * Use an input buffer instead of directly sending messages to input channels.
-   * This may compensate for situations where input messages are replicated but
-   * replicating the corresponding ACKs did not occur during a master failure.
-   *
-   * TODO: make inputBufferLimit configurable.
-   */
-  val inputBufferLimit = 10
 
   def receive = {
     case RegisterComponents(composite) => {

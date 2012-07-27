@@ -94,7 +94,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       import slaveFixture._
 
-      val replicator = system.actorOf(Props(new Replicator(slaveFixture.journaler)))
+      val replicator = system.actorOf(Props(new Replicator(slaveFixture.journaler, 10)))
       def replicate(cmd: Any) = Await.result(replicator ? cmd, timeout.duration)
 
       replicator ! RegisterComponents(slaveComponent)
@@ -150,7 +150,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       import slaveFixture._
 
-      val replicator = system.actorOf(Props(new Replicator(slaveFixture.journaler)))
+      val replicator = system.actorOf(Props(new Replicator(slaveFixture.journaler, 10)))
       def replicate(cmd: Any) = Await.result(replicator ? cmd, timeout.duration)
 
       replicator ! RegisterComponents(slaveComponent)
@@ -209,7 +209,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     // Create a replicator. This is usually a remote actor created
     // on a slave node and used on the master node. In this test,
     // master and slave are co-located
-    val replicator = slaveFixture.system.actorOf(Props(new Replicator(slaveFixture.journaler)))
+    val replicator = slaveFixture.system.actorOf(Props(new Replicator(slaveFixture.journaler, 10)))
 
     // Replicator event-sources slave component/composite with
     // replicated messages
