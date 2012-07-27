@@ -112,6 +112,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
         val composite = createExampleComposite(journaler, destination, true)
 
+        Composite.recount(composite)
         Composite.replay(composite)
         Composite.deliver(composite)
 
@@ -146,6 +147,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
         val composite = createExampleComposite(journaler, destination, true)
 
+        Composite.recount(composite)
         Composite.replay(composite)
         Composite.deliver(composite)
 
@@ -177,6 +179,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
         val composite = createExampleComposite(journaler, destination, false)
 
+        Composite.recount(composite)
         Composite.replay(composite)
         Composite.deliver(composite)
 
@@ -206,6 +209,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
         val composite = createExampleComposite(journaler, destination, false)
 
+        Composite.recount(composite)
         Composite.replay(composite)
         Composite.deliver(composite)
 

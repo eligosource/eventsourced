@@ -28,8 +28,6 @@ import akka.util._
  * its environment. A channel is used to communicate via event messages.
  */
 trait Channel extends Actor {
-  import Journaler._
-
   def id: Int
   def componentId: Int
 
@@ -38,23 +36,18 @@ trait Channel extends Actor {
   def journaler: ActorRef
   val journalerTimeout = Timeout(10 seconds)
 
-  var counter = 0L
-
-  def lastSequenceNr: Long = {
-    val future = journaler.ask(GetLastSequenceNr(componentId, id))(journalerTimeout).mapTo[Long]
-    Await.result(future, journalerTimeout.duration)
-  }
+  var counter = 1L
 }
 
 object Channel {
   val inputChannelId = 0
   val destinationTimeout = Timeout(5 seconds)
 
+  case class SetCounter(counter: Long)
   case class SetProcessor(processor: ActorRef)
   case class SetDestination(processor: ActorRef)
 
   case object Deliver
-  case object Recount
 }
 
 /**
@@ -81,20 +74,12 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
       processor foreach { p => journaler forward WriteMsg(key, msg, p) }
       counter = counter + 1
     }
-    case Recount => {
-      recount
+    case SetCounter(c) => {
+      counter = c
     }
     case cmd @ SetProcessor(p) => {
       processor = Some(p)
     }
-  }
-
-  def recount() {
-    counter = lastSequenceNr + 1
-  }
-
-  override def preStart() {
-    recount
   }
 }
 
@@ -154,10 +139,6 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
       case r => journaler.!(WriteAck(Key(componentId, inputChannelId, ackSequenceNr, id)))(null)
     }
   }
-
-  override def preStart() {
-    counter = 1L
-  }
 }
 
 case class ReliableOutputChannelEnv(
@@ -176,7 +157,6 @@ case class ReliableOutputChannelEnv(
 class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends OutputChannel {
   import Channel._
   import Journaler._
-  import ReliableOutputChannel._
 
   assert(id > 0)
 
@@ -193,16 +173,16 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
       journaler.!(WriteAckAndMsg(ackKey, msgKey, msg, buffer.getOrElse(context.system.deadLetters)))(null)
       counter = counter + 1
     }
-    case Recount => {
-      recount()
-    }
     case Deliver => destination foreach { d =>
       buffer = Some(createBuffer(d))
       deliverPendingMessages(buffer.get)
     }
-    case Terminated(s) => buffer foreach { s =>
+    case Terminated(s) => buffer foreach { b =>
       buffer = None
       context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Deliver)
+    }
+    case SetCounter(c) => {
+      counter = c
     }
     case cmd @ SetDestination(d) => if (destination.isEmpty) {
       destination = Some(d)
@@ -210,21 +190,11 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   }
 
   def deliverPendingMessages(destination: ActorRef) {
-    val cmd = Replay(componentId, id, 0L, destination)
-    // wait for all stored messages to be added to the destination's mailbox
-    Await.result(journaler.ask(cmd)(defaultReplayTimeout), defaultReplayTimeout.duration)
+    journaler ! Replay(componentId, id, 0L, destination)
   }
 
   def createBuffer(destination: ActorRef) = {
-    context.watch(context.actorOf(Props(new ReliableOutputChannelBuffer(id, destination, env, lastSequenceNr))))
-  }
-
-  def recount() {
-    counter = lastSequenceNr + 1L
-  }
-
-  override def preStart() {
-    recount()
+    context.watch(context.actorOf(Props(new ReliableOutputChannelBuffer(id, destination, env))))
   }
 }
 
@@ -241,7 +211,7 @@ object ReliableOutputChannel {
   case object FeedMe
 }
 
-class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv, val lastSequenceNr: Long) extends Actor {
+class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv) extends Actor {
   import ReliableOutputChannel._
 
   var rocSenderQueue = Queue.empty[Message]

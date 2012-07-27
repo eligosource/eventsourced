@@ -44,8 +44,9 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   val inputProducer = system.actorOf(Props(new InputChannelProducer(inputChannel)))
 
   private var inputProcessor: Option[ActorRef] = None
-  private var outputChannels = Map.empty[String, ActorRef]
   private var outputDependencies = List.empty[Component]
+  private var outputChannelsForName = Map.empty[String, ActorRef]
+  private var outputChannelsForId = Map.empty[Int, ActorRef]
 
   def addReliableOutputChannelToSelf(name: String): Component = {
     addReliableOutputChannelToActor(name, inputChannel)
@@ -56,34 +57,26 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   }
 
   def addReliableOutputChannelToActor(name: String, destination: ActorRef, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
-    checkAddChannelPreconditions()
-    outputChannels = outputChannels + (name -> createReliableOutputChannel(destination, recoveryDelay, retryDelay, retryMax))
-    this
+    addReliableOutputChannel(name, destination, recoveryDelay, retryDelay, retryMax)
   }
 
   def addReliableOutputChannelToComponent(name: String, component: Component, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
-    checkAddChannelPreconditions()
-    outputChannels = outputChannels + (name -> createReliableOutputChannel(component.inputChannel, recoveryDelay, retryDelay, retryMax))
     outputDependencies = component :: outputDependencies
-    this
+    addReliableOutputChannel(name, component.inputChannel, recoveryDelay, retryDelay, retryMax)
   }
 
   def addDefaultOutputChannelToActor(name: String, destination: ActorRef): Component = {
-    checkAddChannelPreconditions()
-    outputChannels = outputChannels + (name -> createDefaultOutputChannel(destination))
-    this
+    addDefaultOutputChannel(name, destination)
   }
 
   def addDefaultOutputChannelToComponent(name: String, component: Component): Component = {
-    checkAddChannelPreconditions()
-    outputChannels = outputChannels + (name -> createDefaultOutputChannel(component.inputChannel))
     outputDependencies = component :: outputDependencies
-    this
+    addDefaultOutputChannel(name, component.inputChannel)
   }
 
   def setProcessor(processorFactory: Map[String, ActorRef] => ActorRef): Component = {
     checkSetProcessorPreconditions()
-    inputProcessor = Some(processorFactory(outputChannels))
+    inputProcessor = Some(processorFactory(outputChannelsForName))
     inputChannel ! Channel.SetProcessor(inputProcessor.get)
     this
   }
@@ -95,21 +88,25 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
    * Synchronizes message counters of channels with the journal.
    */
   def recount(): Unit = {
-    outputChannels.values.foreach(_ ! Recount)
+    // set counter on input channel
+    journaler ! Recount(this.id, Channel.inputChannelId, count => inputChannel ! SetCounter(count + 1))
+
+    // set counter on reliable output channels
+    for ((id, ch)  <- outputChannelsForId) journaler ! Recount(this.id, id, count => ch ! SetCounter(count + 1))
   }
 
   /**
    * Recovers processor state by replaying input events.
    */
   def replay(fromSequenceNr: Long = 0L, duration: Duration = 5 seconds): Unit = inputProcessor foreach { p =>
-    Await.result(journaler.ask(Replay(id, inputChannelId, fromSequenceNr, p))(duration), duration)
+    journaler ! Replay(id, inputChannelId, fromSequenceNr, p)
   }
 
   /**
    * Initializes output channels and delivers pending messages, if needed.
    */
   def deliver(): Unit = inputProcessor foreach { _ =>
-    outputChannels.values.foreach(_ ! Deliver)
+    outputChannelsForName.values.foreach(_ ! Deliver)
   }
 
   /**
@@ -127,19 +124,32 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     }
   }
 
-  private def createDefaultOutputChannel(destination: ActorRef) = {
-    val channelId = outputChannels.size + 1
+  private def addDefaultOutputChannel(name: String, destination: ActorRef) = {
+    checkAddChannelPreconditions()
+
+    val channelId = outputChannelsForName.size + 1
     val channel = system.actorOf(Props(new DefaultOutputChannel(id, channelId, journaler)))
+
     channel ! Channel.SetDestination(destination)
-    channel
+
+    outputChannelsForName = outputChannelsForName + (name -> channel)
+
+    this
   }
 
-  private def createReliableOutputChannel(destination: ActorRef, recoveryDelay: Duration, retryDelay: Duration, retryMax: Int) = {
-    val channelId = outputChannels.size + 1
+  private def addReliableOutputChannel(name: String, destination: ActorRef, recoveryDelay: Duration, retryDelay: Duration, retryMax: Int) = {
+    checkAddChannelPreconditions()
+
+    val channelId = outputChannelsForName.size + 1
     val channelEnv = ReliableOutputChannelEnv(id, journaler, recoveryDelay, retryDelay, retryMax)
     val channel = system.actorOf(Props(new ReliableOutputChannel(channelId, channelEnv)))
+
     channel ! Channel.SetDestination(destination)
-    channel
+
+    outputChannelsForName = outputChannelsForName + (name -> channel)
+    outputChannelsForId = outputChannelsForId + (channelId -> channel)
+
+    this
   }
 
   private def checkAddChannelPreconditions() {

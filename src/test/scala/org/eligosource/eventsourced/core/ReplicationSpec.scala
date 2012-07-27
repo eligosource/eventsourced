@@ -82,14 +82,17 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     }
   }
 
-  "A master component with reliable output channels" must {
-    "failover to a hot-standby slave component" in { pair =>
+  "A replicated component with reliable output channels" must {
+    "be able to fail over" in { pair =>
       failover(pair._1, pair._2, true)
     }
   }
-  "A master component with default output channels" must {
-    "failover to a hot-standby slave component" in { pair =>
+  "A replicated component with default output channels" must {
+    "be able to fail over" in { pair =>
       failover(pair._1, pair._2, false)
+    }
+    "blah" in { pair =>
+
     }
   }
 
@@ -117,9 +120,10 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     // ---------
 
     // Initialize output channels on master
+    Composite.recount(masterComponent)
     Composite.deliver(masterComponent)
 
-    //{
+    {
       import masterFixture.timeout
       import masterFixture.system
 
@@ -128,7 +132,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       // await journaling and replication
       Await.result(Future.sequence(submissions), timeout.duration)
-    //}
+    }
 
     // now assume master crashed and there's a failover to slave
     // ...
@@ -155,9 +159,16 @@ class ReplicationSpec extends WordSpec with MustMatchers {
       messages = slaveFixture.dequeue() :: messages
     } while (messages.head.event != 21)
 
+    // TODO: demonstrate that there can be actually gaps
     messages.reverse.foldLeft(0) { (a, m) =>
-      // test for increasing numbers (where gaps are allowed)
-      m.event match { case num: Int => { a must be <= (num); num } }
+      // test for increasing event numbers (where gaps are allowed)
+      m.event match { case num: Int => { a must be < (num); num } }
+    }
+
+    // TODO: demonstrate that there can be gaps in sequence numbers
+    messages.reverse.foldLeft(messages.last.sequenceNr - 1L) { (a, m) =>
+    // test for increasing sequence numbers (gaps are not allowed)
+      m.sequenceNr match { case snr => { a must be(snr - 1); snr } }
     }
 
     messages.foreach(println)

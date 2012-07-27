@@ -64,6 +64,7 @@ class Example extends WordSpec with MustMatchers {
       val destination = system.actorOf(Props(new ExampleDestination(exchanger)))
       var component = createExampleComponent(journaler, destination)
 
+      component.recount()
       component.deliver()
 
       // send InputAvailable event to event-sourced component
@@ -84,6 +85,7 @@ class Example extends WordSpec with MustMatchers {
       component = createExampleComponent(journaler, destination)
 
       // recover in-memory state by initializing the new component
+      component.recount()
       component.replay()
       component.deliver()
 

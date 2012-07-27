@@ -60,12 +60,13 @@ class Journaler(dir: File) extends Actor {
       delete(key)
       sender ! ()
     }
+    case Recount(compId, chanId, p) => {
+      p(lastSequenceNr(compId, chanId))
+      sender ! ()
+    }
     case Replay(compId, chanId, fromNr, target) => {
       replay(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
       sender ! ()
-    }
-    case GetLastSequenceNr(compId, chanId) => {
-      sender ! lastSequenceNr(compId, chanId)
     }
   }
 
@@ -167,9 +168,9 @@ object Journaler {
   case class WriteMsg(key: Key, msg: Message, target: ActorRef)
   case class WriteAckAndMsg(ackKey: Key, msgKey: Key, msg: Message, target: ActorRef)
   case class WriteAck(key: Key)
-  case class Replay(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
 
-  case class GetLastSequenceNr(componentId: Int, channelId: Int)
+  case class Replay(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
+  case class Recount(componentId: Int, channelId: Int, p: Long => Unit)
 
   case class Key(
     componentId: Int,
@@ -221,10 +222,10 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
     case SetReplicator(r) => {
       replicator = r
     }
-    case cmd: Replay => {
+    case cmd: Recount => {
       journaler forward cmd
     }
-    case cmd: GetLastSequenceNr => {
+    case cmd: Replay => {
       journaler forward cmd
     }
     case cmd: WriteMsg => {
@@ -330,7 +331,7 @@ class Replicator(journaler: ActorRef) extends Actor {
       // reply that components are recovered
       sender ! ()
 
-      // will not receive further messages
+      // and ignore further messages
       context.stop(self)
     }
     case cmd @ WriteMsg(key, msg, target) => {

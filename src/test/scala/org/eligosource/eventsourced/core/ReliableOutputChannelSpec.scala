@@ -92,6 +92,8 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
 
         write(Message("x", None, None, 7L))
 
+        journaler ! Recount(0, 1, count => channel ! SetCounter(count + 1L))
+
         channel ! SetDestination(successDestination)
         channel ! Deliver
 
