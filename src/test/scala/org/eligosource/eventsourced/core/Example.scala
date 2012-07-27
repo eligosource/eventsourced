@@ -64,8 +64,7 @@ class Example extends WordSpec with MustMatchers {
       val destination = system.actorOf(Props(new ExampleDestination(exchanger)))
       var component = createExampleComponent(journaler, destination)
 
-      component.recount()
-      component.deliver()
+      component.init()
 
       // send InputAvailable event to event-sourced component
       component.inputProducer ! InputAvailable("category-a", "input-1") // no response expected
@@ -85,9 +84,7 @@ class Example extends WordSpec with MustMatchers {
       component = createExampleComponent(journaler, destination)
 
       // recover in-memory state by initializing the new component
-      component.recount()
-      component.replay()
-      component.deliver()
+      component.init()
 
       // now trigger the next aggregation (2 messages of category-b missing)
       component.inputProducer ! InputAvailable("category-b", "input-8") // no response expected

@@ -309,7 +309,7 @@ class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor
       // synchronize channel counters with journal
       components.values.foreach(_.recount())
 
-      // compute replay starting position for components referenced in input buffer
+      // compute replay starting position for components referenced from input buffer
       val replayFrom = inputBuffer.reverse.foldLeft(Map.empty[Int, Long]) { (a, e) =>
         val (cid, m) = e
         a + (cid -> m.sequenceNr)
@@ -321,7 +321,7 @@ class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor
         component  <- components.get(cid)
       } component.replay(snr)
 
-      // and deliver pending messages
+      // and deliver pending output messages
       components.values.foreach(_.deliver())
 
       // reply that components are recovered

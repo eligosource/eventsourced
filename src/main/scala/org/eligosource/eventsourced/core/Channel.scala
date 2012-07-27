@@ -18,7 +18,6 @@ package org.eligosource.eventsourced.core
 import scala.collection.immutable.Queue
 
 import akka.actor._
-import akka.dispatch._
 import akka.pattern.ask
 import akka.util.duration._
 import akka.util._

@@ -196,7 +196,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
       failover(pair._1, pair._2, true)
     }
   }
-  "A component with default output channels" must {
+  "A master component with default output channels" must {
     "be able to fail over to a slave component" in { pair =>
       failover(pair._1, pair._2, false)
     }
@@ -223,8 +223,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     // ---------
 
     // Initialize output channels on master
-    Composite.recount(masterComponent)
-    Composite.deliver(masterComponent)
+    Composite.init(masterComponent)
 
     {
       import masterFixture.timeout

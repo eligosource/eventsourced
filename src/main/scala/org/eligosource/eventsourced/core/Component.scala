@@ -18,10 +18,7 @@ package org.eligosource.eventsourced.core
 import java.io.File
 
 import akka.actor._
-import akka.dispatch._
-import akka.pattern.ask
 import akka.util.Duration
-import akka.util.duration._
 
 /**
  * An event-sourced component that uses an application-defined actor (processor)
@@ -48,21 +45,17 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   private var outputChannelsForName = Map.empty[String, ActorRef]
   private var outputChannelsForId = Map.empty[Int, ActorRef]
 
-  def addReliableOutputChannelToSelf(name: String): Component = {
-    addReliableOutputChannelToActor(name, inputChannel)
-  }
-
-  def addDefaultOutputChannelToSelf(name: String): Component = {
-    addDefaultOutputChannelToActor(name, inputChannel)
-  }
-
-  def addReliableOutputChannelToActor(name: String, destination: ActorRef, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+  def addReliableOutputChannelToActor(name: String, destination: ActorRef, recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
     addReliableOutputChannel(name, destination, recoveryDelay, retryDelay, retryMax)
   }
 
-  def addReliableOutputChannelToComponent(name: String, component: Component, recoveryDelay: Duration  = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+  def addReliableOutputChannelToComponent(name: String, component: Component, recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
     outputDependencies = component :: outputDependencies
     addReliableOutputChannel(name, component.inputChannel, recoveryDelay, retryDelay, retryMax)
+  }
+
+  def addReliableOutputChannelToSelf(name: String, recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+    addReliableOutputChannelToActor(name, inputChannel, recoveryDelay, retryDelay, retryMax)
   }
 
   def addDefaultOutputChannelToActor(name: String, destination: ActorRef): Component = {
@@ -74,6 +67,10 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     addDefaultOutputChannel(name, component.inputChannel)
   }
 
+  def addDefaultOutputChannelToSelf(name: String): Component = {
+    addDefaultOutputChannelToActor(name, inputChannel)
+  }
+
   def setProcessor(processorFactory: Map[String, ActorRef] => ActorRef): Component = {
     checkSetProcessorPreconditions()
     inputProcessor = Some(processorFactory(outputChannelsForName))
@@ -83,6 +80,15 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
 
   def processor: Option[ActorRef] =
     inputProcessor
+
+  /**
+   * Initializes this component, recovering from existing journal data if necessary.
+   */
+  def init(fromSequenceNr: Long = 0L): Unit = {
+    recount()
+    replay(fromSequenceNr)
+    deliver()
+  }
 
   /**
    * Synchronizes message counters of channels with the journal.
@@ -98,7 +104,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   /**
    * Recovers processor state by replaying input events.
    */
-  def replay(fromSequenceNr: Long = 0L, duration: Duration = 5 seconds): Unit = inputProcessor foreach { p =>
+  def replay(fromSequenceNr: Long = 0L): Unit = inputProcessor foreach { p =>
     journaler ! Replay(id, inputChannelId, fromSequenceNr, p)
   }
 
@@ -172,12 +178,18 @@ object Component {
 }
 
 object Composite {
-  def recount(composite: Component): Unit =
+  def init(composite: Component) = {
+    recount(composite)
+    replay(composite)
+    deliver(composite)
+  }
+
+  def recount(composite: Component) =
     composite.foreach(_.recount())
 
-  def replay(composite: Component, duration: Duration = 5 seconds): Unit =
+  def replay(composite: Component) =
     composite.foreach(_.replay())
 
-  def deliver(composite: Component): Unit =
+  def deliver(composite: Component) =
     composite.foreach(_.deliver())
 }
