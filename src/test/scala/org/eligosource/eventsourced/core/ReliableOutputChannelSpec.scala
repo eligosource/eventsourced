@@ -39,25 +39,28 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     implicit val system = ActorSystem("test")
     implicit val timeout = Timeout(5 seconds)
 
-    val queue = new LinkedBlockingQueue[Either[Message, Message]]
+    val destinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
 
     val successDestination =
-      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue, None)))
+      system.actorOf(Props(new TestDesination(destinationQueue, None)))
     def failureDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new ReliableOutputChannelTestDesination(queue, Some(failAtEvent), enqueueFailures, failureCount)))
+      system.actorOf(Props(new TestDesination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount)))
+
+    val writeMsgListenerQueue = new LinkedBlockingQueue[WriteMsg]
+    val writeMsgListener = system.actorOf(Props(new WriteMsgListener(writeMsgListenerQueue)))
 
     val journalDir = new File("target/journal")
 
-    lazy val journaler =
+    val journaler =
       system.actorOf(Props(new Journaler(journalDir)))
-    lazy val channel =
+    val channel =
       system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(1, journaler, 10 milliseconds, 10 milliseconds, 3))))
 
     def write(msg: Message) {
       Await.result(journaler ? WriteMsg(1, 1, msg, None, system.deadLetters, false), timeout.duration)
     }
 
-    def dequeue(timeout: Long = 5000): Either[Message, Message] = {
+    def dequeue[A](queue: LinkedBlockingQueue[A], timeout: Long = 5000): A = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
     }
 
@@ -65,6 +68,36 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       system.shutdown()
       system.awaitTermination(5 seconds)
       FileUtils.deleteDirectory(journalDir)
+    }
+
+    class TestDesination(
+      // for interaction with test code
+      blockingQueue: LinkedBlockingQueue[Either[Message, Message]],
+      // event where first failure should occur
+      failAtEvent: Option[Any],
+      // if failing messages should be added to queue
+      enqueueFailures: Boolean = false,
+      // number of messages that will fail
+      var failureCount: Int = 0) extends Actor {
+
+      def receive = {
+        case msg: Message => {
+          if (failAtEvent.map(_ == msg.event).getOrElse(false) && failureCount > 0) {
+            failureCount = failureCount - 1
+            sender ! Status.Failure(new Exception("test"))
+            if (enqueueFailures) blockingQueue.put(Left(msg))
+          } else {
+            sender ! ()
+            blockingQueue.put(Right(msg))
+          }
+        }
+      }
+    }
+
+    class WriteMsgListener(blockingQueue: LinkedBlockingQueue[WriteMsg]) extends Actor {
+      def receive = {
+        case cmd: WriteMsg => blockingQueue.put(cmd)
+      }
     }
   }
 
@@ -84,8 +117,8 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         channel ! SetDestination(successDestination)
         channel ! Deliver
 
-        dequeue() must be (Right(Message("a", None, None, 4L)))
-        dequeue() must be (Right(Message("b", None, None, 5L)))
+        dequeue(destinationQueue) must be (Right(Message("a", None, None, 4L)))
+        dequeue(destinationQueue) must be (Right(Message("b", None, None, 5L)))
       }
     }
     "delivering a single output message" must {
@@ -96,9 +129,9 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         channel ! Deliver
         channel ! Message("a")
 
-        dequeue() must be (Left(Message("a", None, None, 1L)))
-        dequeue() must be (Left(Message("a", None, None, 1L)))  // redelivery 1
-        dequeue() must be (Right(Message("a", None, None, 1L))) // redelivery 2
+        dequeue(destinationQueue) must be (Left(Message("a", None, None, 1L)))
+        dequeue(destinationQueue) must be (Left(Message("a", None, None, 1L)))  // redelivery 1
+        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 2
       }
     }
     "delivering multiple output messages" must {
@@ -130,38 +163,42 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
           Right(Message(7, None, None, 7L))  // success    at event 7
         )
 
-        List.fill(12)(dequeue()) must be(expected)
+        List.fill(12)(dequeue(destinationQueue)) must be(expected)
 
         // send another message to reliable output channel
         channel ! Message(8, None, None, 0L)
 
         // check that sequence number is updated appropriately
-        dequeue() must be(Right(Message(8, None, None, 8L)))
+        dequeue(destinationQueue) must be(Right(Message(8, None, None, 8L)))
       }
     }
   }
-}
+  "A reliable output channel" must {
+    "acknowledge messages by default" in { fixture =>
+      import fixture._
 
-class ReliableOutputChannelTestDesination(
-    // for interaction with test code
-    blockingQueue: LinkedBlockingQueue[Either[Message, Message]],
-    // event where first failure should occur
-    failAtEvent: Option[Any],
-    // if failing messages should be added to queue
-    enqueueFailures: Boolean = false,
-    // number of messages that will fail
-    var failureCount: Int = 0) extends Actor {
+      journaler ! SetCommandListener(Some(writeMsgListener))
 
-  def receive = {
-    case msg: Message => {
-      if (failAtEvent.map(_ == msg.event).getOrElse(false) && failureCount > 0) {
-        failureCount = failureCount - 1
-        sender ! Status.Failure(new Exception("test"))
-        if (enqueueFailures) blockingQueue.put(Left(msg))
-      } else {
-        sender ! ()
-        blockingQueue.put(Right(msg))
-      }
+      channel ! Message("a", sequenceNr = 1)
+      channel ! Deliver
+      channel ! Message("b", sequenceNr = 2)
+
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (Some(1))
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (Some(2))
+    }
+    "not acknowledge messages on request" in { fixture =>
+      import fixture._
+
+      journaler ! SetCommandListener(Some(writeMsgListener))
+
+      channel ! Message("a", sequenceNr = 1, ack = false)
+      channel ! Deliver
+      channel ! Message("b", sequenceNr = 2, ack = false)
+      channel ! Message("c", sequenceNr = 3)
+
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (None)
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (None)
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (Some(3))
     }
   }
 }

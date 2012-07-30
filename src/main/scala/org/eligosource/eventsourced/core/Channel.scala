@@ -101,10 +101,6 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
 
   assert(id > 0)
 
-  // ------------------------
-  //  TODO: BATCH PROCESSING
-  // ------------------------
-
   var retain = true
   var buffer = List.empty[Message]
 
@@ -125,7 +121,7 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
 
   def send(msg: Message) = destination foreach { d =>
     d.ask(msg)(destinationTimeout) onSuccess {
-      case r => journaler ! WriteAck(componentId, id, msg.sequenceNr)
+      case _ if (msg.ack) => journaler ! WriteAck(componentId, id, msg.sequenceNr)
     }
   }
 }
@@ -149,17 +145,14 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
 
   assert(id > 0)
 
-  // ------------------------
-  //  TODO: BATCH PROCESSING
-  // ------------------------
-
   val componentId = env.componentId
   val journaler = env.journaler
   var buffer: Option[ActorRef] = None
 
   def receive = {
     case msg: Message if (!msg.acks.contains(id) && !msg.replicated) => {
-      journaler ! WriteMsg(componentId, id, msg, Some(msg.sequenceNr), buffer.getOrElse(context.system.deadLetters))
+      val ackSequenceNr = if (msg.ack) Some(msg.sequenceNr) else None
+      journaler ! WriteMsg(componentId, id, msg, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
     }
     case Deliver => destination foreach { d =>
       buffer = Some(createBuffer(d))

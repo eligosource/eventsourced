@@ -41,6 +41,7 @@ class Journaler(dir: File) extends Actor {
   val levelDbWriteOptions = new WriteOptions().sync(false)
   val leveldb = factory.open(dir, new Options().createIfMissing(true))
 
+  var commandListener: Option[ActorRef] = None
   var counter = 0L
 
   def receive = {
@@ -49,14 +50,17 @@ class Journaler(dir: File) extends Actor {
       execute(c)
       if (c.target != context.system.deadLetters) c.target ! c.message
       sender ! ()
+      commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteAck => {
       execute(cmd)
       sender ! ()
+      commandListener.foreach(_ ! cmd)
     }
     case cmd: DeleteMsg => {
       execute(cmd)
       sender ! ()
+      commandListener.foreach(_ ! cmd)
     }
     case Replay(compId, chanId, fromNr, target) => {
       replay(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
@@ -64,6 +68,9 @@ class Journaler(dir: File) extends Actor {
     }
     case GetCounter => {
       sender ! getCounter
+    }
+    case SetCommandListener(cl) => {
+      commandListener = cl
     }
   }
 
@@ -168,6 +175,7 @@ object Journaler {
   case class Replay(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
 
   case object GetCounter
+  case class SetCommandListener(listener: Option[ActorRef])
 
   private val CounterKeyBytes = Key(0, 0, 0L, 0).bytes
 
