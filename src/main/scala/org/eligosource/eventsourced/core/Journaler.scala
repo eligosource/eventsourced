@@ -50,12 +50,6 @@ class Journaler(dir: File) extends Actor {
       if (c.target != context.system.deadLetters) c.target ! c.message
       sender ! ()
     }
-    case cmd: WriteMsgs => {
-      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
-      execute(c)
-      if (c.target != context.system.deadLetters) c.messages.foreach(c.target.!)
-      sender ! ()
-    }
     case cmd: WriteAck => {
       execute(cmd)
       sender ! ()
@@ -84,29 +78,6 @@ class Journaler(dir: File) extends Actor {
       batch.put(CounterKeyBytes, counterToBytes(counter))
       batch.put(k.bytes, serializer.toBytes(m.copy(sender = None)))
 
-      // optionally, add ack to batch
-      cmd.ackSequenceNr.foreach { snr =>
-        val k = Key(cmd.componentId, Channel.inputChannelId, snr, cmd.channelId)
-        batch.put(k.bytes, Array.empty[Byte])
-      }
-      leveldb.write(batch, levelDbWriteOptions)
-      counter = counter + 1
-    } finally {
-      batch.close()
-    }
-  }
-
-  def execute(cmd: WriteMsgs) {
-    val batch = leveldb.createWriteBatch()
-    try {
-      // add all messages to batch
-      cmd.messages.foreach { msg =>
-        counter = msg.sequenceNr
-        val k = Key(cmd.componentId, cmd.channelId, msg.sequenceNr, 0)
-        val m = msg.copy(sender = None)
-        batch.put(CounterKeyBytes, counterToBytes(counter))
-        batch.put(k.bytes, serializer.toBytes(m.copy(sender = None)))
-      }
       // optionally, add ack to batch
       cmd.ackSequenceNr.foreach { snr =>
         val k = Key(cmd.componentId, Channel.inputChannelId, snr, cmd.channelId)
@@ -191,12 +162,6 @@ object Journaler {
       copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
     }
   }
-  case class WriteMsgs(componentId: Int, channelId: Int, messages: List[Message], ackSequenceNr: Option[Long], target: ActorRef, genSequenceNr: Boolean = true) {
-    def forSequenceNr(snr: Long) = {
-      var ctr = snr - 1
-      copy(messages = messages.map { m => ctr = ctr + 1; m.copy(sequenceNr = ctr) }, genSequenceNr = false)
-    }
-  }
 
   case class WriteAck(componentId: Int, channelId: Int, ackSequenceNr: Long)
   case class DeleteMsg(componentId: Int, channelId: Int, msgSequenceNr: Long)
@@ -269,15 +234,6 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
       }
       deliveryCounter = deliveryCounter + 1
       messageCounter = c.message.sequenceNr + 1
-    }
-    case cmd: WriteMsgs => {
-      val d = deliveryCounter
-      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(messageCounter) else cmd
-      execute(c.copy(target = context.system.deadLetters)) {
-        sequencer ! (d, (c.target, c.messages))
-      }
-      deliveryCounter = deliveryCounter + 1
-      messageCounter = cmd.messages.lastOption.map(_.sequenceNr).getOrElse(messageCounter) + 1 // TODO: optimize
     }
     case cmd => {
       execute(cmd)(())
@@ -391,10 +347,6 @@ class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor
 
     case cmd: WriteMsg => {
       if (cmd.channelId == Channel.inputChannelId) delay(cmd.componentId, cmd.message)
-      journaler forward cmd.copy(target = context.system.deadLetters)
-    }
-    case cmd: WriteMsgs => {
-      if (cmd.channelId == Channel.inputChannelId) cmd.messages.foreach(m => delay(cmd.componentId, m))
       journaler forward cmd.copy(target = context.system.deadLetters)
     }
     case cmd: WriteAck => {
