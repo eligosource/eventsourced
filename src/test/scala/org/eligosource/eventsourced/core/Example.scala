@@ -16,7 +16,7 @@
 package org.eligosource.eventsourced.core
 
 import java.io.File
-import java.util.concurrent.{TimeUnit, Exchanger}
+import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 import akka.actor._
 import akka.dispatch._
@@ -39,10 +39,17 @@ class Example extends WordSpec with MustMatchers {
     val journalDir = new File("target/journal")
     val journaler = system.actorOf(Props(new Journaler(journalDir)))
 
-    def createExampleComponent(journaler: ActorRef, destination: ActorRef) = Component(0, journaler)
+    val queue = new LinkedBlockingQueue[Message]
+    val destination = system.actorOf(Props(new ExampleDestination(queue)))
+
+    def createExampleComponent = Component(1, journaler)
       .addDefaultOutputChannelToSelf("self")
       .addReliableOutputChannelToActor("dest", destination)
       .setProcessor(outputChannels => system.actorOf(Props(new ExampleAggregator(outputChannels))))
+
+    def dequeue(timeout: Long = 5000): Message = {
+      queue.poll(timeout, TimeUnit.MILLISECONDS)
+    }
 
     def shutdown() {
       system.shutdown()
@@ -60,9 +67,7 @@ class Example extends WordSpec with MustMatchers {
     "recover state from stored event messages" in { fixture =>
       import fixture._
 
-      val exchanger = new Exchanger[Message]
-      val destination = system.actorOf(Props(new ExampleDestination(exchanger)))
-      var component = createExampleComponent(journaler, destination)
+      var component = createExampleComponent
 
       component.init()
 
@@ -76,12 +81,12 @@ class Example extends WordSpec with MustMatchers {
       Await.result(future, timeout.duration) must be("aggregated 3 messages of category-a")
 
       // obtain output event message delivered to destination
-      var delivered = exchanger.exchange(null, 5, TimeUnit.SECONDS)
+      var delivered = dequeue()
       delivered.event must be(InputAggregated("category-a", List("input-1", "input-2", "input-3")))
       delivered.senderMessageId must be(Some("aggregated-1"))
 
       // now drop all in-memory state by creating a new component
-      component = createExampleComponent(journaler, destination)
+      component = createExampleComponent
 
       // recover in-memory state by initializing the new component
       component.init()
@@ -94,7 +99,7 @@ class Example extends WordSpec with MustMatchers {
       Await.result(future, timeout.duration) must be("aggregated 3 messages of category-b")
 
       // obtain next output event message delivered to destination
-      delivered = exchanger.exchange(null, 5, TimeUnit.SECONDS)
+      delivered = dequeue()
       delivered.event must be(InputAggregated("category-b", List("input-7", "input-8", "input-9")))
       delivered.senderMessageId must be(Some("aggregated-2"))
     }
@@ -132,8 +137,8 @@ class ExampleAggregator(outputChannels: Map[String, ActorRef]) extends Actor {
   }
 }
 
-class ExampleDestination(exchanger: Exchanger[Message]) extends Actor {
+class ExampleDestination(queue: LinkedBlockingQueue[Message]) extends Actor {
   def receive = {
-    case msg: Message => { exchanger.exchange(msg); sender ! () }
+    case msg: Message => { queue.put(msg); sender ! () }
   }
 }

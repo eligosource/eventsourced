@@ -34,15 +34,12 @@ trait Channel extends Actor {
 
   def journaler: ActorRef
   val journalerTimeout = Timeout(10 seconds)
-
-  var counter = 1L
 }
 
 object Channel {
   val inputChannelId = 0
   val destinationTimeout = Timeout(5 seconds)
 
-  case class SetCounter(counter: Long)
   case class SetProcessor(processor: ActorRef)
   case class SetDestination(processor: ActorRef)
 
@@ -66,15 +63,8 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
   var processor: Option[ActorRef] = None
 
   def receive = {
-    case Message(evt, sdr, sdrmid, _, _, false) => {
-      val msg = Message(evt, sdr, sdrmid, counter)
-      val key = Key(componentId, id, msg.sequenceNr, 0)
-
-      processor foreach { p => journaler forward WriteMsg(key, msg, p) }
-      counter = counter + 1
-    }
-    case SetCounter(c) => {
-      counter = c
+    case msg: Message => {
+      processor foreach { p => journaler forward WriteMsg(componentId, id, msg, None, p) }
     }
     case cmd @ SetProcessor(p) => {
       processor = Some(p)
@@ -99,7 +89,7 @@ trait OutputChannel extends Channel {
 
 /**
  * An output channel that sends event messages to a destination. If the destination responds
- * with a successful result, a send confirmation is written to the journal.
+ * with a successful result, an acknowledgement is written to the journal.
  *
  * @param componentId id of the input channel owner
  * @param id output channel id
@@ -111,21 +101,21 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
 
   assert(id > 0)
 
+  // ------------------------
+  //  TODO: BATCH PROCESSING
+  // ------------------------
+
   var retain = true
-  var buffer = List.empty[(Long, Message)]
+  var buffer = List.empty[Message]
 
   def receive = {
-    case Message(evt, sdr, sdrmid, seqnr, acks, replicated) if (!acks.contains(id) && !replicated) => {
-      val msg = Message(evt, sdr, sdrmid, counter)
-
-      if (retain) buffer = (seqnr, msg) :: buffer
-      else sendOutputMessage(msg, seqnr)
-
-      counter = counter + 1
+    case msg: Message if (!msg.acks.contains(id) && !msg.replicated) => {
+      if (retain) buffer = msg :: buffer
+      else send(msg)
     }
     case Deliver => {
       retain = false
-      buffer.reverse.foreach(t => sendOutputMessage(t._2, t._1))
+      buffer.reverse.foreach(send)
       buffer = Nil
     }
     case SetDestination(d) => {
@@ -133,9 +123,9 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
     }
   }
 
-  def sendOutputMessage(msg: Message, ackSequenceNr: Long) = destination foreach { d =>
+  def send(msg: Message) = destination foreach { d =>
     d.ask(msg)(destinationTimeout) onSuccess {
-      case r => journaler.!(WriteAck(Key(componentId, inputChannelId, ackSequenceNr, id)))(null)
+      case r => journaler ! WriteAck(componentId, id, msg.sequenceNr)
     }
   }
 }
@@ -159,18 +149,17 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
 
   assert(id > 0)
 
+  // ------------------------
+  //  TODO: BATCH PROCESSING
+  // ------------------------
+
   val componentId = env.componentId
   val journaler = env.journaler
   var buffer: Option[ActorRef] = None
 
   def receive = {
-    case Message(evt, sdr, sdrmid, seqnr, acks, replicated)  if (!acks.contains(id) && !replicated) => {
-      val msg = Message(evt, sdr, sdrmid, counter)
-      val msgKey = Key(componentId, id, msg.sequenceNr, 0)
-      val ackKey = Key(componentId, inputChannelId, seqnr, id)
-
-      journaler.!(WriteAckAndMsg(ackKey, msgKey, msg, buffer.getOrElse(context.system.deadLetters)))(null)
-      counter = counter + 1
+    case msg: Message if (!msg.acks.contains(id) && !msg.replicated) => {
+      journaler ! WriteMsg(componentId, id, msg, Some(msg.sequenceNr), buffer.getOrElse(context.system.deadLetters))
     }
     case Deliver => destination foreach { d =>
       buffer = Some(createBuffer(d))
@@ -179,9 +168,6 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
     case Terminated(s) => buffer foreach { b =>
       buffer = None
       context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Deliver)
-    }
-    case SetCounter(c) => {
-      counter = c
     }
     case cmd @ SetDestination(d) => if (destination.isEmpty) {
       destination = Some(d)
@@ -267,7 +253,7 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: Re
 
       future onSuccess {
         case _ => {
-          env.journaler.!(DeleteMsg(Key(env.componentId, channelId, msg.sequenceNr, 0)))(null)
+          env.journaler ! DeleteMsg(env.componentId, channelId, msg.sequenceNr)
           self ! Next(0)
         }
       }

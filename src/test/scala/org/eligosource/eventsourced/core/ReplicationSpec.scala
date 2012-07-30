@@ -49,13 +49,13 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     }))
 
     def component(reliable: Boolean) = if (reliable) {
-      Component(0, replicatingJournaler)
+      Component(1, replicatingJournaler)
         .addReliableOutputChannelToActor("dest", dest)
         .setProcessor { outputChannels =>
         system.actorOf(Props(new ReplicatedProcessor(outputChannels)))
       }
     } else {
-      Component(0, replicatingJournaler)
+      Component(1, replicatingJournaler)
         .addDefaultOutputChannelToActor("dest", dest)
         .setProcessor { outputChannels =>
         system.actorOf(Props(new ReplicatedProcessor(outputChannels)))
@@ -94,45 +94,28 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       import slaveFixture._
 
-      val replicator = system.actorOf(Props(new Replicator(slaveFixture.journaler, 10)))
+      val replicator = system.actorOf(Props(new Replicator(slaveFixture.replicatingJournaler, 10)))
       def replicate(cmd: Any) = Await.result(replicator ? cmd, timeout.duration)
 
       replicator ! RegisterComponents(slaveComponent)
 
       // all input messages are replicated
       1 to 20 foreach { i =>
-        replicate(WriteMsg(Key(0, 0, i, 0), Message(i, None, None, i), dl))
+        replicate(WriteMsg(1, 0, Message(i, None, None, i), None, dl, false))
       }
 
       // only out messages and acks 1 - 14 are replicated
       1 to 14 foreach { i =>
-        replicate(WriteAckAndMsg(Key(0, 0, i, 1), Key(0, 1, i, 0), Message(i, None, None, i), dl))
+        replicate(WriteMsg(1, 1, Message(i, None, None, 20 + i), Some(i), dl, false))
       }
 
       // out message deletions except 4, 7, 12, 14 are replicated
-      1 to 14 filter (! Set(4, 7, 12, 14).contains(_)) foreach { i =>
-        replicate(DeleteMsg(Key(0, 1, i, 0)))
+      1 to 14 filterNot (Set(4, 7, 12, 14).contains) foreach { i =>
+        replicate(DeleteMsg(1, 1, 20 + i))
       }
 
       Replicator.complete(replicator, 5 seconds)
-
-      slaveComponent.inputChannel ! Message(0)
-
-      // replay starts from message 11 (buffer limit of replicator)
-      // but reliable output channel additionally causes redelivery
-      // of messages 4 and 7.
-      val expected = List(
-        Message(4, None, None, 4L),
-        Message(7, None, None, 7L),
-        Message(12, None, None, 12L),
-        Message(14, None, None, 14L),
-        Message(15, None, None, 15L),
-        Message(16, None, None, 16L),
-        Message(17, None, None, 17L),
-        Message(18, None, None, 18L),
-        Message(19, None, None, 19L),
-        Message(20, None, None, 20L),
-        Message(21, None, None, 21L))
+      slaveComponent.inputChannel ! Message(7000)
 
       var received = List.empty[Message]
 
@@ -140,7 +123,14 @@ class ReplicationSpec extends WordSpec with MustMatchers {
         received = slaveFixture.dequeue() :: received
       } while (received.head.event != 21)
 
-      received.reverse must be(expected)
+      // replay starts from message 11 (buffer limit of replicator) but reliable
+      // output channel additionally causes redelivery of messages 4 and 7.
+      received.reverse.map(_.event) must be (List(4, 7, 12, 14, 15, 16, 17, 18, 19, 20, 21))
+
+      // test for increasing sequence numbers (gaps are allowed)
+      received.reverse.foldLeft(0L) { (a, m) =>
+        m.sequenceNr match { case num => { a must be < (num); num } }
+      }
     }
   }
   "A slave component with default output channels" must {
@@ -150,37 +140,23 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       import slaveFixture._
 
-      val replicator = system.actorOf(Props(new Replicator(slaveFixture.journaler, 10)))
+      val replicator = system.actorOf(Props(new Replicator(slaveFixture.replicatingJournaler, 10)))
       def replicate(cmd: Any) = Await.result(replicator ? cmd, timeout.duration)
 
       replicator ! RegisterComponents(slaveComponent)
 
       // all input messages are replicated
       1 to 20 foreach { i =>
-        replicate(WriteMsg(Key(0, 0, i, 0), Message(i, None, None, i), dl))
+        replicate(WriteMsg(1, 0, Message(i, None, None, i), None, dl, false))
       }
 
       // acknowledgements except 4, 7, 12, 14 are replicated
-      1 to 14 filter (! Set(4, 7, 12, 14).contains(_)) foreach { i =>
-        replicate(WriteAck(Key(0, 0, i, 1)))
+      1 to 14 filterNot (Set(4, 7, 12, 14).contains) foreach { i =>
+        replicate(WriteAck(1, 1, i))
       }
 
       Replicator.complete(replicator, 5 seconds)
-
-      slaveComponent.inputChannel ! Message(0)
-
-      // replay starts from message 11 (buffer limit of replicator) but
-      // default output channel cannot redeliver messages 4 and 7.
-      val expected = List(
-        Message(12, None, None, 1L),
-        Message(14, None, None, 2L),
-        Message(15, None, None, 3L),
-        Message(16, None, None, 4L),
-        Message(17, None, None, 5L),
-        Message(18, None, None, 6L),
-        Message(19, None, None, 7L),
-        Message(20, None, None, 8L),
-        Message(21, None, None, 9L))
+      slaveComponent.inputChannel ! Message(7000)
 
       var received = List.empty[Message]
 
@@ -188,7 +164,14 @@ class ReplicationSpec extends WordSpec with MustMatchers {
         received = slaveFixture.dequeue() :: received
       } while (received.head.event != 21)
 
-      received.reverse must be(expected)
+      // replay starts from message 11 (buffer limit of replicator) but
+      // default output channel cannot redeliver messages 4 and 7.
+      received.reverse.map(_.event) must be (List(12, 14, 15, 16, 17, 18, 19, 20, 21))
+
+      // test for increasing sequence numbers (gaps are allowed)
+      received.reverse.foldLeft(0L) { (a, m) =>
+        m.sequenceNr match { case num => { a must be < (num); num } }
+      }
     }
   }
   "A master component with reliable output channels" must {
@@ -209,7 +192,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     // Create a replicator. This is usually a remote actor created
     // on a slave node and used on the master node. In this test,
     // master and slave are co-located
-    val replicator = slaveFixture.system.actorOf(Props(new Replicator(slaveFixture.journaler, 10)))
+    val replicator = slaveFixture.system.actorOf(Props(new Replicator(slaveFixture.replicatingJournaler, 10)))
 
     // Replicator event-sources slave component/composite with
     // replicated messages
@@ -253,7 +236,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
     // now slave component is the new master and can process
     // new messages. TODO: init replicator on new master
-    slaveComponent.inputChannel ! Message(0)
+    slaveComponent.inputChannel ! Message(7000)
 
     var messages = List.empty[Message]
 
@@ -261,13 +244,13 @@ class ReplicationSpec extends WordSpec with MustMatchers {
       messages = slaveFixture.dequeue() :: messages
     } while (messages.head.event != 21)
 
+    // test for increasing event numbers (gaps are allowed)
     messages.reverse.foldLeft(0) { (a, m) =>
-      // test for increasing event numbers (where gaps are allowed)
       m.event match { case num: Int => { a must be < (num); num } }
     }
 
+    // test for increasing sequence numbers (gaps are allowed)
     messages.reverse.foldLeft(0L) { (a, m) =>
-    // test for increasing sequence numbers (where gaps are allowed with reliable output channels)
       m.sequenceNr match { case num => { a must be < (num); num } }
     }
   }

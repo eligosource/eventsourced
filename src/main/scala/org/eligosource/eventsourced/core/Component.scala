@@ -37,6 +37,8 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     defaultRetryMax      => rtm
   }
 
+  assert(id > 0)
+
   val inputChannel = system.actorOf(Props(new InputChannel(id, journaler)))
   val inputProducer = system.actorOf(Props(new InputChannelProducer(inputChannel)))
 
@@ -85,7 +87,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
    * Initializes this component, recovering from existing journal data if necessary.
    */
   def init(fromSequenceNr: Long = 0L): Unit = {
-    recount()
+    //recount()
     replay(fromSequenceNr)
     deliver()
   }
@@ -93,13 +95,13 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   /**
    * Synchronizes message counters of channels with the journal.
    */
-  def recount(): Unit = {
+  /*def recount(): Unit = {
     // set counter on input channel
     journaler ! Recount(this.id, Channel.inputChannelId, count => inputChannel ! SetCounter(count + 1))
 
     // set counter on reliable output channels
     for ((id, ch)  <- outputChannelsForId) journaler ! Recount(this.id, id, count => ch ! SetCounter(count + 1))
-  }
+  }*/
 
   /**
    * Recovers processor state by replaying input events.
@@ -179,13 +181,13 @@ object Component {
 
 object Composite {
   def init(composite: Component) = {
-    recount(composite)
+    //recount(composite)
     replay(composite)
     deliver(composite)
   }
 
-  def recount(composite: Component) =
-    composite.foreach(_.recount())
+  /*def recount(composite: Component) =
+    composite.foreach(_.recount())*/
 
   def replay(composite: Component) =
     composite.foreach(_.replay())

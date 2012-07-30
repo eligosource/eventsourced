@@ -35,63 +35,111 @@ class Journaler(dir: File) extends Actor {
   import Journaler._
 
   // TODO: make configurable
-  private val serializer = new JavaSerializer[Value]
+  private val serializer = new JavaSerializer[Message]
 
   val levelDbReadOptions = new ReadOptions
   val levelDbWriteOptions = new WriteOptions().sync(false)
   val leveldb = factory.open(dir, new Options().createIfMissing(true))
 
+  var counter = 0L
+
   def receive = {
-    case WriteAck(key) => {
-      write(key)
+    case cmd: WriteMsg => {
+      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
+      execute(c)
+      if (c.target != context.system.deadLetters) c.target ! c.message
       sender ! ()
     }
-    case WriteMsg(key, msg, target) => {
-      write(key, msg.copy(sender = None))
-      if (target != context.system.deadLetters) { target ! msg }
+    case cmd: WriteMsgs => {
+      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
+      execute(c)
+      if (c.target != context.system.deadLetters) c.messages.foreach(c.target.!)
       sender ! ()
     }
-    case WriteAckAndMsg(ackKey, msgKey, msg, target) => {
-      write(ackKey, msgKey, msg.copy(sender = None))
-      if (target != context.system.deadLetters) { target ! msg }
+    case cmd: WriteAck => {
+      execute(cmd)
       sender ! ()
     }
-    case DeleteMsg(key) => {
-      delete(key)
-      sender ! ()
-    }
-    case Recount(compId, chanId, p) => {
-      p(lastSequenceNr(compId, chanId))
+    case cmd: DeleteMsg => {
+      execute(cmd)
       sender ! ()
     }
     case Replay(compId, chanId, fromNr, target) => {
       replay(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
       sender ! ()
     }
+    case GetCounter => {
+      sender ! getCounter
+    }
   }
 
-  def write(key: Key): Unit =
-    leveldb.put(key.bytes, serializer.toBytes(Value()), levelDbWriteOptions)
-
-  def write(key: Key, message: Message): Unit =
-    leveldb.put(key.bytes, serializer.toBytes(Value(message = message)), levelDbWriteOptions)
-
-  def write(ackKey: Key, msgKey: Key, message: Message): Unit = {
+  def execute(cmd: WriteMsg) {
     val batch = leveldb.createWriteBatch()
+    val msg = cmd.message
     try {
-      batch.put(ackKey.bytes, serializer.toBytes(Value()))
-      batch.put(msgKey.bytes, serializer.toBytes(Value(message = message)))
+      // add message to batch
+      counter = msg.sequenceNr
+      val k = Key(cmd.componentId, cmd.channelId, msg.sequenceNr, 0)
+      val m = msg.copy(sender = None)
+      batch.put(CounterKeyBytes, counterToBytes(counter))
+      batch.put(k.bytes, serializer.toBytes(m.copy(sender = None)))
+
+      // optionally, add ack to batch
+      cmd.ackSequenceNr.foreach { snr =>
+        val k = Key(cmd.componentId, Channel.inputChannelId, snr, cmd.channelId)
+        batch.put(k.bytes, Array.empty[Byte])
+      }
       leveldb.write(batch, levelDbWriteOptions)
+      counter = counter + 1
     } finally {
       batch.close()
     }
   }
 
-  def delete(key: Key): Unit =
-    leveldb.delete(key.bytes, levelDbWriteOptions)
+  def execute(cmd: WriteMsgs) {
+    val batch = leveldb.createWriteBatch()
+    try {
+      // add all messages to batch
+      cmd.messages.foreach { msg =>
+        counter = msg.sequenceNr
+        val k = Key(cmd.componentId, cmd.channelId, msg.sequenceNr, 0)
+        val m = msg.copy(sender = None)
+        batch.put(CounterKeyBytes, counterToBytes(counter))
+        batch.put(k.bytes, serializer.toBytes(m.copy(sender = None)))
+      }
+      // optionally, add ack to batch
+      cmd.ackSequenceNr.foreach { snr =>
+        val k = Key(cmd.componentId, Channel.inputChannelId, snr, cmd.channelId)
+        batch.put(k.bytes, Array.empty[Byte])
+      }
+      leveldb.write(batch, levelDbWriteOptions)
+      counter = counter + 1
+    } finally {
+      batch.close()
+    }
+  }
+
+  def execute(cmd: WriteAck) {
+    val k = Key(cmd.componentId, Channel.inputChannelId, cmd.ackSequenceNr, cmd.channelId)
+    leveldb.put(k.bytes, Array.empty[Byte], levelDbWriteOptions)
+  }
+
+  def execute(cmd: DeleteMsg) {
+    val k = Key(cmd.componentId, cmd.channelId, cmd.msgSequenceNr, 0)
+    leveldb.delete(k.bytes, levelDbWriteOptions)
+  }
+
+  override def preStart() {
+    counter = getCounter
+  }
 
   override def postStop() {
     leveldb.close()
+  }
+
+  private def getCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
+    case null  => 1L
+    case bytes => bytesToCounter(bytes) + 1L
   }
 
   private def replay(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
@@ -112,8 +160,8 @@ class Journaler(dir: File) extends Actor {
       val nextKey = Key(nextEntry.getKey)
       assert(nextKey.confirmingChannelId == 0)
       if (key.componentId         == nextKey.componentId &&
-          key.initiatingChannelId == nextKey.initiatingChannelId) {
-        val msg = serializer.fromBytes(nextEntry.getValue).message
+        key.initiatingChannelId == nextKey.initiatingChannelId) {
+        val msg = serializer.fromBytes(nextEntry.getValue)
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(msg.copy(acks = channelIds))
         replay(iter, nextKey, p)
@@ -127,52 +175,44 @@ class Journaler(dir: File) extends Actor {
       val nextEntry = iter.peekNext()
       val nextKey = Key(nextEntry.getKey)
       if (key.componentId         == nextKey.componentId &&
-          key.initiatingChannelId == nextKey.initiatingChannelId &&
-          key.sequenceNr          == nextKey.sequenceNr) {
+        key.initiatingChannelId == nextKey.initiatingChannelId &&
+        key.sequenceNr          == nextKey.sequenceNr) {
         iter.next()
         confirmingChannelIds(iter, nextKey, nextKey.confirmingChannelId :: channelIds)
       } else channelIds
     } else channelIds
   }
 
-  // --------------------------------------------------------
-  //  Slow search of highest sequence number. This is
-  //  because iterator.prev() doesn't work properly in
-  //  leveldbjbi. Not on critical path, only needed on
-  //  application start.
-  // --------------------------------------------------------
-
-  private def lastSequenceNr(componentId: Int, channelId: Int): Long = {
-    val iter = leveldb.iterator()
-    try {
-      val startKey = Key(componentId, channelId, 0L, 0)
-      iter.seek(startKey.bytes)
-      lastSequenceNr(iter, startKey).sequenceNr
-    } finally {
-      iter.close()
-    }
-  }
-
-  @scala.annotation.tailrec
-  private def lastSequenceNr(iter: DBIterator, key: Key): Key = {
-    if (iter.hasNext) {
-      val nextKey = Key(iter.next().getKey)
-      if (key.componentId         == nextKey.componentId &&
-          key.initiatingChannelId == nextKey.initiatingChannelId) lastSequenceNr(iter, nextKey) else key
-    } else key
-  }
 }
 
 object Journaler {
-  case class DeleteMsg(key: Key)
-  case class WriteMsg(key: Key, msg: Message, target: ActorRef)
-  case class WriteAckAndMsg(ackKey: Key, msgKey: Key, msg: Message, target: ActorRef)
-  case class WriteAck(key: Key)
+  case class WriteMsg(componentId: Int, channelId: Int, message: Message, ackSequenceNr: Option[Long], target: ActorRef, genSequenceNr: Boolean = true) {
+    def forSequenceNr(snr: Long) = {
+      copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
+    }
+  }
+  case class WriteMsgs(componentId: Int, channelId: Int, messages: List[Message], ackSequenceNr: Option[Long], target: ActorRef, genSequenceNr: Boolean = true) {
+    def forSequenceNr(snr: Long) = {
+      var ctr = snr - 1
+      copy(messages = messages.map { m => ctr = ctr + 1; m.copy(sequenceNr = ctr) }, genSequenceNr = false)
+    }
+  }
 
+  case class WriteAck(componentId: Int, channelId: Int, ackSequenceNr: Long)
+  case class DeleteMsg(componentId: Int, channelId: Int, msgSequenceNr: Long)
   case class Replay(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
-  case class Recount(componentId: Int, channelId: Int, p: Long => Unit)
 
-  case class Key(
+  case object GetCounter
+
+  private val CounterKeyBytes = Key(0, 0, 0L, 0).bytes
+
+  private def counterToBytes(value: Long) =
+    ByteBuffer.allocate(8).putLong(value).array
+
+  private def bytesToCounter(bytes: Array[Byte]) =
+    ByteBuffer.wrap(bytes).getLong
+
+  private case class Key(
     componentId: Int,
     initiatingChannelId: Int,
     sequenceNr: Long,
@@ -188,7 +228,7 @@ object Journaler {
     }
   }
 
-  case object Key {
+  private case object Key {
     def apply(bytes: Array[Byte]): Key = {
       val bb = ByteBuffer.wrap(bytes)
       val componentId = bb.getInt
@@ -198,8 +238,6 @@ object Journaler {
       new Key(componentId, initiatingChannelId, sequenceNumber, confirmingChannelId)
     }
   }
-
-  private case class Value(timestamp: Long = System.currentTimeMillis(), message: Message = null)
 }
 
 class ReplicatingJournaler(journaler: ActorRef) extends Actor {
@@ -208,54 +246,53 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
 
   implicit val executor = context.dispatcher
 
-  var counter = 1L
-  var replicator: Option[ActorRef] = None
-  val sequencer: ActorRef = context.actorOf(Props(new Sequencer {
-    delivered = 0L
+  var messageCounter = 1L
+  var deliveryCounter = 1L
 
-    def receiveSequenced = {
-      case (target: ActorRef, message) => target ! message
-    }
-  }))
+  var replicator: Option[ActorRef] = None
+  var sequencer: ActorRef = _
+
+  val success = Promise.successful(())
 
   def receive = {
     case SetReplicator(r) => {
       replicator = r
     }
-    case cmd: Recount => {
-      journaler forward cmd
-    }
     case cmd: Replay => {
       journaler forward cmd
     }
     case cmd: WriteMsg => {
-      val c = counter
-      journalAndReplicate(cmd.copy(target = context.system.deadLetters)) {
-        sequencer ! (c, (cmd.target, cmd.msg))
+      val d = deliveryCounter
+      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(messageCounter) else cmd
+      execute(c.copy(target = context.system.deadLetters)) {
+        sequencer ! (d, (c.target, c.message))
       }
-      counter = counter + 1
+      deliveryCounter = deliveryCounter + 1
+      messageCounter = c.message.sequenceNr + 1
     }
-    case cmd: WriteAckAndMsg => {
-      val c = counter
-      journalAndReplicate(cmd.copy(target = context.system.deadLetters)) {
-        sequencer ! (c, (cmd.target, cmd.msg))
+    case cmd: WriteMsgs => {
+      val d = deliveryCounter
+      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(messageCounter) else cmd
+      execute(c.copy(target = context.system.deadLetters)) {
+        sequencer ! (d, (c.target, c.messages))
       }
-      counter = counter + 1
+      deliveryCounter = deliveryCounter + 1
+      messageCounter = cmd.messages.lastOption.map(_.sequenceNr).getOrElse(messageCounter) + 1 // TODO: optimize
     }
     case cmd => {
-      journalAndReplicate(cmd)(())
+      execute(cmd)(())
     }
   }
 
-  def journalAndReplicate(cmd: Any)(success: => Unit) {
+  def execute(cmd: Any)(onSuccess: => Unit) {
     val jf = journaler.ask(cmd)(journalerTimeout)
-    val rf = if (replicator.isDefined) replicator.get.ask(cmd)(replicatorTimeout) else Promise.successful(())
+    val rf = if (replicator.isDefined) replicator.get.ask(cmd)(replicatorTimeout) else success
     val cf = Future.sequence(List(jf, rf))
 
     val s = sender
 
     cf onSuccess {
-      case r => { success; s ! () }
+      case r => { s ! (); onSuccess }
     }
 
     cf onFailure {
@@ -268,7 +305,7 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
             // continue at risk without replication
             self ! SetReplicator(None)
             // inform sender about journaling result
-            s ! jf.value.get.right.get
+            s ! ()
             // ...
             // TODO: inform cluster manager to re-attach slave
           }
@@ -278,6 +315,30 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
         }
       }
     }
+  }
+
+  def getCounter: Long = {
+    val future = journaler.ask(GetCounter)(counterInitTimeout)
+    Await.result(future.mapTo[Long], counterInitTimeout.duration)
+  }
+
+  override def preStart() {
+    // initialize message counter from stored sequence number
+    messageCounter = getCounter
+
+    // use a delivery counter for re-sequencing future callbacks
+    val deliveryCounter = this.deliveryCounter
+    sequencer = context.actorOf(Props(new Sequencer {
+      delivered = deliveryCounter - 1L
+      def receiveSequenced = {
+        case (target: ActorRef, message: Message) => {
+          if (target != context.system.deadLetters) target ! message
+        }
+        case (target: ActorRef, messages: List[Message]) => {
+          if (target != context.system.deadLetters) messages.foreach(m => target ! m)
+        }
+      }
+    }))
   }
 }
 
@@ -306,10 +367,7 @@ class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor
       }
     }
     case CompleteReplication => {
-      // synchronize channel counters with journal
-      components.values.foreach(_.recount())
-
-      // compute replay starting position for components referenced from input buffer
+      // compute replay starting position for components referenced from input buffer ...
       val replayFrom = inputBuffer.reverse.foldLeft(Map.empty[Int, Long]) { (a, e) =>
         val (cid, m) = e
         a + (cid -> m.sequenceNr)
@@ -330,34 +388,44 @@ class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor
       // and ignore further messages
       context.stop(self)
     }
-    case cmd @ WriteMsg(key, msg, target) => {
-      inputBuffer = inputBuffer.enqueue(key.componentId, msg.copy(replicated = true))
-      inputBufferSize = inputBufferSize + 1
 
-      if (inputBufferSize > inputBufferLimit) {
-        val ((cid, m), b) = inputBuffer.dequeue
-        inputBuffer = b
-        inputBufferSize = inputBufferSize -1
-        for {
-          c <- components.get(cid)
-          p <- c.processor
-        } p ! m
-      }
-
+    case cmd: WriteMsg => {
+      if (cmd.channelId == Channel.inputChannelId) delay(cmd.componentId, cmd.message)
       journaler forward cmd.copy(target = context.system.deadLetters)
     }
-    case cmd: WriteAckAndMsg => {
+    case cmd: WriteMsgs => {
+      if (cmd.channelId == Channel.inputChannelId) cmd.messages.foreach(m => delay(cmd.componentId, m))
       journaler forward cmd.copy(target = context.system.deadLetters)
     }
-    case cmd => {
+    case cmd: WriteAck => {
       journaler forward cmd
+    }
+    case cmd: DeleteMsg => {
+      journaler forward cmd
+    }
+  }
+
+  def delay(componentId: Int, msg: Message) {
+    inputBuffer = inputBuffer.enqueue(componentId, msg.copy(replicated = true))
+    inputBufferSize = inputBufferSize + 1
+
+    if (inputBufferSize > inputBufferLimit) {
+      val ((cid, m), b) = inputBuffer.dequeue
+      inputBuffer = b
+      inputBufferSize = inputBufferSize -1
+      for {
+        c <- components.get(cid)
+        p <- c.processor
+      } p ! m
     }
   }
 }
 
 object Replicator {
+  val counterInitTimeout = Timeout(5 seconds)
   val replicatorTimeout = Timeout(5 seconds)
   val journalerTimeout = Timeout(5 seconds)
+
 
   case class SetReplicator(replicator: Option[ActorRef])
   case class RegisterComponents(composite: Component)

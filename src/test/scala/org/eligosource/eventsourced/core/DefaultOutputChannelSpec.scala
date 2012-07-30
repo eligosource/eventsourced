@@ -39,7 +39,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
 
     val journalDir = new File("target/journal")
     val journaler = system.actorOf(Props(new Journaler(journalDir)))
-    val channel = system.actorOf(Props(new DefaultOutputChannel(0, 1, journaler)))
+    val channel = system.actorOf(Props(new DefaultOutputChannel(1, 1, journaler)))
 
     channel ! SetDestination(destination)
 
@@ -61,29 +61,29 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
 
   "A default output channel" must {
     "buffer messages before initial delivery" in { fixture =>
-        import fixture._
+      import fixture._
 
-        channel ! Message("a", None, None, 0L)
-        channel ! Message("b", None, None, 0L)
+      channel ! Message("a")
+      channel ! Message("b")
 
-        channel ! Deliver
+      channel ! Deliver
 
-        dequeue() must be (Message("a", None, None, 1L))
-        dequeue() must be (Message("b", None, None, 2L))
+      dequeue() must be (Message("a"))
+      dequeue() must be (Message("b"))
     }
     "not buffer messages after initial delivery" in { fixture =>
       import fixture._
 
-      channel ! Message("a", None, None, 0L)
+      channel ! Message("a")
 
       channel ! Deliver
 
-      channel ! Message("b", None, None, 0L)
-      channel ! Message("c", None, None, 0L)
+      channel ! Message("b")
+      channel ! Message("c")
 
-      dequeue() must be (Message("a", None, None, 1L))
-      dequeue() must be (Message("b", None, None, 2L))
-      dequeue() must be (Message("c", None, None, 3L))
+      dequeue() must be (Message("a"))
+      dequeue() must be (Message("b"))
+      dequeue() must be (Message("c"))
     }
   }
 }

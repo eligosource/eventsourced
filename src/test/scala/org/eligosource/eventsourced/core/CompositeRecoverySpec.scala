@@ -47,8 +47,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     val dl = system.deadLetters
 
     def createExampleComposite(journaler: ActorRef, destination: ActorRef, reliable: Boolean): Component = {
-      val c1 = Component(0, journaler)
-      val c2 = Component(1, journaler)
+      val c1 = Component(1, journaler)
+      val c2 = Component(2, journaler)
 
       if (reliable) {
         c1.addReliableOutputChannelToComponent("next", c2)
@@ -68,8 +68,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
       Await.result(journaler ? cmd, timeout.duration)
     }
 
-    def dequeue(timeout: Long = 5000): Message = {
-      queue.poll(timeout, TimeUnit.MILLISECONDS)
+    def dequeue(p: Message => Unit) {
+      p(queue.poll(5000, TimeUnit.MILLISECONDS))
     }
 
     def shutdown() {
@@ -94,28 +94,29 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
-        // 2.) input message 2 written by input channel of component 2
-        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
-        // 3.) ACK that input message 1 has been processed by processor 1 (and stored by out-channel)
-        journal(WriteAck(Key(0, 0, 1, 1)))
-        // 4.) output message from processor 1 written by 'next' output channel of component 1 (deleted after delivery)
-        //journal(WriteMsg(Key(0, 1, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        // 2.) input message 2 written by input channel of component 1
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
+        // 3.) ACK that input message 1 has been processed by processor 1
+        journal(WriteAck(1, 1, 1))
+        // 4.) output message from processor 1 written by 'next' output channel of component 1 (and deleted after delivery)
+        //journal(WriteMsg(1, 1, Message(InputCreated("a-0"), None, None, 3), None, dl, false))
         // 5.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
-        // 6.) ACK that input message 1' has been processed by processor 2 (and stored by out-channel)
-        journal(WriteAck(Key(1, 0, 1, 1))) // instead
-        // 7.) output message from processor 2 written by 'next' output channel of component 2
-        //journal(WriteMsg(Key(1, 1, 1, 0), Message(InputModified("a-0-0"), None, Some("1"), 1)))
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 4), None, dl, false))
+        // 6.) ACK that input message 1' has been processed by processor 2
+        journal(WriteAck(2, 1, 4))
+        // 7.) output message from processor 2 written by 'next' output channel of component 2 (and deleted after delivery)
+        //journal(WriteMsg(2, 1, Message(InputModified("a-0-0"), None, Some("4"), 5), None, dl, false))
         // 8.) output message from processor 2 is again input message 1'' of component 1
-        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
+        journal(WriteMsg(1, 0, Message(InputModified("a-0-0"), None, Some("4"), 6), None, dl, false))
 
         val composite = createExampleComposite(journaler, destination, true)
 
         Composite.init(composite)
 
-        dequeue() must be(Message(InputModified("a-0-0-2"), None, Some("1"), 1))
-        dequeue() must be(Message(InputModified("b-1-1-3"), None, Some("2"), 2))
+        dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("4"), m.sequenceNr)) }
+        dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr)) }
+
       }
       "recover from failures and support duplicate detection" in { fixture =>
         import fixture._
@@ -125,31 +126,31 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
-        // 2.) input message 2 written by input channel of component 2
-        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
-        // 3.) ACK that input message 1 has been processed by processor 1 (and stored by out-channel)
-        journal(WriteAck(Key(0, 0, 1, 1)))
-        // 4.) output message from processor 1 written by 'next' output channel of component 1 (deleted after delivery)
-        //journal(WriteMsg(Key(0, 1, 1, 0), Message(InputModified("a-0"), None, None, 1)))
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        // 2.) input message 2 written by input channel of component 1
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
+        // 3.) ACK that input message 1 has been processed by processor 1
+        journal(WriteAck(1, 1, 1))
+        // 4.) output message from processor 1 written by 'next' output channel of component 1 (and deleted after delivery)
+        //journal(WriteMsg(1, 1, Message(InputCreated("a-0"), None, None, 3), None, dl, false))
         // 5.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
-        // 6.) ACK that input message 1' has been processed by processor 2 (and stored by out-channel)
-        journal(WriteAck(Key(1, 0, 1, 1))) // instead
-        // 7.) output message from processor 2 written by 'next' output channel of component 2
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 4), None, dl, false))
+        // 6.) ACK that input message 1' has been processed by processor 2
+        journal(WriteAck(2, 1, 4))
+        // 7.) output message from processor 2 written by 'next' output channel of component 2 (and deleted after delivery)
         // DELIVERED TO NEXT COMPONENT BUT NOT YET DELETED FROM RELIABLE OUTPUT CHANNEL:
         // WILL CAUSE A DUPLICATE (which can be detected via senderMessageId and ignored, if needed)
-        journal(WriteMsg(Key(1, 1, 1, 0), Message(InputModified("a-0-0"), None, Some("1"), 1), dl))
+        journal(WriteMsg(2, 1, Message(InputModified("a-0-0"), None, Some("4"), 5), None, dl, false))
         // 8.) output message from processor 2 is again input message 1'' of component 1
-        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
+        journal(WriteMsg(1, 0, Message(InputModified("a-0-0"), None, Some("4"), 6), None, dl, false))
 
         val composite = createExampleComposite(journaler, destination, true)
 
         Composite.init(composite)
 
-        dequeue() must be(Message(InputModified("a-0-0-2"),   None, Some("1"), 1))
-        dequeue() must be(Message(InputModified("a-0-0-dup"), None, Some("1"), 2))
-        dequeue() must be(Message(InputModified("b-1-1-3"),   None, Some("2"), 3))
+        dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("4"), m.sequenceNr)) }
+        dequeue { m => m must be(Message(InputModified("a-0-0-dup"), None, Some("4"), m.sequenceNr)) }
+        dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr)) }
       }
     }
     "using default output channels" must {
@@ -161,24 +162,25 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
-        // 2.) input message 2 written by input channel of component 2
-        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        // 2.) input message 2 written by input channel of component 1
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
         // 3.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 3), None, dl, false))
         // 4.) ACK that input message 1 has been processed by processor 1 (and stored by component 2)
-        journal(WriteAck(Key(0, 0, 1, 1)))
+        journal(WriteAck(1, 1, 1))
         // 5.) output message from processor 2 is again input message 1'' of component 1
-        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
+        journal(WriteMsg(1, 0, Message(InputModified("a-0-0"), None, Some("3"), 4), None, dl, false))
         // 6.) ACK that input message 1' has been processed by processor 2
-        journal(WriteAck(Key(1, 0, 1, 1)))
+        journal(WriteAck(2, 1, 3))
 
         val composite = createExampleComposite(journaler, destination, false)
 
         Composite.init(composite)
 
-        dequeue() must be(Message(InputModified("a-0-0-2"), None, Some("1"), 1))
-        dequeue() must be(Message(InputModified("b-1-1-3"), None, Some("2"), 2))
+        dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("3"), m.sequenceNr)) }
+        dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr)) }
+
       }
       "recover from failures and support duplicate detection" in { fixture =>
         import fixture._
@@ -188,26 +190,26 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(Key(0, 0, 1, 0), Message(InputCreated("a"), None, None, 1), dl))
-        // 2.) input message 2 written by input channel of component 2
-        journal(WriteMsg(Key(0, 0, 2, 0), Message(InputCreated("b"), None, None, 2), dl)) // input message 2
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        // 2.) input message 2 written by input channel of component 1
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
         // 3.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(Key(1, 0, 1, 0), Message(InputModified("a-0"), None, None, 1), dl))
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 3), None, dl, false))
         // 4.) ACK that input message 1 has been processed by processor 1 (and stored by component 2)
-        journal(WriteAck(Key(0, 0, 1, 1)))
+        journal(WriteAck(1, 1, 1))
         // 5.) output message from processor 2 is again input message 1'' of component 1
-        journal(WriteMsg(Key(0, 0, 3, 0), Message(InputModified("a-0-0"), None, Some("1"), 3), dl))
+        journal(WriteMsg(1, 0, Message(InputModified("a-0-0"), None, Some("3"), 4), None, dl, false))
         // 6.) ACK that input message 1' has been processed by processor 2
         // NOT YET ACKNOWLEDGED: WILL CAUSE A DUPLICATE (which is detected)
-        //journal(WriteAck(Key(1, 0, 1, 1)))
+        //journal(WriteAck(2, 1, 3))
 
         val composite = createExampleComposite(journaler, destination, false)
 
         Composite.init(composite)
 
-        dequeue() must be(Message(InputModified("a-0-0-2"),   None, Some("1"), 1))
-        dequeue() must be(Message(InputModified("a-0-0-dup"), None, Some("1"), 2))
-        dequeue() must be(Message(InputModified("b-1-1-3"),   None, Some("2"), 3))
+        dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("3"), m.sequenceNr)) }
+        dequeue { m => m must be(Message(InputModified("a-0-0-dup"), None, Some("3"), m.sequenceNr)) }
+        dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr)) }
       }
     }
   }

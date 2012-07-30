@@ -51,10 +51,10 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     lazy val journaler =
       system.actorOf(Props(new Journaler(journalDir)))
     lazy val channel =
-      system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(0, journaler, 10 milliseconds, 10 milliseconds, 3))))
+      system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(1, journaler, 10 milliseconds, 10 milliseconds, 3))))
 
     def write(msg: Message) {
-      Await.result(journaler ? WriteMsg(Key(0, 1, msg.sequenceNr, 0), msg, system.deadLetters), timeout.duration)
+      Await.result(journaler ? WriteMsg(1, 1, msg, None, system.deadLetters, false), timeout.duration)
     }
 
     def dequeue(timeout: Long = 5000): Either[Message, Message] = {
@@ -78,32 +78,14 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       "redeliver stored output messaged during recovery" in { fixture =>
         import fixture._
 
-        write(Message("a", None, None, 3L))
-        write(Message("b", None, None, 4L))
+        write(Message("a", None, None, 4L)) // sequence nr written to journal
+        write(Message("b", None, None, 5L)) // sequence nr written to journal
 
         channel ! SetDestination(successDestination)
         channel ! Deliver
 
-        dequeue() must be (Right(Message("a", None, None, 3L)))
-        dequeue() must be (Right(Message("b", None, None, 4L)))
-      }
-      "derive its counter value from stored output messages" in { fixture =>
-        import fixture._
-
-        write(Message("x", None, None, 7L))
-
-        journaler ! Recount(0, 1, count => channel ! SetCounter(count + 1L))
-
-        channel ! SetDestination(successDestination)
-        channel ! Deliver
-
-        dequeue()
-
-        channel ! Message("y", None, None, 0L)
-        channel ! Message("z", None, None, 0L)
-
-        dequeue() must be (Right(Message("y", None, None, 8L)))
-        dequeue() must be (Right(Message("z", None, None, 9L)))
+        dequeue() must be (Right(Message("a", None, None, 4L)))
+        dequeue() must be (Right(Message("b", None, None, 5L)))
       }
     }
     "delivering a single output message" must {
@@ -112,7 +94,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
 
         channel ! SetDestination(failureDestination("a", true, 2))
         channel ! Deliver
-        channel ! Message("a", None, None, 0L)
+        channel ! Message("a")
 
         dequeue() must be (Left(Message("a", None, None, 1L)))
         dequeue() must be (Left(Message("a", None, None, 1L)))  // redelivery 1
@@ -131,7 +113,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         channel ! Deliver
 
         // send 7 messages to reliable output channel
-        1 to 7 foreach { i => channel ! Message(i, None, None, 0L) }
+        1 to 7 foreach { i => channel ! Message(i) }
 
         val expected = List(
           Right(Message(1, None, None, 1L)), // success    at event 1
