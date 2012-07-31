@@ -18,6 +18,7 @@ package org.eligosource.eventsourced.core
 import scala.collection.immutable.Queue
 
 import akka.actor._
+import akka.dispatch._
 import akka.pattern.ask
 import akka.util.duration._
 import akka.util._
@@ -38,10 +39,13 @@ trait Channel extends Actor {
 
 object Channel {
   val inputChannelId = 0
+
   val destinationTimeout = Timeout(5 seconds)
+  val replyDestinationTimeout = Timeout(5 seconds)
 
   case class SetProcessor(processor: ActorRef)
-  case class SetDestination(processor: ActorRef)
+  case class SetDestination(destination: ActorRef)
+  case class SetReplyDestination(replayDestination: ActorRef)
 
   case object Deliver
 }
@@ -66,7 +70,7 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
     case msg: Message => {
       processor foreach { p => journaler forward WriteMsg(componentId, id, msg, None, p) }
     }
-    case cmd @ SetProcessor(p) => {
+    case SetProcessor(p) => {
       processor = Some(p)
     }
   }
@@ -85,6 +89,7 @@ class InputChannelProducer(inputChannel: ActorRef) extends Actor {
  */
 trait OutputChannel extends Channel {
   var destination: Option[ActorRef] = None
+  var replyDestination: Option[ActorRef] = None
 }
 
 /**
@@ -117,13 +122,24 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
     case SetDestination(d) => {
       destination = Some(d)
     }
+    case SetReplyDestination(rd) => {
+      replyDestination = Some(rd)
+    }
   }
 
-  def send(msg: Message) = destination foreach { d =>
-    d.ask(msg)(destinationTimeout) onSuccess {
+  def send(msg: Message): Unit = destination foreach { d =>
+    val r = for {
+      r1 <- d.ask(msg)(destinationTimeout)
+      r2 <- reply(msg)
+    } yield r2
+
+    r onSuccess {
       case _ if (msg.ack) => journaler ! WriteAck(componentId, id, msg.sequenceNr)
     }
   }
+
+  def reply(msg: Message): Future[Any] =
+    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(()))
 }
 
 case class ReliableOutputChannelEnv(
@@ -147,6 +163,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
 
   val componentId = env.componentId
   val journaler = env.journaler
+
   var buffer: Option[ActorRef] = None
 
   def receive = {
@@ -162,8 +179,11 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
       buffer = None
       context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Deliver)
     }
-    case cmd @ SetDestination(d) => if (destination.isEmpty) {
+    case SetDestination(d) => {
       destination = Some(d)
+    }
+    case SetReplyDestination(rd) => {
+      replyDestination = Some(rd)
     }
   }
 
@@ -172,7 +192,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   }
 
   def createBuffer(destination: ActorRef) = {
-    context.watch(context.actorOf(Props(new ReliableOutputChannelBuffer(id, destination, env))))
+    context.watch(context.actorOf(Props(new ReliableOutputChannelBuffer(id, destination, replyDestination, env))))
   }
 }
 
@@ -189,13 +209,13 @@ object ReliableOutputChannel {
   case object FeedMe
 }
 
-class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv) extends Actor {
+class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, replyDestination: Option[ActorRef], env: ReliableOutputChannelEnv) extends Actor {
   import ReliableOutputChannel._
 
   var rocSenderQueue = Queue.empty[Message]
   var rocSenderBusy = false //
 
-  val rocSender = context.actorOf(Props(new ReliableOutputChannelSender(channelId, destination, env)))
+  val rocSender = context.actorOf(Props(new ReliableOutputChannelSender(channelId, destination, replyDestination, env)))
 
   def receive = {
     case msg: Message => {
@@ -216,9 +236,12 @@ class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, env: Re
   }
 }
 
-class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: ReliableOutputChannelEnv) extends Actor {
+class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDestination: Option[ActorRef], env: ReliableOutputChannelEnv) extends Actor {
+  import Channel._
   import Journaler._
   import ReliableOutputChannel._
+
+  implicit val executionContext = context.dispatcher
 
   var sequencer: Option[ActorRef] = None
   var queue = Queue.empty[Message]
@@ -240,7 +263,7 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: Re
       retries = r
       queue = q
 
-      val future = destination.ask(msg)(Channel.destinationTimeout)
+      val future = send(msg)
       val ctx = context
 
 
@@ -264,4 +287,12 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, env: Re
       if (retries < env.retryMax) self ! Next(retries + 1) else sequencer.foreach(s => context.stop(s))
     }
   }
+
+  def send(msg: Message): Future[Any] = for {
+    r1 <- destination.ask(msg)(destinationTimeout)
+    r2 <- reply(msg)
+  } yield r2
+
+  def reply(msg: Message): Future[Any] =
+    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(()))
 }

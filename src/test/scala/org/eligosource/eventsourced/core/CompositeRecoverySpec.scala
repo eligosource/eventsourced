@@ -41,8 +41,12 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     val journalDir = new File("target/journal")
     val journaler = system.actorOf(Props(new Journaler(journalDir)))
 
-    val queue = new LinkedBlockingQueue[Message]
-    val destination = system.actorOf(Props(new Receiver(queue)))
+    val destinationQueue = new LinkedBlockingQueue[Message]
+    val destination = system.actorOf(Props(new Receiver(destinationQueue)))
+
+    // Example of an external service that echoes its input. The echo
+    // is fed back to component 1 (c1) of the example composite.
+    val echo = system.actorOf(Props(new Echo))
 
     val dl = system.deadLetters
 
@@ -52,11 +56,11 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
       if (reliable) {
         c1.addReliableOutputChannelToComponent("next", c2)
-        c2.addReliableOutputChannelToComponent("next", c1)
+        c2.addReliableOutputChannelToActor("next", echo, Some(c1))
         c1.addReliableOutputChannelToActor("dest", destination)
       } else {
         c1.addDefaultOutputChannelToComponent("next", c2)
-        c2.addDefaultOutputChannelToComponent("next", c1)
+        c2.addReliableOutputChannelToActor("next", echo, Some(c1))
         c1.addDefaultOutputChannelToActor("dest", destination)
       }
 
@@ -69,13 +73,62 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     }
 
     def dequeue(p: Message => Unit) {
-      p(queue.poll(5000, TimeUnit.MILLISECONDS))
+      p(destinationQueue.poll(5000, TimeUnit.MILLISECONDS))
     }
 
     def shutdown() {
       system.shutdown()
       system.awaitTermination(5 seconds)
       FileUtils.deleteDirectory(journalDir)
+    }
+
+    class C1Processor(outputChannels: Map[String, ActorRef]) extends Actor {
+      var numProcessed = 0
+      var lastSenderMessageId = 0L
+
+      def receive = {
+        case msg: Message => msg.event match {
+          case InputCreated(s)  => {
+            outputChannels("next") ! msg.copy(event = InputModified("%s-%d" format (s, numProcessed)))
+            numProcessed = numProcessed + 1
+          }
+          case InputModified(s) => {
+            val sid = msg.senderMessageId.get.toLong
+            if (sid <= lastSenderMessageId) { // duplicate detected
+              outputChannels("dest") ! msg.copy(event = InputModified("%s-%s" format (s, "dup")))
+            } else {
+              outputChannels("dest") ! msg.copy(event = InputModified("%s-%d" format (s, numProcessed)))
+              numProcessed = numProcessed + 1
+              lastSenderMessageId = sid
+            }
+          }
+        }
+      }
+    }
+
+    class C2Processor(outputChannels: Map[String, ActorRef]) extends Actor {
+      var numProcessed = 0
+
+      def receive = {
+        case msg: Message => msg.event match {
+          case InputModified(s) => {
+            val evt = InputModified("%s-%d" format (s, numProcessed))
+            val sid = Some(msg.sequenceNr.toString) // for detecting duplicates
+            outputChannels("next") ! msg.copy(event = evt, senderMessageId = sid)
+            numProcessed = numProcessed + 1
+          }
+        }
+      }
+    }
+
+    class Echo extends Actor {
+      def receive = { case msg: Message => sender ! msg }
+    }
+
+    class Receiver(queue: LinkedBlockingQueue[Message]) extends Actor {
+      def receive = {
+        case msg: Message => { queue.put(msg); sender ! () }
+      }
     }
   }
 
@@ -137,7 +190,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 4), None, dl, false))
         // 6.) ACK that input message 1' has been processed by processor 2
         journal(WriteAck(2, 1, 4))
-        // 7.) output message from processor 2 written by 'next' output channel of component 2 (and deleted after delivery)
+        // 7.) output message from processor 2 written by 'next' output channel of component 2
         // DELIVERED TO NEXT COMPONENT BUT NOT YET DELETED FROM RELIABLE OUTPUT CHANNEL:
         // WILL CAUSE A DUPLICATE (which can be detected via senderMessageId and ignored, if needed)
         journal(WriteMsg(2, 1, Message(InputModified("a-0-0"), None, Some("4"), 5), None, dl, false))
@@ -217,51 +270,3 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
 case class InputCreated(s: String)
 case class InputModified(s: String)
-
-class C1Processor(outputChannels: Map[String, ActorRef]) extends Actor {
-  var numProcessed = 0
-  var lastSenderMessageId = 0L
-
-  def receive = {
-    case msg: Message => msg.event match {
-      case InputCreated(s)  => {
-        outputChannels("next") ! msg.copy(event = InputModified("%s-%d" format (s, numProcessed)))
-        numProcessed = numProcessed + 1
-      }
-      case InputModified(s) => {
-        val sid = msg.senderMessageId.get.toLong
-        if (sid <= lastSenderMessageId) { // duplicate detected
-          outputChannels("dest") ! msg.copy(event = InputModified("%s-%s" format (s, "dup")))
-        } else {
-          outputChannels("dest") ! msg.copy(event = InputModified("%s-%d" format (s, numProcessed)))
-          numProcessed = numProcessed + 1
-          lastSenderMessageId = sid
-        }
-      }
-    }
-  }
-}
-
-class C2Processor(outputChannels: Map[String, ActorRef]) extends Actor {
-  var numProcessed = 0
-
-  def receive = {
-    case msg: Message => msg.event match {
-      case InputModified(s) => {
-        val evt = InputModified("%s-%d" format (s, numProcessed))
-        val sid = Some(msg.sequenceNr.toString) // for detecting duplicates
-        outputChannels("next") ! msg.copy(event = evt, senderMessageId = sid)
-        numProcessed = numProcessed + 1
-      }
-    }
-  }
-}
-
-class Receiver(queue: LinkedBlockingQueue[Message]) extends Actor {
-  def receive = {
-    case msg: Message => {
-      queue.put(msg)
-      sender ! ()
-    }
-  }
-}

@@ -40,11 +40,17 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     implicit val timeout = Timeout(5 seconds)
 
     val destinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
+    val replyDestinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
 
     val successDestination =
       system.actorOf(Props(new TestDesination(destinationQueue, None)))
     def failureDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
       system.actorOf(Props(new TestDesination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount)))
+
+    val successReplyDestination =
+      system.actorOf(Props(new TestDesination(replyDestinationQueue, None)))
+    def failureReplyDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
+      system.actorOf(Props(new TestDesination(replyDestinationQueue, Some(failAtEvent), enqueueFailures, failureCount)))
 
     val writeMsgListenerQueue = new LinkedBlockingQueue[WriteMsg]
     val writeMsgListener = system.actorOf(Props(new WriteMsgListener(writeMsgListenerQueue)))
@@ -126,12 +132,34 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         import fixture._
 
         channel ! SetDestination(failureDestination("a", true, 2))
+        channel ! SetReplyDestination(successReplyDestination)
         channel ! Deliver
         channel ! Message("a")
+        channel ! Message("b")
 
         dequeue(destinationQueue) must be (Left(Message("a", None, None, 1L)))
         dequeue(destinationQueue) must be (Left(Message("a", None, None, 1L)))  // redelivery 1
         dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 2
+        dequeue(destinationQueue) must be (Right(Message("b", None, None, 2L)))
+
+        dequeue(replyDestinationQueue) must be (Right(Message("a", None, None, 1L)))
+        dequeue(replyDestinationQueue) must be (Right(Message("b", None, None, 2L)))
+      }
+      "recover from reply destination failures" in { fixture =>
+        import fixture._
+
+        channel ! SetDestination(successDestination)
+        channel ! SetReplyDestination(failureReplyDestination("a", true, 2))
+        channel ! Deliver
+        channel ! Message("a")
+
+        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L)))
+        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 1
+        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 2
+
+        dequeue(replyDestinationQueue) must be (Left(Message("a", None, None, 1L)))
+        dequeue(replyDestinationQueue) must be (Left(Message("a", None, None, 1L)))  // redelivery 1
+        dequeue(replyDestinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 2
       }
     }
     "delivering multiple output messages" must {

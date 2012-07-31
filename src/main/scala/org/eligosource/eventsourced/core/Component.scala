@@ -47,26 +47,31 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
   private var outputChannelsForName = Map.empty[String, ActorRef]
   private var outputChannelsForId = Map.empty[Int, ActorRef]
 
-  def addReliableOutputChannelToActor(name: String, destination: ActorRef, recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
-    addReliableOutputChannel(name, destination, recoveryDelay, retryDelay, retryMax)
+  def addReliableOutputChannelToActor(name: String, destination: ActorRef, replyDestination: Option[Component] = None,
+      recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+    replyDestination.foreach(rd => outputDependencies = rd :: outputDependencies)
+    addReliableOutputChannel(name, destination, replyDestination.map(_.inputChannel), recoveryDelay, retryDelay, retryMax)
   }
 
-  def addReliableOutputChannelToComponent(name: String, component: Component, recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+  def addReliableOutputChannelToComponent(name: String, component: Component,
+      recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
     outputDependencies = component :: outputDependencies
-    addReliableOutputChannel(name, component.inputChannel, recoveryDelay, retryDelay, retryMax)
+    addReliableOutputChannel(name, component.inputChannel, None, recoveryDelay, retryDelay, retryMax)
   }
 
-  def addReliableOutputChannelToSelf(name: String, recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
-    addReliableOutputChannelToActor(name, inputChannel, recoveryDelay, retryDelay, retryMax)
+  def addReliableOutputChannelToSelf(name: String,
+      recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
+    addReliableOutputChannelToActor(name, inputChannel, None, recoveryDelay, retryDelay, retryMax)
   }
 
-  def addDefaultOutputChannelToActor(name: String, destination: ActorRef): Component = {
-    addDefaultOutputChannel(name, destination)
+  def addDefaultOutputChannelToActor(name: String, destination: ActorRef, replyDestination: Option[Component] = None): Component = {
+    replyDestination.foreach(rd => outputDependencies = rd :: outputDependencies)
+    addDefaultOutputChannel(name, destination, replyDestination.map(_.inputChannel))
   }
 
   def addDefaultOutputChannelToComponent(name: String, component: Component): Component = {
     outputDependencies = component :: outputDependencies
-    addDefaultOutputChannel(name, component.inputChannel)
+    addDefaultOutputChannel(name, component.inputChannel, None)
   }
 
   def addDefaultOutputChannelToSelf(name: String): Component = {
@@ -87,21 +92,9 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
    * Initializes this component, recovering from existing journal data if necessary.
    */
   def init(fromSequenceNr: Long = 0L): Unit = {
-    //recount()
     replay(fromSequenceNr)
     deliver()
   }
-
-  /**
-   * Synchronizes message counters of channels with the journal.
-   */
-  /*def recount(): Unit = {
-    // set counter on input channel
-    journaler ! Recount(this.id, Channel.inputChannelId, count => inputChannel ! SetCounter(count + 1))
-
-    // set counter on reliable output channels
-    for ((id, ch)  <- outputChannelsForId) journaler ! Recount(this.id, id, count => ch ! SetCounter(count + 1))
-  }*/
 
   /**
    * Recovers processor state by replaying input events.
@@ -132,20 +125,22 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     }
   }
 
-  private def addDefaultOutputChannel(name: String, destination: ActorRef) = {
+  private def addDefaultOutputChannel(name: String, destination: ActorRef, replyDestination: Option[ActorRef]) = {
     checkAddChannelPreconditions()
 
     val channelId = outputChannelsForName.size + 1
     val channel = system.actorOf(Props(new DefaultOutputChannel(id, channelId, journaler)))
 
     channel ! Channel.SetDestination(destination)
+    replyDestination foreach { rd => channel ! Channel.SetReplyDestination(rd)}
 
     outputChannelsForName = outputChannelsForName + (name -> channel)
 
     this
   }
 
-  private def addReliableOutputChannel(name: String, destination: ActorRef, recoveryDelay: Duration, retryDelay: Duration, retryMax: Int) = {
+  private def addReliableOutputChannel(name: String, destination: ActorRef, replyDestination: Option[ActorRef],
+      recoveryDelay: Duration, retryDelay: Duration, retryMax: Int) = {
     checkAddChannelPreconditions()
 
     val channelId = outputChannelsForName.size + 1
@@ -153,6 +148,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     val channel = system.actorOf(Props(new ReliableOutputChannel(channelId, channelEnv)))
 
     channel ! Channel.SetDestination(destination)
+    replyDestination foreach { rd => channel ! Channel.SetReplyDestination(rd)}
 
     outputChannelsForName = outputChannelsForName + (name -> channel)
     outputChannelsForId = outputChannelsForId + (channelId -> channel)
@@ -181,13 +177,9 @@ object Component {
 
 object Composite {
   def init(composite: Component) = {
-    //recount(composite)
     replay(composite)
     deliver(composite)
   }
-
-  /*def recount(composite: Component) =
-    composite.foreach(_.recount())*/
 
   def replay(composite: Component) =
     composite.foreach(_.replay())

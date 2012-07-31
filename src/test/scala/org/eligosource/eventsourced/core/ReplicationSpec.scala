@@ -71,6 +71,14 @@ class ReplicationSpec extends WordSpec with MustMatchers {
       system.awaitTermination(5 seconds)
       FileUtils.deleteDirectory(journalDir)
     }
+
+    class ReplicatedProcessor(outputChannels: Map[String, ActorRef]) extends Actor {
+      var ctr = 1
+
+      def receive = {
+        case msg: Message => { outputChannels("dest") ! msg.copy(event = ctr); ctr = ctr + 1 }
+      }
+    }
   }
 
   def withFixture(test: OneArgTest) {
@@ -253,13 +261,5 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     messages.reverse.foldLeft(0L) { (a, m) =>
       m.sequenceNr match { case num => { a must be < (num); num } }
     }
-  }
-}
-
-class ReplicatedProcessor(outputChannels: Map[String, ActorRef]) extends Actor {
-  var ctr = 1
-
-  def receive = {
-    case msg: Message => { outputChannels("dest") ! msg.copy(event = ctr); ctr = ctr + 1 }
   }
 }

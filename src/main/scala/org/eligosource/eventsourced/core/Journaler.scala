@@ -298,9 +298,6 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
         case (target: ActorRef, message: Message) => {
           if (target != context.system.deadLetters) target ! message
         }
-        case (target: ActorRef, messages: List[Message]) => {
-          if (target != context.system.deadLetters) messages.foreach(m => target ! m)
-        }
       }
     }))
   }
