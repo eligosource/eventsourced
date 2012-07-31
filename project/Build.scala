@@ -3,7 +3,7 @@ import Keys._
 
 object Settings {
   val buildOrganization = "org.eligosource"
-  val buildVersion      = "0.3-SNAPSHOT"
+  val buildVersion      = "0.4-SNAPSHOT"
   val buildScalaVersion = Version.Scala
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := buildOrganization,
