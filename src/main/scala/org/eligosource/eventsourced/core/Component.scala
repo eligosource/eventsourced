@@ -22,10 +22,10 @@ import akka.util.Duration
 
 /**
  * An event-sourced component that uses an application-defined actor (processor)
- * for managing state. Applications use the component's input channel to send
- * event messages to that actor. The actor uses the component's output channel
- * to communicate with other parts of the application. Components can be composed
- * to directed, cyclic graphs.
+ * for processing events and managing state. Applications use the component's input
+ * channel to send event messages to that actor. The actor uses the component's output
+ * channels to communicate with other collaborators. Components can be composed to
+ * directed graphs (cyclic, if needed).
  */
 class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSystem) extends Iterable[Component] {
   import Channel._
@@ -89,7 +89,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     inputProcessor
 
   /**
-   * Initializes this component, recovering from existing journal data if necessary.
+   * Initializes this component, recovering from existing journaled events, if necessary.
    */
   def init(fromSequenceNr: Long = 0L): Unit = {
     replay(fromSequenceNr)

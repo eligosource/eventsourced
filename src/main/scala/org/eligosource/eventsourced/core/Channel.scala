@@ -24,8 +24,8 @@ import akka.util.duration._
 import akka.util._
 
 /**
- * A communication channel used by an event-sourced Component to interact with
- * its environment. A channel is used to communicate via event messages.
+ * A communication channel used by an event-sourced component to interact with
+ * its environment via event messages.
  */
 trait Channel extends Actor {
   def id: Int
@@ -51,12 +51,9 @@ object Channel {
 }
 
 /**
- * An input channel is used by application to send event messages to an event-sourced
+ * An input channel is used by applications to send event messages to an event-sourced
  * component. This channel writes event messages to a journal before sending it to the
  * component's processor.
- *
- * @param componentId id of the input channel owner
- * @param journaler
  */
 class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channel {
   import Channel._
@@ -85,7 +82,7 @@ class InputChannelProducer(inputChannel: ActorRef) extends Actor {
 
 /**
  * A channel used by a component's processor (actor) to send event messages
- * to it's environment (or even to the component it is owned by).
+ * to destinations.
  */
 trait OutputChannel extends Channel {
   var destination: Option[ActorRef] = None
@@ -93,12 +90,8 @@ trait OutputChannel extends Channel {
 }
 
 /**
- * An output channel that sends event messages to a destination. If the destination responds
- * with a successful result, an acknowledgement is written to the journal.
- *
- * @param componentId id of the input channel owner
- * @param id output channel id
- * @param journaler
+ * An output channel that sends event messages to a destination. If the destination successfully
+ * responds, an acknowledgement is written to the journal.
  */
 class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: ActorRef) extends OutputChannel {
   import Channel._
@@ -151,9 +144,9 @@ case class ReliableOutputChannelEnv(
 )
 
 /**
- * An output channel that stores output messages in the journal before sending it to its
- * destination. If the destination responds with a successful result the stored output
- * message is removed from the journal, otherwise a re-send is attempted.
+ * An output channel that stores output messages in the journal before sending it to a
+ * destination. If the destination successfully responds, the stored output message is
+ * removed from the journal, otherwise a re-delivery is attempted.
  */
 class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends OutputChannel {
   import Channel._

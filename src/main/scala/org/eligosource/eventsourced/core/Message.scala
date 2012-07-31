@@ -18,8 +18,7 @@ package org.eligosource.eventsourced.core
 import akka.actor.ActorRef
 
 /**
- * An event messages used by an event-sourced Component to communicate with it's
- * environment.
+ * A message to communicate application events.
  *
  * @param event the event.
  * @param sender an optional, application-defined sender reference that can be used
@@ -27,11 +26,12 @@ import akka.actor.ActorRef
  * @param senderMessageId an optional, application-defined message id in order to
  *        allow receivers to detect duplicates (which may occur during recovery or
  *        fail-over).
- * @param sequenceNr a message sequence number assigned by a component's input channel.
- * @param acks list of output channel ids that have acknowledged a message-send. This
- *        list is only non-empty during a replay.
+ * @param sequenceNr the message's sequence number (only relevant to processors).
+ * @param acks list of output channel ids that have acknowledged an output message
+ *        delivery or output message storage. This list is only non-empty during a
+ *        replay.
  * @param ack whether or not to acknowledge this message.
- * @param replicated true if this is a replicated message.
+ * @param replicated whether or not this message is a replicated message.
  */
 case class Message(
   event: Any,
