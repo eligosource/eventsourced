@@ -85,15 +85,20 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     this
   }
 
+  def setProcessor(processor: ActorRef): Component = {
+    setProcessor(outputChannels => system.actorOf(Props(new Processor(outputChannels, processor))))
+  }
+
   def processor: Option[ActorRef] =
     inputProcessor
 
   /**
    * Initializes this component, recovering from existing journaled events, if necessary.
    */
-  def init(fromSequenceNr: Long = 0L): Unit = {
+  def init(fromSequenceNr: Long = 0L): Component = {
     replay(fromSequenceNr)
     deliver()
+    this
   }
 
   /**

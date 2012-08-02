@@ -143,7 +143,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         import fixture._
 
         // ----------------------------------
-        // Example journal state after crash
+        // AggregatorExample journal state after crash
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
@@ -175,7 +175,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         import fixture._
 
         // ----------------------------------
-        // Example journal state after crash
+        // AggregatorExample journal state after crash
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
@@ -211,7 +211,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         import fixture._
 
         // ----------------------------------
-        // Example journal state after crash
+        // AggregatorExample journal state after crash
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
@@ -239,7 +239,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         import fixture._
 
         // ----------------------------------
-        // Example journal state after crash
+        // AggregatorExample journal state after crash
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
