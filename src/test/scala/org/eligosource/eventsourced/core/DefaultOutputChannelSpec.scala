@@ -140,31 +140,6 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
 
       received must be (expected)
     }
-    "acknowledge messages after delivery to a reply destination" in { fixture =>
-      import fixture._
-
-      journaler ! SetCommandListener(Some(writeAckListener))
-
-      channel ! SetReplyDestination(successReplyDestination)
-      channel ! Message("a", sequenceNr = 1)
-      channel ! Deliver
-      channel ! Message("b", sequenceNr = 2)
-
-      dequeue(replyDestinationQueue) must be (Message("a", sequenceNr = 1))
-      dequeue(replyDestinationQueue) must be (Message("b", sequenceNr = 2))
-
-      val received = Set(
-        dequeue(writeAckListenerQueue),
-        dequeue(writeAckListenerQueue)
-      )
-
-      val expected = Set(
-        WriteAck(1, 1, 1),
-        WriteAck(1, 1, 2)
-      )
-
-      received must be (expected)
-    }
     "not acknowledge messages on request" in { fixture =>
       import fixture._
 
@@ -176,6 +151,42 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       channel ! Message("c", sequenceNr = 3)
 
       dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 3))
+    }
+    "acknowledge messages after delivery to a reply destination" in { fixture =>
+      import fixture._
+
+      journaler ! SetCommandListener(Some(writeAckListener))
+
+      channel ! SetReplyDestination(successReplyDestination)
+      channel ! Message("a", sequenceNr = 1)
+      channel ! Deliver
+      channel ! Message("b", sequenceNr = 2)
+
+      dequeue(destinationQueue) must be (Message("a", sequenceNr = 1))
+      dequeue(destinationQueue) must be (Message("b", sequenceNr = 2))
+
+      val receivedReplies = Set(
+        dequeue(replyDestinationQueue),
+        dequeue(replyDestinationQueue)
+      )
+
+      val receivedAcks = Set(
+        dequeue(writeAckListenerQueue),
+        dequeue(writeAckListenerQueue)
+      )
+
+      val expectedReplies = Set(
+        Message("a", sequenceNr = 1),
+        Message("b", sequenceNr = 2)
+      )
+
+      val expectedAcks = Set(
+        WriteAck(1, 1, 1),
+        WriteAck(1, 1, 2)
+      )
+
+      receivedReplies must be (expectedReplies)
+      receivedAcks must be (expectedAcks)
     }
     "acknowledge messages after delivery failure to a destination" in { fixture =>
       import fixture._
