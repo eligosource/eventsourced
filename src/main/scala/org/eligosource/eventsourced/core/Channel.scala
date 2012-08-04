@@ -127,7 +127,7 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
     } yield r2
 
     r onSuccess {
-      case _ if (msg.ack) => journaler ! WriteAck(componentId, id, msg.sequenceNr)
+      case _ if (msg.ack) => journaler.!(WriteAck(componentId, id, msg.sequenceNr))(null)
     }
   }
 
@@ -162,7 +162,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   def receive = {
     case msg: Message if (!msg.acks.contains(id) && !msg.replicated) => {
       val ackSequenceNr = if (msg.ack) Some(msg.sequenceNr) else None
-      journaler ! WriteMsg(componentId, id, msg, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
+      journaler.!(WriteMsg(componentId, id, msg, ackSequenceNr, buffer.getOrElse(context.system.deadLetters)))(null)
     }
     case Deliver => destination foreach { d =>
       buffer = Some(createBuffer(d))
@@ -181,7 +181,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   }
 
   def deliverPendingMessages(destination: ActorRef) {
-    journaler ! Replay(componentId, id, 0L, destination)
+    journaler.!(Replay(componentId, id, 0L, destination))(null)
   }
 
   def createBuffer(destination: ActorRef) = {
@@ -262,7 +262,7 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDe
 
       future onSuccess {
         case _ => {
-          env.journaler ! DeleteMsg(env.componentId, channelId, msg.sequenceNr)
+          env.journaler.!(DeleteMsg(env.componentId, channelId, msg.sequenceNr))(null)
           self ! Next(0)
         }
       }

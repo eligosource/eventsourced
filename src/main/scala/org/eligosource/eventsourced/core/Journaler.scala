@@ -49,22 +49,22 @@ class Journaler(dir: File) extends Actor {
       val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
       execute(c)
       if (c.target != context.system.deadLetters) c.target ! c.message
-      sender ! ()
+      if (sender   != context.system.deadLetters) sender ! ()
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteAck => {
       execute(cmd)
-      sender ! ()
+      if (sender != context.system.deadLetters) sender ! ()
       commandListener.foreach(_ ! cmd)
     }
     case cmd: DeleteMsg => {
       execute(cmd)
-      sender ! ()
+      if (sender != context.system.deadLetters) sender ! ()
       commandListener.foreach(_ ! cmd)
     }
     case Replay(compId, chanId, fromNr, target) => {
       replay(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
-      sender ! ()
+      if (sender != context.system.deadLetters) sender ! ()
     }
     case GetCounter => {
       sender ! getCounter
