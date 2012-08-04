@@ -109,12 +109,12 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       // all input messages are replicated
       1 to 20 foreach { i =>
-        replicate(WriteMsg(1, 0, Message(i, None, None, i), None, dl, false))
+        replicate(WriteMsg(1, 0, Message(i, sequenceNr = i), None, dl, false))
       }
 
       // only out messages and acks 1 - 14 are replicated
       1 to 14 foreach { i =>
-        replicate(WriteMsg(1, 1, Message(i, None, None, 20 + i), Some(i), dl, false))
+        replicate(WriteMsg(1, 1, Message(i, sequenceNr = 20 + i), Some(i), dl, false))
       }
 
       // out message deletions except 4, 7, 12, 14 are replicated
@@ -155,7 +155,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       // all input messages are replicated
       1 to 20 foreach { i =>
-        replicate(WriteMsg(1, 0, Message(i, None, None, i), None, dl, false))
+        replicate(WriteMsg(1, 0, Message(i, sequenceNr = i), None, dl, false))
       }
 
       // acknowledgements except 4, 7, 12, 14 are replicated

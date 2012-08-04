@@ -147,15 +147,15 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), sequenceNr = 1), None, dl, false))
         // 2.) input message 2 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), sequenceNr = 2), None, dl, false))
         // 3.) ACK that input message 1 has been processed by processor 1
         journal(WriteAck(1, 1, 1))
         // 4.) output message from processor 1 written by 'next' output channel of component 1 (and deleted after delivery)
-        //journal(WriteMsg(1, 1, Message(InputCreated("a-0"), None, None, 3), None, dl, false))
+        //journal(WriteMsg(1, 1, Message(InputCreated("a-0"), sequenceNr = 3), None, dl, false))
         // 5.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 4), None, dl, false))
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), sequenceNr = 4), None, dl, false))
         // 6.) ACK that input message 1' has been processed by processor 2
         journal(WriteAck(2, 1, 4))
         // 7.) output message from processor 2 written by 'next' output channel of component 2 (and deleted after delivery)
@@ -179,15 +179,15 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), sequenceNr = 1), None, dl, false))
         // 2.) input message 2 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), sequenceNr = 2), None, dl, false))
         // 3.) ACK that input message 1 has been processed by processor 1
         journal(WriteAck(1, 1, 1))
         // 4.) output message from processor 1 written by 'next' output channel of component 1 (and deleted after delivery)
-        //journal(WriteMsg(1, 1, Message(InputCreated("a-0"), None, None, 3), None, dl, false))
+        //journal(WriteMsg(1, 1, Message(InputCreated("a-0"), sequenceNr = 3), None, dl, false))
         // 5.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 4), None, dl, false))
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), sequenceNr = 4), None, dl, false))
         // 6.) ACK that input message 1' has been processed by processor 2
         journal(WriteAck(2, 1, 4))
         // 7.) output message from processor 2 written by 'next' output channel of component 2
@@ -215,11 +215,11 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), sequenceNr = 1), None, dl, false))
         // 2.) input message 2 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), sequenceNr = 2), None, dl, false))
         // 3.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 3), None, dl, false))
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), sequenceNr = 3), None, dl, false))
         // 4.) ACK that input message 1 has been processed by processor 1 (and stored by component 2)
         journal(WriteAck(1, 1, 1))
         // 5.) output message from processor 2 is again input message 1'' of component 1
@@ -243,11 +243,11 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // ----------------------------------
 
         // 1.) input message 1 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("a"), None, None, 1), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("a"), sequenceNr = 1), None, dl, false))
         // 2.) input message 2 written by input channel of component 1
-        journal(WriteMsg(1, 0, Message(InputCreated("b"), None, None, 2), None, dl, false))
+        journal(WriteMsg(1, 0, Message(InputCreated("b"), sequenceNr = 2), None, dl, false))
         // 3.) output message from processor 1 is now input message 1' of component 2
-        journal(WriteMsg(2, 0, Message(InputModified("a-0"), None, None, 3), None, dl, false))
+        journal(WriteMsg(2, 0, Message(InputModified("a-0"), sequenceNr = 3), None, dl, false))
         // 4.) ACK that input message 1 has been processed by processor 1 (and stored by component 2)
         journal(WriteAck(1, 1, 1))
         // 5.) output message from processor 2 is again input message 1'' of component 1

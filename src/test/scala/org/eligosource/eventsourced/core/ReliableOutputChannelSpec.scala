@@ -117,14 +117,14 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       "redeliver stored output messaged during recovery" in { fixture =>
         import fixture._
 
-        write(Message("a", None, None, 4L)) // sequence nr written to journal
-        write(Message("b", None, None, 5L)) // sequence nr written to journal
+        write(Message("a", sequenceNr = 4L)) // sequence nr written to journal
+        write(Message("b", sequenceNr = 5L)) // sequence nr written to journal
 
         channel ! SetDestination(successDestination)
         channel ! Deliver
 
-        dequeue(destinationQueue) must be (Right(Message("a", None, None, 4L)))
-        dequeue(destinationQueue) must be (Right(Message("b", None, None, 5L)))
+        dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 4L)))
+        dequeue(destinationQueue) must be (Right(Message("b", sequenceNr = 5L)))
       }
     }
     "delivering a single output message" must {
@@ -137,13 +137,13 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         channel ! Message("a")
         channel ! Message("b")
 
-        dequeue(destinationQueue) must be (Left(Message("a", None, None, 1L)))
-        dequeue(destinationQueue) must be (Left(Message("a", None, None, 1L)))  // redelivery 1
-        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 2
-        dequeue(destinationQueue) must be (Right(Message("b", None, None, 2L)))
+        dequeue(destinationQueue) must be (Left(Message("a", sequenceNr = 1L)))
+        dequeue(destinationQueue) must be (Left(Message("a", sequenceNr = 1L)))  // redelivery 1
+        dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 2
+        dequeue(destinationQueue) must be (Right(Message("b", sequenceNr = 2L)))
 
-        dequeue(replyDestinationQueue) must be (Right(Message("a", None, None, 1L)))
-        dequeue(replyDestinationQueue) must be (Right(Message("b", None, None, 2L)))
+        dequeue(replyDestinationQueue) must be (Right(Message("a", sequenceNr = 1L)))
+        dequeue(replyDestinationQueue) must be (Right(Message("b", sequenceNr = 2L)))
       }
       "recover from reply destination failures" in { fixture =>
         import fixture._
@@ -153,13 +153,13 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         channel ! Deliver
         channel ! Message("a")
 
-        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L)))
-        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 1
-        dequeue(destinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 2
+        dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 1L)))
+        dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 1
+        dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 2
 
-        dequeue(replyDestinationQueue) must be (Left(Message("a", None, None, 1L)))
-        dequeue(replyDestinationQueue) must be (Left(Message("a", None, None, 1L)))  // redelivery 1
-        dequeue(replyDestinationQueue) must be (Right(Message("a", None, None, 1L))) // redelivery 2
+        dequeue(replyDestinationQueue) must be (Left(Message("a", sequenceNr = 1L)))
+        dequeue(replyDestinationQueue) must be (Left(Message("a", sequenceNr = 1L)))  // redelivery 1
+        dequeue(replyDestinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 2
       }
     }
     "delivering multiple output messages" must {
@@ -177,27 +177,27 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         1 to 7 foreach { i => channel ! Message(i) }
 
         val expected = List(
-          Right(Message(1, None, None, 1L)), // success    at event 1
-          Right(Message(2, None, None, 2L)), // success    at event 2
-          Right(Message(3, None, None, 3L)), // success    at event 3
-          Left( Message(4, None, None, 4L)), // failure #1 at event 4
-          Left( Message(4, None, None, 4L)), // failure #2 at event 4, retry #1 before recovery
-          Left( Message(4, None, None, 4L)), // failure #3 at event 4, retry #2 before recovery
-          Left( Message(4, None, None, 4L)), // failure #4 at event 4, retry #3 before recovery
-          Left( Message(4, None, None, 4L)), // failure #5 at event 4, retry #1 after recovery #1
-          Right(Message(4, None, None, 4L)), // success    at event 4, retry #2 after recovery #1
-          Right(Message(5, None, None, 5L)), // success    at event 5
-          Right(Message(6, None, None, 6L)), // success    at event 6
-          Right(Message(7, None, None, 7L))  // success    at event 7
+          Right(Message(1, sequenceNr = 1L)), // success    at event 1
+          Right(Message(2, sequenceNr = 2L)), // success    at event 2
+          Right(Message(3, sequenceNr = 3L)), // success    at event 3
+          Left( Message(4, sequenceNr = 4L)), // failure #1 at event 4
+          Left( Message(4, sequenceNr = 4L)), // failure #2 at event 4, retry #1 before recovery
+          Left( Message(4, sequenceNr = 4L)), // failure #3 at event 4, retry #2 before recovery
+          Left( Message(4, sequenceNr = 4L)), // failure #4 at event 4, retry #3 before recovery
+          Left( Message(4, sequenceNr = 4L)), // failure #5 at event 4, retry #1 after recovery #1
+          Right(Message(4, sequenceNr = 4L)), // success    at event 4, retry #2 after recovery #1
+          Right(Message(5, sequenceNr = 5L)), // success    at event 5
+          Right(Message(6, sequenceNr = 6L)), // success    at event 6
+          Right(Message(7, sequenceNr = 7L))  // success    at event 7
         )
 
         List.fill(12)(dequeue(destinationQueue)) must be(expected)
 
         // send another message to reliable output channel
-        channel ! Message(8, None, None, 0L)
+        channel ! Message(8, sequenceNr = 0L)
 
         // check that sequence number is updated appropriately
-        dequeue(destinationQueue) must be(Right(Message(8, None, None, 8L)))
+        dequeue(destinationQueue) must be(Right(Message(8, sequenceNr = 8L)))
       }
     }
   }
