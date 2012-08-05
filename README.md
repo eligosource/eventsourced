@@ -1,4 +1,10 @@
 Eventsourced
 ============
 
-Eventsourced is a library that adds event-sourcing to [Akka](http://akka.io/) actors and can be used for building reliable, scalable and distributed event-sourced [Scala](http://www.scala-lang.org/) applications. More to follow soon ...
+Eventsourced is a library that adds event-sourcing to [Akka](http://akka.io/) actors and can be used for building scalable, reliable and distributed stateful Scala (web) applications. It appends event (or command) messages to a journal before they are processed by an actor and recovers actor state by replaying these events. Appending event messages to a journal, instead of writing actor state directly, allows for actor state persistence at very high transaction rates. Actor state can also be replicated by event-sourcing actor copies on hot-standby slave nodes which can start handling new events immediately should a master go down. 
+
+Events produced by an event-sourced actor are sent to destinations via one or more output channels. Channels connect an actor to other application parts such as external web services, internal domain services, messaging systems, event archives or other local or remote event-sourced actors, to mention only a few examples. During recovery, output channels ensure that messages produced by an event-sourced actor are not redundantly delivered to destinations. They may also guarantee delivery of produced event messages by optionally appending them to a journal and removing them once they have been successfully delivered. 
+
+From an application developer's perspective there's no difference whether the state of a single actor is recovered (e.g. after a crash or during normal application start) or the state of a network of event-sourced actors (connected via channels to a directed graph which may contain cycles). The library provides a single method to recover an event-sourced application. Another benefit of the provided recovery mechanisms is that the implementation of reliable long-running business processes based on event-sourced state machines becomes trivial. For example, Akka's [FSM](http://doc.akka.io/docs/akka/2.0.2/scala/fsm.html) can be used to implement long-running business processes where persistence and recovery is provided by the library.
+
+More coming soon …
