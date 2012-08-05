@@ -27,9 +27,9 @@ import akka.util.Duration
  * channels to communicate with other collaborators. Components can be composed to
  * directed graphs (cyclic, if needed).
  */
-class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSystem) extends Iterable[Component] {
+class Component(val id: Int, val journal: ActorRef)(implicit system: ActorSystem) extends Iterable[Component] {
   import Channel._
-  import Journaler._
+  import Journal._
 
   import ReliableOutputChannel.{
     defaultRecoveryDelay => rcd,
@@ -39,7 +39,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
 
   assert(id > 0)
 
-  val inputChannel = system.actorOf(Props(new InputChannel(id, journaler)))
+  val inputChannel = system.actorOf(Props(new InputChannel(id, journal)))
   val inputProducer = system.actorOf(Props(new InputChannelProducer(inputChannel)))
 
   private var inputProcessor: Option[ActorRef] = None
@@ -105,7 +105,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
    * Recovers processor state by replaying input events.
    */
   def replay(fromSequenceNr: Long = 0L): Unit = inputProcessor foreach { p =>
-    journaler ! Replay(id, inputChannelId, fromSequenceNr, p)
+    journal ! Replay(id, inputChannelId, fromSequenceNr, p)
   }
 
   /**
@@ -134,7 +134,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     checkAddChannelPreconditions()
 
     val channelId = outputChannelsForName.size + 1
-    val channel = system.actorOf(Props(new DefaultOutputChannel(id, channelId, journaler)))
+    val channel = system.actorOf(Props(new DefaultOutputChannel(id, channelId, journal)))
 
     channel ! Channel.SetDestination(destination)
     replyDestination foreach { rd => channel ! Channel.SetReplyDestination(rd)}
@@ -149,7 +149,7 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
     checkAddChannelPreconditions()
 
     val channelId = outputChannelsForName.size + 1
-    val channelEnv = ReliableOutputChannelEnv(id, journaler, recoveryDelay, retryDelay, retryMax)
+    val channelEnv = ReliableOutputChannelEnv(id, journal, recoveryDelay, retryDelay, retryMax)
     val channel = system.actorOf(Props(new ReliableOutputChannel(channelId, channelEnv)))
 
     channel ! Channel.SetDestination(destination)
@@ -171,11 +171,11 @@ class Component(val id: Int, val journaler: ActorRef)(implicit system: ActorSyst
 }
 
 object Component {
-  def apply(id: Int, journaler: ActorRef)(implicit system: ActorSystem): Component =
-    new Component(id, journaler)
+  def apply(id: Int, journal: ActorRef)(implicit system: ActorSystem): Component =
+    new Component(id, journal)
 
   def apply(id: Int, journalDir: File)(implicit system: ActorSystem): Component =
-    apply(id, system.actorOf(Props(new Journaler(journalDir))))
+    apply(id, system.actorOf(Props(new Journal(journalDir))))
 
   val invalidStateMessage = "output channels cannot be added after processor has been set"
 }

@@ -33,8 +33,8 @@ trait Channel extends Actor {
 
   implicit val executionContext = context.dispatcher
 
-  def journaler: ActorRef
-  val journalerTimeout = Timeout(10 seconds)
+  def journal: ActorRef
+  val journalTimeout = Timeout(10 seconds)
 }
 
 object Channel {
@@ -55,9 +55,9 @@ object Channel {
  * component. This channel writes event messages to a journal before sending it to the
  * component's processor.
  */
-class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channel {
+class InputChannel(val componentId: Int, val journal: ActorRef) extends Channel {
   import Channel._
-  import Journaler._
+  import Journal._
 
   val id = inputChannelId
 
@@ -65,7 +65,7 @@ class InputChannel(val componentId: Int, val journaler: ActorRef) extends Channe
 
   def receive = {
     case msg: Message => {
-      processor foreach { p => journaler forward WriteMsg(componentId, id, msg, None, p) }
+      processor foreach { p => journal forward WriteMsg(componentId, id, msg, None, p) }
     }
     case SetProcessor(p) => {
       processor = Some(p)
@@ -93,9 +93,9 @@ trait OutputChannel extends Channel {
  * An output channel that sends event messages to a destination. If the destination successfully
  * responds, an acknowledgement is written to the journal.
  */
-class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: ActorRef) extends OutputChannel {
+class DefaultOutputChannel(val componentId: Int, val id: Int, val journal: ActorRef) extends OutputChannel {
   import Channel._
-  import Journaler._
+  import Journal._
 
   assert(id > 0)
 
@@ -127,7 +127,7 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
     } yield r2
 
     r onSuccess {
-      case _ if (msg.ack) => journaler.!(WriteAck(componentId, id, msg.sequenceNr))(null)
+      case _ if (msg.ack) => journal.!(WriteAck(componentId, id, msg.sequenceNr))(null)
     }
   }
 
@@ -137,7 +137,7 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journaler: Act
 
 case class ReliableOutputChannelEnv(
   componentId: Int,
-  journaler: ActorRef,
+  journal: ActorRef,
   recoveryDelay: Duration,
   retryDelay: Duration,
   retryMax: Int
@@ -150,19 +150,19 @@ case class ReliableOutputChannelEnv(
  */
 class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends OutputChannel {
   import Channel._
-  import Journaler._
+  import Journal._
 
   assert(id > 0)
 
   val componentId = env.componentId
-  val journaler = env.journaler
+  val journal = env.journal
 
   var buffer: Option[ActorRef] = None
 
   def receive = {
     case msg: Message if (!msg.acks.contains(id) && !msg.replicated) => {
       val ackSequenceNr = if (msg.ack) Some(msg.sequenceNr) else None
-      journaler.!(WriteMsg(componentId, id, msg, ackSequenceNr, buffer.getOrElse(context.system.deadLetters)))(null)
+      journal.!(WriteMsg(componentId, id, msg, ackSequenceNr, buffer.getOrElse(context.system.deadLetters)))(null)
     }
     case Deliver => destination foreach { d =>
       buffer = Some(createBuffer(d))
@@ -181,7 +181,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   }
 
   def deliverPendingMessages(destination: ActorRef) {
-    journaler.!(Replay(componentId, id, 0L, destination))(null)
+    journal.!(Replay(componentId, id, 0L, destination))(null)
   }
 
   def createBuffer(destination: ActorRef) = {
@@ -231,7 +231,7 @@ class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, replyDe
 
 class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDestination: Option[ActorRef], env: ReliableOutputChannelEnv) extends Actor {
   import Channel._
-  import Journaler._
+  import Journal._
   import ReliableOutputChannel._
 
   implicit val executionContext = context.dispatcher
@@ -262,7 +262,7 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDe
 
       future onSuccess {
         case _ => {
-          env.journaler.!(DeleteMsg(env.componentId, channelId, msg.sequenceNr))(null)
+          env.journal.!(DeleteMsg(env.componentId, channelId, msg.sequenceNr))(null)
           self ! Next(0)
         }
       }

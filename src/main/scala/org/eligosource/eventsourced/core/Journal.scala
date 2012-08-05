@@ -31,8 +31,8 @@ import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.util.JavaSerializer
 
-class Journaler(dir: File) extends Actor {
-  import Journaler._
+class Journal(dir: File) extends Actor {
+  import Journal._
 
   // TODO: make configurable
   private val serializer = new JavaSerializer[Message]
@@ -163,7 +163,7 @@ class Journaler(dir: File) extends Actor {
 
 }
 
-object Journaler {
+object Journal {
   case class WriteMsg(componentId: Int, channelId: Int, message: Message, ackSequenceNr: Option[Long], target: ActorRef, genSequenceNr: Boolean = true) {
     def forSequenceNr(snr: Long) = {
       copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
@@ -213,8 +213,8 @@ object Journaler {
   }
 }
 
-class ReplicatingJournaler(journaler: ActorRef) extends Actor {
-  import Journaler._
+class ReplicatingJournal(journal: ActorRef) extends Actor {
+  import Journal._
   import Replicator._
 
   implicit val executor = context.dispatcher
@@ -232,7 +232,7 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
       replicator = r
     }
     case cmd: Replay => {
-      journaler forward cmd
+      journal forward cmd
     }
     case cmd: WriteMsg => {
       val d = deliveryCounter
@@ -249,7 +249,7 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
   }
 
   def execute(cmd: Any)(onSuccess: => Unit) {
-    val jf = journaler.ask(cmd)(journalerTimeout)
+    val jf = journal.ask(cmd)(journalTimeout)
     val rf = if (replicator.isDefined) replicator.get.ask(cmd)(replicatorTimeout) else success
     val cf = Future.sequence(List(jf, rf))
 
@@ -282,7 +282,7 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
   }
 
   def getCounter: Long = {
-    val future = journaler.ask(GetCounter)(counterInitTimeout)
+    val future = journal.ask(GetCounter)(counterInitTimeout)
     Await.result(future.mapTo[Long], counterInitTimeout.duration)
   }
 
@@ -303,8 +303,8 @@ class ReplicatingJournaler(journaler: ActorRef) extends Actor {
   }
 }
 
-class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor {
-  import Journaler._
+class Replicator(journal: ActorRef, inputBufferLimit: Int = 100) extends Actor {
+  import Journal._
   import Replicator._
 
   var components = Map.empty[Int, Component]
@@ -352,13 +352,13 @@ class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor
 
     case cmd: WriteMsg => {
       if (cmd.channelId == Channel.inputChannelId) delay(cmd.componentId, cmd.message)
-      journaler forward cmd.copy(target = context.system.deadLetters)
+      journal forward cmd.copy(target = context.system.deadLetters)
     }
     case cmd: WriteAck => {
-      journaler forward cmd
+      journal forward cmd
     }
     case cmd: DeleteMsg => {
-      journaler forward cmd
+      journal forward cmd
     }
   }
 
@@ -381,7 +381,7 @@ class Replicator(journaler: ActorRef, inputBufferLimit: Int = 100) extends Actor
 object Replicator {
   val counterInitTimeout = Timeout(5 seconds)
   val replicatorTimeout = Timeout(5 seconds)
-  val journalerTimeout = Timeout(5 seconds)
+  val journalTimeout = Timeout(5 seconds)
 
 
   case class SetReplicator(replicator: Option[ActorRef])

@@ -38,8 +38,8 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
     val dl = system.deadLetters
 
-    val journaler = system.actorOf(Props(new Journaler(journalDir)))
-    val replicatingJournaler = system.actorOf(Props(new ReplicatingJournaler(journaler)))
+    val journal = system.actorOf(Props(new Journal(journalDir)))
+    val replicatingJournal = system.actorOf(Props(new ReplicatingJournal(journal)))
 
     val queue = new LinkedBlockingQueue[Message]
     val dest = system.actorOf(Props(new Actor {
@@ -49,13 +49,13 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     }))
 
     def component(reliable: Boolean) = if (reliable) {
-      Component(1, replicatingJournaler)
+      Component(1, replicatingJournal)
         .addReliableOutputChannelToActor("dest", dest)
         .setProcessor { outputChannels =>
         system.actorOf(Props(new ReplicatedProcessor(outputChannels)))
       }
     } else {
-      Component(1, replicatingJournaler)
+      Component(1, replicatingJournal)
         .addDefaultOutputChannelToActor("dest", dest)
         .setProcessor { outputChannels =>
         system.actorOf(Props(new ReplicatedProcessor(outputChannels)))
@@ -92,7 +92,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     }
   }
 
-  import Journaler._
+  import Journal._
   import Replicator._
 
   "A slave component with reliable output channels" must {
@@ -102,7 +102,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       import slaveFixture._
 
-      val replicator = system.actorOf(Props(new Replicator(slaveFixture.replicatingJournaler, 10)))
+      val replicator = system.actorOf(Props(new Replicator(slaveFixture.replicatingJournal, 10)))
       def replicate(cmd: Any) = Await.result(replicator ? cmd, timeout.duration)
 
       replicator ! RegisterComponents(slaveComponent)
@@ -148,7 +148,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
       import slaveFixture._
 
-      val replicator = system.actorOf(Props(new Replicator(slaveFixture.replicatingJournaler, 10)))
+      val replicator = system.actorOf(Props(new Replicator(slaveFixture.replicatingJournal, 10)))
       def replicate(cmd: Any) = Await.result(replicator ? cmd, timeout.duration)
 
       replicator ! RegisterComponents(slaveComponent)
@@ -200,14 +200,14 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     // Create a replicator. This is usually a remote actor created
     // on a slave node and used on the master node. In this test,
     // master and slave are co-located
-    val replicator = slaveFixture.system.actorOf(Props(new Replicator(slaveFixture.replicatingJournaler, 10)))
+    val replicator = slaveFixture.system.actorOf(Props(new Replicator(slaveFixture.replicatingJournal, 10)))
 
     // Replicator event-sources slave component/composite with
     // replicated messages
     replicator ! RegisterComponents(slaveComponent)
 
-    // Configure replicating journaler with replicator.
-    masterFixture.replicatingJournaler ! SetReplicator(Some(replicator))
+    // Configure replicating journal with replicator.
+    masterFixture.replicatingJournal ! SetReplicator(Some(replicator))
 
     // ---------
     // On master

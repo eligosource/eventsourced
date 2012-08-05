@@ -30,7 +30,7 @@ import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
 class CompositeRecoverySpec extends WordSpec with MustMatchers {
-  import Journaler._
+  import Journal._
 
   type FixtureParam = Fixture
 
@@ -39,7 +39,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     implicit val timeout = Timeout(5 seconds)
 
     val journalDir = new File("target/journal")
-    val journaler = system.actorOf(Props(new Journaler(journalDir)))
+    val journal = system.actorOf(Props(new Journal(journalDir)))
 
     val destinationQueue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Receiver(destinationQueue)))
@@ -50,9 +50,9 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
     val dl = system.deadLetters
 
-    def createExampleComposite(journaler: ActorRef, destination: ActorRef, reliable: Boolean): Component = {
-      val c1 = Component(1, journaler)
-      val c2 = Component(2, journaler)
+    def createExampleComposite(journal: ActorRef, destination: ActorRef, reliable: Boolean): Component = {
+      val c1 = Component(1, journal)
+      val c2 = Component(2, journal)
 
       if (reliable) {
         c1.addReliableOutputChannelToComponent("next", c2)
@@ -69,7 +69,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     }
 
     def journal(cmd: Any) {
-      Await.result(journaler ? cmd, timeout.duration)
+      Await.result(journal ? cmd, timeout.duration)
     }
 
     def dequeue(p: Message => Unit) {
@@ -163,7 +163,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // 8.) output message from processor 2 is again input message 1'' of component 1
         journal(WriteMsg(1, 0, Message(InputModified("a-0-0"), None, Some("4"), 6), None, dl, false))
 
-        val composite = createExampleComposite(journaler, destination, true)
+        val composite = createExampleComposite(journal, destination, true)
 
         Composite.init(composite)
 
@@ -197,7 +197,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // 8.) output message from processor 2 is again input message 1'' of component 1
         journal(WriteMsg(1, 0, Message(InputModified("a-0-0"), None, Some("4"), 6), None, dl, false))
 
-        val composite = createExampleComposite(journaler, destination, true)
+        val composite = createExampleComposite(journal, destination, true)
 
         Composite.init(composite)
 
@@ -227,7 +227,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // 6.) ACK that input message 1' has been processed by processor 2
         journal(WriteAck(2, 1, 3))
 
-        val composite = createExampleComposite(journaler, destination, false)
+        val composite = createExampleComposite(journal, destination, false)
 
         Composite.init(composite)
 
@@ -256,7 +256,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // NOT YET ACKNOWLEDGED: WILL CAUSE A DUPLICATE (which is detected)
         //journal(WriteAck(2, 1, 3))
 
-        val composite = createExampleComposite(journaler, destination, false)
+        val composite = createExampleComposite(journal, destination, false)
 
         Composite.init(composite)
 

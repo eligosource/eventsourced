@@ -31,7 +31,7 @@ import org.scalatest.matchers.MustMatchers
 
 class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
   import Channel._
-  import Journaler._
+  import Journal._
 
   type FixtureParam = Fixture
 
@@ -57,13 +57,13 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
 
     val journalDir = new File("target/journal")
 
-    val journaler =
-      system.actorOf(Props(new Journaler(journalDir)))
+    val journal =
+      system.actorOf(Props(new Journal(journalDir)))
     val channel =
-      system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(1, journaler, 10 milliseconds, 10 milliseconds, 3))))
+      system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(1, journal, 10 milliseconds, 10 milliseconds, 3))))
 
     def write(msg: Message) {
-      Await.result(journaler ? WriteMsg(1, 1, msg, None, system.deadLetters, false), timeout.duration)
+      Await.result(journal ? WriteMsg(1, 1, msg, None, system.deadLetters, false), timeout.duration)
     }
 
     def dequeue[A](queue: LinkedBlockingQueue[A], timeout: Long = 5000): A = {
@@ -205,7 +205,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     "acknowledge messages by default" in { fixture =>
       import fixture._
 
-      journaler ! SetCommandListener(Some(writeMsgListener))
+      journal ! SetCommandListener(Some(writeMsgListener))
 
       channel ! Message("a", sequenceNr = 1)
       channel ! Deliver
@@ -217,7 +217,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     "not acknowledge messages on request" in { fixture =>
       import fixture._
 
-      journaler ! SetCommandListener(Some(writeMsgListener))
+      journal ! SetCommandListener(Some(writeMsgListener))
 
       channel ! Message("a", sequenceNr = 1, ack = false)
       channel ! Deliver

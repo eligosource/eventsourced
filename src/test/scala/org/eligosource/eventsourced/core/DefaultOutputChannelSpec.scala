@@ -28,7 +28,7 @@ import org.scalatest.matchers.MustMatchers
 
 class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
   import Channel._
-  import Journaler._
+  import Journal._
 
   type FixtureParam = Fixture
 
@@ -49,8 +49,8 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
 
     val journalDir = new File("target/journal")
-    val journaler = system.actorOf(Props(new Journaler(journalDir)))
-    val channel = system.actorOf(Props(new DefaultOutputChannel(1, 1, journaler)))
+    val journal = system.actorOf(Props(new Journal(journalDir)))
+    val channel = system.actorOf(Props(new DefaultOutputChannel(1, 1, journal)))
 
     channel ! SetDestination(successDestination)
 
@@ -122,7 +122,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     "acknowledge messages by default" in { fixture =>
       import fixture._
 
-      journaler ! SetCommandListener(Some(writeAckListener))
+      journal ! SetCommandListener(Some(writeAckListener))
 
       channel ! Message("a", sequenceNr = 1)
       channel ! Deliver
@@ -143,7 +143,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     "not acknowledge messages on request" in { fixture =>
       import fixture._
 
-      journaler ! SetCommandListener(Some(writeAckListener))
+      journal ! SetCommandListener(Some(writeAckListener))
 
       channel ! Message("a", sequenceNr = 1, ack = false)
       channel ! Deliver
@@ -155,7 +155,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     "acknowledge messages after delivery to a reply destination" in { fixture =>
       import fixture._
 
-      journaler ! SetCommandListener(Some(writeAckListener))
+      journal ! SetCommandListener(Some(writeAckListener))
 
       channel ! SetReplyDestination(successReplyDestination)
       channel ! Message("a", sequenceNr = 1)
@@ -191,7 +191,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     "acknowledge messages after delivery failure to a destination" in { fixture =>
       import fixture._
 
-      journaler ! SetCommandListener(Some(writeAckListener))
+      journal ! SetCommandListener(Some(writeAckListener))
 
       channel ! SetDestination(failureDestination("a"))
       channel ! SetReplyDestination(successReplyDestination)
@@ -205,7 +205,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     "acknowledge messages after delivery failure to a reply destination" in { fixture =>
       import fixture._
 
-      journaler ! SetCommandListener(Some(writeAckListener))
+      journal ! SetCommandListener(Some(writeAckListener))
 
       channel ! SetReplyDestination(failureReplyDestination("a"))
       channel ! Message("a", sequenceNr = 1)

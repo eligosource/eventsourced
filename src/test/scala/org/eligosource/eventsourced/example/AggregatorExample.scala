@@ -39,12 +39,12 @@ class AggregatorExample extends WordSpec with MustMatchers {
     implicit val timeout = Timeout(5 seconds)
 
     val journalDir = new File("target/journal")
-    val journaler = system.actorOf(Props(new Journaler(journalDir)))
+    val journal = system.actorOf(Props(new Journal(journalDir)))
 
     val queue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Destination(queue)))
 
-    def createExampleComponent = Component(1, journaler)
+    def createExampleComponent = Component(1, journal)
       .addDefaultOutputChannelToSelf("self")
       .addReliableOutputChannelToActor("dest", destination)
       .setProcessor(outputChannels => system.actorOf(Props(new Aggregator(outputChannels))))
