@@ -44,7 +44,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     val queue = new LinkedBlockingQueue[Message]
     val dest = system.actorOf(Props(new Actor {
       def receive = {
-        case msg: Message => { queue.put(msg); sender ! () }
+        case msg: Message => { queue.put(msg); sender ! Ack }
       }
     }))
 

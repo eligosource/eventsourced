@@ -49,22 +49,22 @@ class Journal(dir: File) extends Actor {
       val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
       execute(c)
       if (c.target != context.system.deadLetters) c.target ! c.message
-      if (sender   != context.system.deadLetters) sender ! ()
+      if (sender   != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteAck => {
       execute(cmd)
-      if (sender != context.system.deadLetters) sender ! ()
+      if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case cmd: DeleteMsg => {
       execute(cmd)
-      if (sender != context.system.deadLetters) sender ! ()
+      if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case Replay(compId, chanId, fromNr, target) => {
       replay(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
-      if (sender != context.system.deadLetters) sender ! ()
+      if (sender != context.system.deadLetters) sender ! Ack
     }
     case GetCounter => {
       sender ! getCounter
@@ -256,7 +256,7 @@ class ReplicatingJournal(journal: ActorRef) extends Actor {
     val s = sender
 
     cf onSuccess {
-      case r => { s ! (); onSuccess }
+      case r => { s ! Ack; onSuccess }
     }
 
     cf onFailure {
@@ -268,8 +268,8 @@ class ReplicatingJournal(journal: ActorRef) extends Actor {
           case (true, false) => {
             // continue at risk without replication
             self ! SetReplicator(None)
-            // inform sender about journaling result
-            s ! ()
+            // inform sender about success
+            s ! Ack
             // ...
             // TODO: inform cluster manager to re-attach slave
           }

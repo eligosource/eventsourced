@@ -93,8 +93,8 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
             sender ! Status.Failure(new Exception("test"))
             if (enqueueFailures) blockingQueue.put(Left(msg))
           } else {
-            sender ! ()
             blockingQueue.put(Right(msg))
+            sender ! Ack
           }
         }
       }

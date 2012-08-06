@@ -139,7 +139,7 @@ class AggregatorExample extends WordSpec with MustMatchers {
 
   class Destination(queue: LinkedBlockingQueue[Message]) extends Actor {
     def receive = {
-      case msg: Message => { queue.put(msg); sender ! () }
+      case msg: Message => { queue.put(msg); sender ! Ack }
     }
   }
 

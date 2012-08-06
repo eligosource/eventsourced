@@ -127,7 +127,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
     class Receiver(queue: LinkedBlockingQueue[Message]) extends Actor {
       def receive = {
-        case msg: Message => { queue.put(msg); sender ! () }
+        case msg: Message => { queue.put(msg); sender ! Ack }
       }
     }
   }
