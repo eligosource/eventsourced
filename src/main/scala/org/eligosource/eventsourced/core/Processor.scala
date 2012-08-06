@@ -20,6 +20,11 @@ import akka.pattern.ask
 import akka.util.duration._
 
 /**
+ * Used by wrapped processors to publish an event to a (named) channel.
+ */
+case class Publish(channel: String, event: Any)
+
+/**
  * Wraps a processor.
  */
 class Processor(outputChannels: Map[String, ActorRef], processor: ActorRef) extends Actor {
@@ -30,7 +35,7 @@ class Processor(outputChannels: Map[String, ActorRef], processor: ActorRef) exte
     case msg: Message => {
       val ctr = counter
       processor.ask(msg.event)(5 seconds /* TODO: make configurable */) onSuccess {
-        case (channel: String, event) => sequencer ! (ctr, (outputChannels.get(channel), msg.copy(event = event)))
+        case Publish(channel, event) => sequencer ! (ctr, (outputChannels.get(channel), msg.copy(event = event)))
       } onFailure {
         case t => { sequencer ! (ctr, None, ()) } // TODO: error handling
       }

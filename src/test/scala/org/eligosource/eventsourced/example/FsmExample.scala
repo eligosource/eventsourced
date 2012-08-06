@@ -94,16 +94,16 @@ class FsmExample extends WordSpec with MustMatchers {
     startWith(DoorClosed, 1)
 
     when(DoorClosed) {
-      case Event("open", counter) => goto(DoorOpen) using(counter + 1) replying(("dest", DoorMoved(counter)))
+      case Event("open", counter) => goto(DoorOpen) using(counter + 1) replying(Publish("dest", DoorMoved(counter)))
     }
 
     when(DoorOpen) {
-      case Event("close", counter) => goto(DoorClosed) using(counter + 1) replying(("dest", DoorMoved(counter)))
+      case Event("close", counter) => goto(DoorClosed) using(counter + 1) replying(Publish("dest", DoorMoved(counter)))
     }
 
     whenUnhandled {
       case Event(cmd, counter) => {
-        stay replying(("dest", DoorNotMoved("cannot %s door in state %s" format (cmd, stateName))))
+        stay replying(Publish("dest", DoorNotMoved("cannot %s door in state %s" format (cmd, stateName))))
       }
     }
   }
