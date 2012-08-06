@@ -7,7 +7,7 @@ Events produced by an event-sourced actor are sent to destinations via one or mo
 
 From an application developer's perspective there's no difference whether the state of a single actor is recovered (e.g. after a crash or during normal application start) or the state of a network of event-sourced actors (connected via channels to a directed graph which may also contain cycles). The library provides a single method for that. Another benefit of the provided recovery mechanisms is that the implementation of reliable long-running business processes based on event-sourced state machines becomes trivial. For example, Akka's [FSM](http://doc.akka.io/docs/akka/2.0.2/scala/fsm.html) can be used to implement long-running business processes where persistence and recovery is provided by the Eventsourced library.
 
-The library itself is built on top of Akka and all message exchanges performed by the library are asynchronous and non-blocking. Most of the library's building blocks (channels, journal, reliable delivery mechanisms, …) are accessible via actor references. Alternative implementation technologies such as the [Disruptor](http://code.google.com/p/disruptor/) concurrent programming framework will be likely evaluated later. For the journal, [LevelDB](http://code.google.com/p/leveldb/) together with [leveldbjni](https://github.com/fusesource/leveldbjni) are currently used. More information about current development state and limitations is given in section ..
+The library itself is built on top of Akka and all message exchanges performed by the library are asynchronous and non-blocking. Most of the library's building blocks (channels, journal, reliable delivery mechanisms, …) are accessible via actor references. Alternative implementation technologies such as the [Disruptor](http://code.google.com/p/disruptor/) concurrent programming framework will be likely evaluated later. For the journal, [LevelDB](http://code.google.com/p/leveldb/) together with [leveldbjni](https://github.com/fusesource/leveldbjni) are currently used. More information about the current development status and limitations is given in section [Current status](#current-status).
 
 Installation
 ------------
@@ -95,5 +95,25 @@ Note that the order ids `0` and `1` were generated from the size of the order ma
 
 Diving deeper
 -------------
+
+TODO
+
+Another example
+---------------
+
+TODO
+
+State machines
+--------------
+
+TODO
+
+More features
+-------------
+
+TODO
+
+Current status
+--------------
 
 TODO
