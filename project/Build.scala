@@ -63,15 +63,19 @@ object EventsourcedBuild extends Build {
     base = file("."),
     settings = defaultSettings ++ Seq(
       libraryDependencies ++= Dependencies.core,
-      runNobootcpSetting,
+      mainRunNobootcpSetting,
+      testRunNobootcpSetting,
       testNobootcpSetting
     )
   )
 
   val runNobootcp =
-    InputKey[Unit]("run-nobootcp", "Runs main classes without Scala library classes on the boot classpath")
+    InputKey[Unit]("run-nobootcp", "Runs main classes without Scala library on the boot classpath")
 
-  val runNobootcpSetting = runNobootcp <<= inputTask { (argTask: TaskKey[Seq[String]]) => (argTask, streams, fullClasspath in Runtime) map { (at, st, cp) =>
+  val mainRunNobootcpSetting = runNobootcp <<= runNobootcpInputTask(Runtime)
+  val testRunNobootcpSetting = runNobootcp <<= runNobootcpInputTask(Test)
+
+  def runNobootcpInputTask(configuration: Configuration) = inputTask { (argTask: TaskKey[Seq[String]]) => (argTask, streams, fullClasspath in configuration) map { (at, st, cp) =>
     val runCp = cp.map(_.data).mkString(pathSeparator)
     val runOpts = Seq("-classpath", runCp) ++ at
     val result = Fork.java.fork(None, runOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()

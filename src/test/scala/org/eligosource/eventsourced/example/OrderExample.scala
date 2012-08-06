@@ -38,6 +38,16 @@ object OrderExample1 extends App {
   // recover processor state from journaled events
   orderComponent.init()
 
+  // send some events
+  orderComponent.inputProducer ! OrderSubmitted(Order("foo"))
+  orderComponent.inputProducer ! OrderSubmitted(Order("bar"))
+
+  // wait for output events to arrive (graceful shutdown coming soon)
+  Thread.sleep(1000)
+
+  // then shutdown
+  system.shutdown()
+
   // event-sourced processor
   class Processor extends Actor {
     var orders = Map.empty[Int, Order] // processor state
