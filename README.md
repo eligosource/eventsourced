@@ -117,3 +117,8 @@ Current status
 --------------
 
 TODO
+
+Forum
+-----
+
+[Eventsourced](http://groups.google.com/group/eventsourced) Google Group
