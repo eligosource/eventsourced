@@ -75,12 +75,14 @@ object EventsourcedBuild extends Build {
   val mainRunNobootcpSetting = runNobootcp <<= runNobootcpInputTask(Runtime)
   val testRunNobootcpSetting = runNobootcp <<= runNobootcpInputTask(Test)
 
-  def runNobootcpInputTask(configuration: Configuration) = inputTask { (argTask: TaskKey[Seq[String]]) => (argTask, streams, fullClasspath in configuration) map { (at, st, cp) =>
-    val runCp = cp.map(_.data).mkString(pathSeparator)
-    val runOpts = Seq("-classpath", runCp) ++ at
-    val result = Fork.java.fork(None, runOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
-    if (result != 0) error("Run failed")
-  } }
+  def runNobootcpInputTask(configuration: Configuration) = inputTask {
+    (argTask: TaskKey[Seq[String]]) => (argTask, streams, fullClasspath in configuration) map { (at, st, cp) =>
+      val runCp = cp.map(_.data).mkString(pathSeparator)
+      val runOpts = Seq("-classpath", runCp) ++ at
+      val result = Fork.java.fork(None, runOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
+      if (result != 0) error("Run failed")
+    }
+  }
 
   val testNobootcpSetting = test <<= (scalaVersion, streams, fullClasspath in Test) map { (sv, st, cp) =>
     val testCp = cp.map(_.data).mkString(pathSeparator)

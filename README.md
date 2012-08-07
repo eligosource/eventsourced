@@ -12,12 +12,65 @@ The library itself is built on top of Akka and all message exchanges performed b
 Installation
 ------------
 
-TODO
+The following steps require [sbt](https://github.com/harrah/xsbt/wiki/) 0.11.3 or higher.
+
+### Building from sources
+
+Until the library can be downloaded from a Maven repository, it must be build from its sources by cloning the project with `git clone git://github.com/eligosource/eventsourced.git` and running `sbt publish-local` from the created `eventsourced` directory. This will publish the library to the local Ivy cache.
+
+### Usage in sbt projects
+
+After having [built](#building-from-sources) the library, add the following dependency to your sbt build definition file.
+
+    "org.eligosource" %% "eventsourced" % "0.4-SNAPSHOT" % "compile"
+
+### Running native code
+
+Running the native LevelDB library from within an sbt project has some issues as described in [sbt issue #358](https://github.com/harrah/xsbt/issues/358). To get it running in your sbt project, a few additional steps are required. The following example adds two new custom tasks, `run-nobootcp` and `test:run-nobootcp` to your project's Build.scala file. They are equivalent to sbt's default `run-main` and `test:run-main` tasks but do not add the Scala library to the boot classpath. 
+
+    import sbt._
+    import Keys._
+
+    object MyBuild extends Build {
+      ...
+
+      lazy val myProject = Project(
+        id = "myProject",
+        base = file("."),
+        settings = Defaults.defaultSettings ++ Seq(
+          ...,
+          mainRunNobootcpSetting,
+          testRunNobootcpSetting
+        )
+      )
+
+      val runNobootcp =
+        InputKey[Unit]("run-nobootcp", "Runs main classes without Scala library on the boot classpath")
+
+      val mainRunNobootcpSetting = runNobootcp <<= runNobootcpInputTask(Runtime)
+      val testRunNobootcpSetting = runNobootcp <<= runNobootcpInputTask(Test)
+
+
+      def runNobootcpInputTask(configuration: Configuration) = inputTask {
+        (argTask: TaskKey[Seq[String]]) => (argTask, streams, fullClasspath in configuration) map { (at, st, cp) =>
+          val runCp = cp.map(_.data).mkString(pathSeparator)
+          val runOpts = Seq("-classpath", runCp) ++ at
+          val result = Fork.java.fork(None, runOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
+          if (result != 0) error("Run failed")
+        }
+      }
+    }
+
+Use these new tasks to run main classes that use the library's LevelDB-based journal. For example, to run the main class `org.example.MyClass` (compiled from sources under `src/main/scala`) execute
+
+    sbt 'run-nobootcp org.example.MyClass'
+
+To get LevelDB running within your tests, you'll need to start your testing framework without the Scala library on the boot classpath. This project's [Build.scala](https://github.com/eligosource/eventsourced/blob/master/project/Build.scala) file demonstrates how this can be done for [ScalaTest](http://www.scalatest.org/), [another example](https://github.com/reportgrid/leveldbjni-specs/blob/master/project/Build.scala) demonstrates how this can be done for [Specs2](http://etorreborre.github.com/specs2/).
 
 First steps
 -----------
 
-Let's start with a simple example that demonstrates some basic library usage. The example actor (`Processor`) that will be event-sourced manages orders by consuming `OrderSubmitted` events and producing `OrderAccepted` events once submitted `Order`s have been assigned an id and are stored in memory. 
+Let's start with a simple example that demonstrates some basic library usage. The example is part of the project's test sources and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.example.OrderExample1'`. The example actor (`Processor`) that will be event-sourced manages orders by consuming `OrderSubmitted` events and producing `OrderAccepted` events once submitted `Order`s have been assigned an id and are stored in memory. 
 
     import akka.actor._
 
