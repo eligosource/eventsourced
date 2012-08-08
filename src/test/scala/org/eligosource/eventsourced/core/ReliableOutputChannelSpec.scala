@@ -94,7 +94,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
             if (enqueueFailures) blockingQueue.put(Left(msg))
           } else {
             blockingQueue.put(Right(msg))
-            sender ! Ack
+            sender ! msg.copy(event = "re: %s" format msg.event)
           }
         }
       }
@@ -142,14 +142,14 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 2
         dequeue(destinationQueue) must be (Right(Message("b", sequenceNr = 2L)))
 
-        dequeue(replyDestinationQueue) must be (Right(Message("a", sequenceNr = 1L)))
-        dequeue(replyDestinationQueue) must be (Right(Message("b", sequenceNr = 2L)))
+        dequeue(replyDestinationQueue) must be (Right(Message("re: a", sequenceNr = 1L)))
+        dequeue(replyDestinationQueue) must be (Right(Message("re: b", sequenceNr = 2L)))
       }
       "recover from reply destination failures" in { fixture =>
         import fixture._
 
         channel ! SetDestination(successDestination)
-        channel ! SetReplyDestination(failureReplyDestination("a", true, 2))
+        channel ! SetReplyDestination(failureReplyDestination("re: a", true, 2))
         channel ! Deliver
         channel ! Message("a")
 
@@ -157,9 +157,9 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 1
         dequeue(destinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 2
 
-        dequeue(replyDestinationQueue) must be (Left(Message("a", sequenceNr = 1L)))
-        dequeue(replyDestinationQueue) must be (Left(Message("a", sequenceNr = 1L)))  // redelivery 1
-        dequeue(replyDestinationQueue) must be (Right(Message("a", sequenceNr = 1L))) // redelivery 2
+        dequeue(replyDestinationQueue) must be (Left(Message("re: a", sequenceNr = 1L)))
+        dequeue(replyDestinationQueue) must be (Left(Message("re: a", sequenceNr = 1L)))  // redelivery 1
+        dequeue(replyDestinationQueue) must be (Right(Message("re: a", sequenceNr = 1L))) // redelivery 2
       }
     }
     "delivering multiple output messages" must {

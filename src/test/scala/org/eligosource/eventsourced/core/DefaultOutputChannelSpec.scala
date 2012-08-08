@@ -66,7 +66,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
 
     class TestDestination(blockingQueue: LinkedBlockingQueue[Message]) extends Actor {
       def receive = {
-        case msg: Message => { blockingQueue.put(msg); sender ! msg }
+        case msg: Message => { blockingQueue.put(msg); sender ! msg.copy(event = "re: %s" format msg.event) }
       }
     }
 
@@ -176,8 +176,8 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       )
 
       val expectedReplies = Set(
-        Message("a", sequenceNr = 1),
-        Message("b", sequenceNr = 2)
+        Message("re: a", sequenceNr = 1),
+        Message("re: b", sequenceNr = 2)
       )
 
       val expectedAcks = Set(
@@ -188,7 +188,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       receivedReplies must be (expectedReplies)
       receivedAcks must be (expectedAcks)
     }
-    "acknowledge messages after delivery failure to a destination" in { fixture =>
+    "not acknowledge messages after delivery failure to a destination" in { fixture =>
       import fixture._
 
       journal ! SetCommandListener(Some(writeAckListener))
@@ -202,17 +202,17 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       dequeue(replyDestinationQueue) must be (Message("b", sequenceNr = 2))
       dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 2))
     }
-    "acknowledge messages after delivery failure to a reply destination" in { fixture =>
+    "not acknowledge messages after delivery failure to a reply destination" in { fixture =>
       import fixture._
 
       journal ! SetCommandListener(Some(writeAckListener))
 
-      channel ! SetReplyDestination(failureReplyDestination("a"))
+      channel ! SetReplyDestination(failureReplyDestination("re: a"))
       channel ! Message("a", sequenceNr = 1)
       channel ! Deliver
       channel ! Message("b", sequenceNr = 2)
 
-      dequeue(replyDestinationQueue) must be (Message("b", sequenceNr = 2))
+      dequeue(replyDestinationQueue) must be (Message("re: b", sequenceNr = 2))
       dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 2))
     }
   }

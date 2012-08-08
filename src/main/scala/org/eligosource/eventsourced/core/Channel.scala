@@ -123,7 +123,7 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journal: Actor
   def send(msg: Message): Unit = destination foreach { d =>
     val r = for {
       r1 <- d.ask(msg)(destinationTimeout)
-      r2 <- reply(msg)
+      r2 <- reply(r1)
     } yield r2
 
     r onSuccess {
@@ -131,8 +131,8 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journal: Actor
     }
   }
 
-  def reply(msg: Message): Future[Any] =
-    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(()))
+  def reply(msg: Any): Future[Any] =
+    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(Ack))
 }
 
 case class ReliableOutputChannelEnv(
@@ -283,9 +283,9 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDe
 
   def send(msg: Message): Future[Any] = for {
     r1 <- destination.ask(msg)(destinationTimeout)
-    r2 <- reply(msg)
+    r2 <- reply(r1)
   } yield r2
 
-  def reply(msg: Message): Future[Any] =
-    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(()))
+  def reply(msg: Any): Future[Any] =
+    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(Ack))
 }
