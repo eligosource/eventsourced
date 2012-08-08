@@ -33,5 +33,5 @@ object Order {
 case class OrderSubmitted(order: Order)
 case class OrderAccepted(order: Order)
 
-case class CredidCardValidationRequested(order: Order)
-case class CredidCardValidated(orderId: String)
+case class CreditCardValidationRequested(order: Order)
+case class CreditCardValidated(orderId: Int)
