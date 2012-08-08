@@ -31,18 +31,18 @@ object OrderExample3 extends App {
   val journalDir = new java.io.File("target/example")
   val journal = system.actorOf(Props(new Journal(journalDir)))
 
+  // create destinations for output events
+  val validator = system.actorOf(Props[CreditCardValidator])
+  val destination = system.actorOf(Props[Destination])
+
   // create an event-sourcing component
   val orderComponent = Component(1, journal)
-
-  // create destinations for output events
-  val validator = system.actorOf(Props[Validator])
-  val destination = system.actorOf(Props[Destination])
 
   // configure component
   orderComponent
     .addReliableOutputChannelToActor("validator", validator, Some(orderComponent))
     .addDefaultOutputChannelToActor("destination", destination)
-    .setProcessor(outputChannels => system.actorOf(Props(new Processor(outputChannels))))
+    .setProcessor(outputChannels => system.actorOf(Props(new OrderProcessor(outputChannels))))
 
   // recover processor state from journaled events
   orderComponent.init()
@@ -58,8 +58,7 @@ object OrderExample3 extends App {
   // then shutdown
   system.shutdown()
 
-  // event-sourced processor
-  class Processor(outputChannels: Map[String, ActorRef]) extends Actor {
+  class OrderProcessor(outputChannels: Map[String, ActorRef]) extends Actor {
     var orders = Map.empty[Int, Order] // processor state
 
     def receive = {
@@ -82,7 +81,7 @@ object OrderExample3 extends App {
     }
   }
 
-  class Validator extends Actor {
+  class CreditCardValidator extends Actor {
     def receive = {
       case msg: Message => msg.event match {
         case CreditCardValidationRequested(order) => {
