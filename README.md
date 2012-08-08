@@ -178,7 +178,7 @@ In this section we'll extend the order management example (developed in [previou
 
 What's described in the second paragraph can be implemented with the Eventsourced library as shown in the following diagram.
 
-![Order example](doc/images/order-example-3.png)
+![Order example](https://raw.github.com/eligosource/eventsourced/master/doc/images/order-example-3.png)
 
 - We implement the mentioned <i>Business Logic Processor</i> processor as event-sourced actor (`OrderProcessor`). It processes `OrderSubmitted` events and emits `CreditCardValidationRequested` events for every submitted order.
 - `CreditCardValidationRequested` events are processed by a `CreditCardValidator` actor. It contacts an external credit card validation service and sends `CreditCardValidated` events back to the order management component for every order with a valid credit card number. In the example implementation below, we won't actually use an external service to keep the implementation simple, but for real-world implementations, [akka-camel](http://doc.akka.io/docs/akka/snapshot/scala/camel.html) would be a perfect fit here.
