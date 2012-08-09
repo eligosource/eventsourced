@@ -44,10 +44,14 @@ class AggregatorExample extends WordSpec with MustMatchers {
     val queue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Destination(queue)))
 
-    def createExampleComponent = Component(1, journal)
-      .addDefaultOutputChannelToSelf("self")
-      .addReliableOutputChannelToActor("dest", destination)
-      .setProcessor(outputChannels => system.actorOf(Props(new Aggregator(outputChannels))))
+    def createExampleComponent = {
+      val component = Component(1, journal)
+
+      component
+        .addDefaultOutputChannelToComponent("self", component)
+        .addReliableOutputChannelToActor("dest", destination)
+        .setProcessor(outputChannels => system.actorOf(Props(new Aggregator(outputChannels))))
+    }
 
     def dequeue(timeout: Long = 5000): Message = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)

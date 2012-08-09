@@ -59,11 +59,6 @@ class Component(val id: Int, val journal: ActorRef)(implicit system: ActorSystem
     addReliableOutputChannel(name, component.inputChannel, None, recoveryDelay, retryDelay, retryMax)
   }
 
-  def addReliableOutputChannelToSelf(name: String,
-      recoveryDelay: Duration = rcd, retryDelay: Duration = rtd, retryMax: Int = rtm): Component = {
-    addReliableOutputChannelToActor(name, inputChannel, None, recoveryDelay, retryDelay, retryMax)
-  }
-
   def addDefaultOutputChannelToActor(name: String, destination: ActorRef, replyDestination: Option[Component] = None): Component = {
     replyDestination.foreach(rd => outputDependencies = rd :: outputDependencies)
     addDefaultOutputChannel(name, destination, replyDestination.map(_.inputChannel))
@@ -72,10 +67,6 @@ class Component(val id: Int, val journal: ActorRef)(implicit system: ActorSystem
   def addDefaultOutputChannelToComponent(name: String, component: Component): Component = {
     outputDependencies = component :: outputDependencies
     addDefaultOutputChannel(name, component.inputChannel, None)
-  }
-
-  def addDefaultOutputChannelToSelf(name: String): Component = {
-    addDefaultOutputChannelToActor(name, inputChannel)
   }
 
   def setProcessor(processorFactory: Map[String, ActorRef] => ActorRef): Component = {
