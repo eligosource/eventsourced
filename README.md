@@ -7,7 +7,7 @@ Events produced by an event-sourced actor are sent to destinations via one or mo
 
 From an application developer's perspective there's no difference whether the state of a single actor is recovered (e.g. after a crash or during normal application start) or the state of a network of event-sourced actors (connected via channels to a directed graph which may also contain cycles). The library provides a single method for that. Another benefit of the provided recovery mechanisms is that the implementation of reliable long-running business processes based on event-sourced state machines becomes trivial. For example, Akka's [FSM](http://doc.akka.io/docs/akka/2.0.2/scala/fsm.html) can be used to implement long-running business processes where persistence and recovery is provided by the Eventsourced library.
 
-The library itself is built on top of Akka and all message exchanges performed by the library are asynchronous and non-blocking. Most of the library's building blocks (channels, journal, reliable delivery mechanisms, …) are accessible via actor references. Alternative implementation technologies such as the [Disruptor](http://code.google.com/p/disruptor/) concurrent programming framework will likely be evaluated later. The journal implementation is currently based on [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni). More information about the current development status and limitations is given in section [Current status](#current-status).
+The library itself is built on top of Akka and all message exchanges performed by the library are asynchronous and non-blocking. Most of the library's building blocks (channels, journal, reliable delivery mechanisms, …) are accessible via actor references. Alternative implementation technologies such as the [Disruptor](http://code.google.com/p/disruptor/) concurrent programming framework will likely be evaluated later. The journal implementation is currently based on [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni). More information about the current development status is given in section [Current status](#current-status).
 
 Installation
 ------------
@@ -310,15 +310,24 @@ to `stdout`. When you exit the application and run it again, the door state and 
 
 The complete source code is at [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala). It can be executed during a normal test run with `sbt test`.
 
-More features
--------------
+Further features
+----------------
 
-TODO
+- Components can be connected to directed graphs (containing cycles if needed) where a component graph can also be distributed (via [actor remoting](http://doc.akka.io/docs/akka/2.0.2/scala/remoting.html))
+- Journals can be (synchronously or asynchronously) replicated to one or more slave nodes (experimental, see also [ReplicationSpec](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/core/ReplicationSpec.scala)).
+- Components can be replicated by event-sourcing them on one or more slave nodes (experimental, see also [ReplicationSpec](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/core/ReplicationSpec.scala))
+- Input and output channels maintain the order of event messages. Reliable output channels even maintain it in presence of destination failures. 
+- Should applications want to re-sequence event messages based on application-defined sequence numbers, they can do so with a [Sequencer](https://github.com/eligosource/eventsourced/blob/master/src/main/scala/org/eligosource/eventsourced/core/Sequencer.scala) which is part of the library.
+- … 
 
 Current status
 --------------
 
-TODO
+The documentation on this page only scratches the surface of what can be done with the library. More examples, a detailed reference documentation and an architecture description will follow.
+
+The development status of the library is still early-access and we expect to have a first release ready in Sep or Oct 2012 (after having implemented some [planned enhancements](https://github.com/eligosource/eventsourced/issues?labels=enhancement)). 
+
+The library isn't performance-optimized yet. Although we already measured throughputs in the order of 10k msgs/s (including persistence) and latencies around 1 ms for the examples above on a 2010 MacBook Pro with default JVM settings, there's enough room for performance improvements.
 
 Forum
 -----
