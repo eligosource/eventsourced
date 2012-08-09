@@ -78,7 +78,7 @@ class FsmExample extends WordSpec with MustMatchers {
 
       dequeue().event must be (DoorMoved(1))
       dequeue().event must be (DoorMoved(2))
-      dequeue().event must be (DoorNotMoved("cannot close door in state DoorClosed"))
+      dequeue().event must be (DoorNotMoved("cannot close door in state Closed"))
 
       val recoveredDoor = createExampleComponent.init()
 
@@ -91,14 +91,14 @@ class FsmExample extends WordSpec with MustMatchers {
   }
 
   class Door extends Actor with FSM[DoorState, Int] {
-    startWith(DoorClosed, 1)
+    startWith(Closed, 0)
 
-    when(DoorClosed) {
-      case Event("open", counter) => goto(DoorOpen) using(counter + 1) replying(Publish("dest", DoorMoved(counter)))
+    when(Closed) {
+      case Event("open", counter) => goto(Open) using(counter + 1) replying(Publish("dest", DoorMoved(counter + 1)))
     }
 
-    when(DoorOpen) {
-      case Event("close", counter) => goto(DoorClosed) using(counter + 1) replying(Publish("dest", DoorMoved(counter)))
+    when(Open) {
+      case Event("close", counter) => goto(Closed) using(counter + 1) replying(Publish("dest", DoorMoved(counter + 1)))
     }
 
     whenUnhandled {
@@ -118,8 +118,8 @@ class FsmExample extends WordSpec with MustMatchers {
 
 sealed trait DoorState
 
-case object DoorOpen extends DoorState
-case object DoorClosed extends DoorState
+case object Open extends DoorState
+case object Closed extends DoorState
 
 case class DoorMoved(times: Int)
 case class DoorNotMoved(reason: String)
