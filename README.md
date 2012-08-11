@@ -320,6 +320,11 @@ Further features
 - Should applications want to re-sequence event messages based on application-defined sequence numbers, they can do so with a [Sequencer](https://github.com/eligosource/eventsourced/blob/master/src/main/scala/org/eligosource/eventsourced/core/Sequencer.scala) which is part of the library.
 - … 
 
+Reference application
+---------------------
+
+A reference web application, demonstrating event-sourcing best practices and usage of the Eventsourced library, is available [here](https://github.com/eligosource/eventsourced-example).
+
 Current status
 --------------
 
