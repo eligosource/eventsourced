@@ -80,6 +80,14 @@ class Component(val id: Int, val journal: ActorRef)(implicit system: ActorSystem
     setProcessor(outputChannels => system.actorOf(Props(new Processor(outputChannels, processor))))
   }
 
+  def setProcessors(processorsFactory: Map[String, ActorRef] => Seq[ActorRef]): Component = {
+    setProcessor(outputChannels => system.actorOf(Props(new Multicast(processorsFactory(outputChannelsForName)))))
+  }
+
+  def setProcessors(processors: Seq[ActorRef]): Component = {
+    setProcessors(outputChannels => processors.map(p => system.actorOf(Props(new Processor(outputChannels, p)))))
+  }
+
   def processor: Option[ActorRef] =
     inputProcessor
 

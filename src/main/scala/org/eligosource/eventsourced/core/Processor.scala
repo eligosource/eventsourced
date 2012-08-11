@@ -20,12 +20,12 @@ import akka.pattern.ask
 import akka.util.duration._
 
 /**
- * Used by wrapped processors to publish an event to a (named) channel.
+ * Used by wrapped processors to publish events to (named) channels.
  */
 case class Publish(channel: String, event: Any)
 
 /**
- * Wraps a processor.
+ * Wraps a processor and manages the output channels for the wrapped processor.
  */
 class Processor(outputChannels: Map[String, ActorRef], processor: ActorRef) extends Actor {
   var counter = 1L
@@ -47,9 +47,18 @@ class Processor(outputChannels: Map[String, ActorRef], processor: ActorRef) exte
 /**
  * Resequences asynchronous responses from wrapped processor.
  */
-class ProcessorOutputSequencer(outputChannels: Map[String, ActorRef]) extends Sequencer {
+private [core] class ProcessorOutputSequencer(outputChannels: Map[String, ActorRef]) extends Sequencer {
   def receiveSequenced = {
     case (channel: Option[ActorRef], message: Message) => channel.foreach(_ ! message)
     case (channel: Option[ActorRef], t: Throwable)     => ()
+  }
+}
+
+/**
+ * Wraps a sequence of processors.
+ */
+private [core] class Multicast(processors: Seq[ActorRef]) extends Actor {
+  def receive = {
+    case msg => processors.foreach(_ forward msg)
   }
 }
