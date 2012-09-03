@@ -57,7 +57,6 @@ object Channel {
  */
 class InputChannel(val componentId: Int, val journal: ActorRef) extends Channel {
   import Channel._
-  import Journal._
 
   val id = inputChannelId
 
@@ -95,7 +94,6 @@ trait OutputChannel extends Channel {
  */
 class DefaultOutputChannel(val componentId: Int, val id: Int, val journal: ActorRef) extends OutputChannel {
   import Channel._
-  import Journal._
 
   assert(id > 0)
 
@@ -150,7 +148,6 @@ case class ReliableOutputChannelEnv(
  */
 class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends OutputChannel {
   import Channel._
-  import Journal._
 
   assert(id > 0)
 
@@ -231,7 +228,6 @@ class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, replyDe
 
 class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDestination: Option[ActorRef], env: ReliableOutputChannelEnv) extends Actor {
   import Channel._
-  import Journal._
   import ReliableOutputChannel._
 
   implicit val executionContext = context.dispatcher

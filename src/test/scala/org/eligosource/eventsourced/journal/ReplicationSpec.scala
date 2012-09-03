@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.core
+package org.eligosource.eventsourced.journal
 
 import java.io.File
 import java.util.concurrent.{TimeUnit, LinkedBlockingQueue}
@@ -29,6 +29,8 @@ import org.apache.commons.io.FileUtils
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
+import org.eligosource.eventsourced.core._
+
 class ReplicationSpec extends WordSpec with MustMatchers {
   type FixtureParam = (Fixture, Fixture)
 
@@ -38,7 +40,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
     val dl = system.deadLetters
 
-    val journal = system.actorOf(Props(new Journal(journalDir)))
+    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
     val replicatingJournal = system.actorOf(Props(new ReplicatingJournal(journal)))
 
     val queue = new LinkedBlockingQueue[Message]
@@ -92,7 +94,6 @@ class ReplicationSpec extends WordSpec with MustMatchers {
     }
   }
 
-  import Journal._
   import Replicator._
 
   "A slave component with reliable output channels" must {

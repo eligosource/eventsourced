@@ -11,8 +11,10 @@ object Settings {
     scalaVersion := buildScalaVersion
   )
 
+  import Resolvers._
+
   val defaultSettings = buildSettings ++ Seq(
-    resolvers ++= Seq(Resolvers.typesafeRepo),
+    resolvers ++= Seq(typesafeRepo, journalioRepo),
     scalacOptions ++= Seq("-unchecked"),
     parallelExecution in Test := false
   )
@@ -20,12 +22,13 @@ object Settings {
 
 object Resolvers {
   val typesafeRepo  = "Typesafe Repo"  at "http://repo.typesafe.com/typesafe/releases/"
+  val journalioRepo = "Journalio Repo" at "https://raw.github.com/sbtourist/Journal.IO/master/m2/repo"
 }
 
 object Dependencies {
   import Dependency._
 
-  val core = Seq(akkaActor, akkaRemote, commonsIo, levelDbJni, scalaStm, scalaTest)
+  val core = Seq(akkaActor, akkaRemote, commonsIo, journalIo, levelDbJni, scalaStm, scalaTest)
 }
 
 object Version {
@@ -43,6 +46,7 @@ object Dependency {
   val akkaActor   = "com.typesafe.akka"         %  "akka-actor"    % Akka      % "compile"
   val akkaRemote  = "com.typesafe.akka"         %  "akka-remote"   % Akka      % "compile"
   val commonsIo   = "commons-io"                %  "commons-io"    % "2.3"     % "compile"
+  val journalIo   = "journalio"                 %  "journalio"     % "1.2"     % "compile"
   val levelDbJni  = "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.2"     % "compile"
   val scalaStm    = "org.scala-tools"           %% "scala-stm"     % "0.5"     % "compile"
 

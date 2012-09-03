@@ -15,8 +15,6 @@
  */
 package org.eligosource.eventsourced.core
 
-import java.io.File
-
 import akka.actor._
 import akka.util.Duration
 
@@ -29,7 +27,6 @@ import akka.util.Duration
  */
 class Component(val id: Int, val journal: ActorRef)(implicit system: ActorSystem) extends Iterable[Component] {
   import Channel._
-  import Journal._
 
   import ReliableOutputChannel.{
     defaultRecoveryDelay => rcd,
@@ -172,9 +169,6 @@ class Component(val id: Int, val journal: ActorRef)(implicit system: ActorSystem
 object Component {
   def apply(id: Int, journal: ActorRef)(implicit system: ActorSystem): Component =
     new Component(id, journal)
-
-  def apply(id: Int, journalDir: File)(implicit system: ActorSystem): Component =
-    apply(id, system.actorOf(Props(new Journal(journalDir))))
 
   val invalidStateMessage = "output channels cannot be added after processor has been set"
 }

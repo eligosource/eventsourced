@@ -15,6 +15,19 @@
  */
 package org.eligosource.eventsourced
 
+import akka.actor.ActorRef
+
 package object core {
+  case class WriteAck(componentId: Int, channelId: Int, ackSequenceNr: Long)
+  case class WriteMsg(componentId: Int, channelId: Int, message: Message, ackSequenceNr: Option[Long], target: ActorRef, genSequenceNr: Boolean = true) {
+    def forSequenceNr(snr: Long) = copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
+  }
+
+  case class DeleteMsg(componentId: Int, channelId: Int, msgSequenceNr: Long)
+  case class Replay(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
+
+  case class SetCommandListener(listener: Option[ActorRef])
+
+  case object GetCounter
   case object Ack
 }

@@ -28,6 +28,7 @@ import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.LeveldbJournal
 
 class FsmExample extends WordSpec with MustMatchers {
   type FixtureParam = Fixture
@@ -37,7 +38,7 @@ class FsmExample extends WordSpec with MustMatchers {
     implicit val timeout = Timeout(5 seconds)
 
     val journalDir = new File("target/journal")
-    val journal = system.actorOf(Props(new Journal(journalDir)))
+    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
 
     val queue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Destination(queue)))

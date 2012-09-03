@@ -26,9 +26,10 @@ import org.apache.commons.io.FileUtils
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
+import org.eligosource.eventsourced.journal.LeveldbJournal
+
 class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
   import Channel._
-  import Journal._
 
   type FixtureParam = Fixture
 
@@ -49,7 +50,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
 
     val journalDir = new File("target/journal")
-    val journal = system.actorOf(Props(new Journal(journalDir)))
+    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
     val channel = system.actorOf(Props(new DefaultOutputChannel(1, 1, journal)))
 
     channel ! SetDestination(successDestination)
