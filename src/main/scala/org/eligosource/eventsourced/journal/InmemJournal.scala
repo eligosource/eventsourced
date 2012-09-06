@@ -24,31 +24,7 @@ import org.eligosource.eventsourced.core._
 /**
  * Journal with transient event log for testing purposes.
  */
-object InmemJournal {
-  case class Key(
-    componentId: Int,
-    initiatingChannelId: Int,
-    sequenceNr: Long,
-    confirmingChannelId: Int) {
-  }
-
-  implicit val keyOrdering = new Ordering[Key] {
-    def compare(x: Key, y: Key) =
-      if (x.componentId != y.componentId)
-        x.componentId - y.componentId
-      else if (x.initiatingChannelId != y.initiatingChannelId)
-        x.initiatingChannelId - y.initiatingChannelId
-      else if (x.sequenceNr != y.sequenceNr)
-        math.signum(x.sequenceNr - y.sequenceNr).toInt
-      else if (x.confirmingChannelId != y.confirmingChannelId)
-        x.confirmingChannelId - y.confirmingChannelId
-      else 0
-  }
-}
-
 class InmemJournal extends Actor {
-  import InmemJournal._
-
   var commandListener: Option[ActorRef] = None
   var redoMap = SortedMap.empty[Key, Any]
   var counter = 0L
@@ -109,13 +85,13 @@ class InmemJournal extends Actor {
     redoMap = redoMap - k
   }
 
+  def getCounter = counter + 1
+
   override def preStart() {
     counter = getCounter
   }
 
-  private def getCounter = counter + 1
-
-  private def replay(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
+  def replay(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
     val startKey = Key(componentId, channelId, fromSequenceNr, 0)
     val iter = redoMap.from(startKey).iterator.buffered
     replay(iter, startKey, p)

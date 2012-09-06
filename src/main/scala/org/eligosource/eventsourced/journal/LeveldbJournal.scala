@@ -45,18 +45,18 @@ class LeveldbJournal(dir: File) extends Actor {
   def receive = {
     case cmd: WriteMsg => {
       val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
-      execute(c)
+      store(c)
       if (c.target != context.system.deadLetters) c.target ! c.message
       if (sender   != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteAck => {
-      execute(cmd)
+      store(cmd)
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case cmd: DeleteMsg => {
-      execute(cmd)
+      store(cmd)
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
@@ -72,7 +72,7 @@ class LeveldbJournal(dir: File) extends Actor {
     }
   }
 
-  def execute(cmd: WriteMsg) {
+  def store(cmd: WriteMsg) {
     val batch = leveldb.createWriteBatch()
     val msg = cmd.message
     try {
@@ -95,12 +95,12 @@ class LeveldbJournal(dir: File) extends Actor {
     }
   }
 
-  def execute(cmd: WriteAck) {
+  def store(cmd: WriteAck) {
     val k = Key(cmd.componentId, Channel.inputChannelId, cmd.ackSequenceNr, cmd.channelId)
     leveldb.put(k.bytes, Array.empty[Byte], levelDbWriteOptions)
   }
 
-  def execute(cmd: DeleteMsg) {
+  def store(cmd: DeleteMsg) {
     val k = Key(cmd.componentId, cmd.channelId, cmd.msgSequenceNr, 0)
     leveldb.delete(k.bytes, levelDbWriteOptions)
   }
@@ -169,31 +169,4 @@ private object LeveldbJournal {
 
   def bytesToCounter(bytes: Array[Byte]) =
     ByteBuffer.wrap(bytes).getLong
-
-  case class Key(
-    componentId: Int,
-    initiatingChannelId: Int,
-    sequenceNr: Long,
-    confirmingChannelId: Int) {
-
-    def bytes = {
-      val bb = ByteBuffer.allocate(20)
-      bb.putInt(componentId)
-      bb.putInt(initiatingChannelId)
-      bb.putLong(sequenceNr)
-      bb.putInt(confirmingChannelId)
-      bb.array
-    }
-  }
-
-  case object Key {
-    def apply(bytes: Array[Byte]): Key = {
-      val bb = ByteBuffer.wrap(bytes)
-      val componentId = bb.getInt
-      val initiatingChannelId = bb.getInt
-      val sequenceNumber = bb.getLong
-      val confirmingChannelId = bb.getInt
-      new Key(componentId, initiatingChannelId, sequenceNumber, confirmingChannelId)
-    }
-  }
 }

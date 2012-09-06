@@ -70,7 +70,7 @@ class ReplicatingJournal(journal: ActorRef) extends Actor {
             // TODO: inform cluster manager to re-attach slave
           }
           case other => {
-            sender ! Status.Failure(e)
+            s ! Status.Failure(e)
           }
         }
       }
