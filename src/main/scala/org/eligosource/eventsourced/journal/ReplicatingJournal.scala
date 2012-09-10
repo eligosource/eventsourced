@@ -133,10 +133,13 @@ class Replicator(journal: ActorRef, inputBufferLimit: Int = 100) extends Actor {
       }
 
       // then replay ...
-      for {
+      val replays = for {
         (cid, snr) <- replayFrom
         component  <- components.get(cid)
-      } component.replay(snr)
+        processor  <- component.processor
+      } yield ReplayInput(cid, snr, processor)
+
+      journal ! BatchReplayInput(replays.toList)
 
       // and deliver pending output messages
       components.values.foreach(_.deliver())
