@@ -27,7 +27,10 @@ class ReplicatingJournal(journal: ActorRef) extends Actor {
     case SetReplicator(r) => {
       replicator = r
     }
-    case cmd: Replay => {
+    case cmd: ReplayInput => {
+      journal forward cmd
+    }
+    case cmd: ReplayOutput => {
       journal forward cmd
     }
     case cmd: WriteMsg => {

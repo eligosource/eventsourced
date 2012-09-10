@@ -47,7 +47,16 @@ class InmemJournal extends Actor {
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case Replay(compId, chanId, fromNr, target) => {
+    case BatchReplayInput(replays) => {
+      // call receive directly instead sending to self
+      // (replay must not interleave with other commands)
+      replays.foreach(receive)
+    }
+    case ReplayInput(compId, fromNr, target) => {
+      replay(compId, Channel.inputChannelId, fromNr, msg => target ! msg.copy(sender = None))
+      if (sender != context.system.deadLetters) sender ! Ack
+    }
+    case ReplayOutput(compId, chanId, fromNr, target) => {
       replay(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
       if (sender != context.system.deadLetters) sender ! Ack
     }

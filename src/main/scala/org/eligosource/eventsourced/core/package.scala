@@ -24,7 +24,9 @@ package object core {
   }
 
   case class DeleteMsg(componentId: Int, channelId: Int, msgSequenceNr: Long)
-  case class Replay(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
+  case class ReplayOutput(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
+  case class ReplayInput(componentId: Int, fromSequenceNr: Long, target: ActorRef)
+  case class BatchReplayInput(replays: List[ReplayInput])
 
   case class SetCommandListener(listener: Option[ActorRef])
 

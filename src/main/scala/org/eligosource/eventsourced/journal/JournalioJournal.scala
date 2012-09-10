@@ -80,11 +80,24 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case Replay(compId, Channel.inputChannelId, fromNr, target) => {
-      replayInputMessages(compId, fromNr, msg => target ! msg.copy(sender = None))
+    case BatchReplayInput(replays) => {
+      val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
+        a + (r.componentId -> (r.fromSequenceNr, r.target))
+      }
+      replayInputMessages { (k, m) =>
+        starts.get(k.componentId) match {
+          case Some((fromSequenceNr, target)) if (m.sequenceNr >= fromSequenceNr) => target ! m.copy(sender = None)
+          case _ => ()
+        }
+      }
       if (sender != context.system.deadLetters) sender ! Ack
     }
-    case Replay(compId, chanId, fromNr, target) => {
+    case r @ ReplayInput(compId, fromNr, target) => {
+      // call receive directly instead sending to self
+      // (replay must not interleave with other commands)
+      receive(BatchReplayInput(List(r)))
+    }
+    case ReplayOutput(compId, chanId, fromNr, target) => {
       replayOutputMessages(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
       if (sender != context.system.deadLetters) sender ! Ack
     }
@@ -96,33 +109,38 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
     }
   }
 
-  private def replayInputMessages(componentId: Int, fromSequenceNr: Long, p: Message => Unit) {
+  def replayInputMessages(p: (Key, Message) => Unit) {
     journal.redo().asScala.foreach { location =>
       serializer.fromBytes(location.getData) match {
         case cmd: WriteMsg if (cmd.channelId == Channel.inputChannelId) => {
           val msgKey = Key(cmd.componentId, cmd.channelId, cmd.message.sequenceNr, 0)
-          if (cmd.message.sequenceNr >= fromSequenceNr && cmd.componentId == componentId)
-            inputReplayQueue.enqueue(msgKey, cmd.message)
+          inputReplayQueue.enqueue(msgKey, cmd.message)
         }
         case cmd: WriteMsg => {
           val msgKey = Key(cmd.componentId, cmd.channelId, cmd.message.sequenceNr, 0)
           outputMessageCache.add(msgKey, location, cmd.message)
         }
         case cmd: WriteAck => {
-          if (cmd.ackSequenceNr >= fromSequenceNr && cmd.componentId == componentId)
-            inputReplayQueue.ack(Key(cmd.componentId, Channel.inputChannelId, cmd.ackSequenceNr, cmd.channelId))
+          val ackKey = Key(cmd.componentId, Channel.inputChannelId, cmd.ackSequenceNr, cmd.channelId)
+          inputReplayQueue.ack(ackKey)
         }
       }
-      if (inputReplayQueue.size > 20000) { // TODO: make configurable
-        p(inputReplayQueue.dequeue()._2)
+      if (inputReplayQueue.size > 20000 /* TODO: make configurable */ ) {
+        val (k, m) = inputReplayQueue.dequeue(); p(k, m)
       }
     }
-    inputReplayQueue.foreach(km => p(km._2))
+    inputReplayQueue.foreach { km => p(km._1, km._2) }
     inputReplayQueue.clear()
   }
 
-  private def replayOutputMessages(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
+  def replayOutputMessages(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
     outputMessageCache.messages(componentId, channelId, fromSequenceNr).foreach(p)
+  }
+
+  def getCounter: Long = {
+    val cmds = journal.undo().asScala.map { location => serializer.fromBytes(location.getData) }
+    val cmdo = cmds.collectFirst { case cmd: WriteMsg => cmd }
+    cmdo.map(_.message.sequenceNr + 1).getOrElse(1L)
   }
 
   override def preStart() {
@@ -141,12 +159,6 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
   override def postStop() {
     journal.close()
     disposer.shutdown()
-  }
-
-  private def getCounter: Long = {
-    val cmds = journal.undo().asScala.map { location => serializer.fromBytes(location.getData) }
-    val cmdo = cmds.collectFirst { case cmd: WriteMsg => cmd }
-    cmdo.map(_.message.sequenceNr + 1).getOrElse(1L)
   }
 }
 

@@ -178,7 +178,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   }
 
   def deliverPendingMessages(destination: ActorRef) {
-    journal.!(Replay(componentId, id, 0L, destination))(null)
+    journal.!(ReplayOutput(componentId, id, 0L, destination))(null)
   }
 
   def createBuffer(destination: ActorRef) = {

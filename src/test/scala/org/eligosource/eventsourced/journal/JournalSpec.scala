@@ -86,7 +86,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteMsg(1, 0, Message("test-1"), None, writeTarget) // input message
       journal ! WriteMsg(1, 0, Message("test-2"), None, writeTarget) // input message
 
-      journal ! Replay(1, 0, 0, replayTarget)
+      journal ! ReplayInput(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1)) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
@@ -97,7 +97,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteMsg(1, 0, Message("test-1", sequenceNr = 5), None, writeTarget, false) // input message with client-defined sequence nr
       journal ! WriteMsg(1, 0, Message("test-2"), None, writeTarget)                        // input message
 
-      journal ! Replay(1, 0, 0, replayTarget)
+      journal ! ReplayInput(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 5)) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 6)) }
@@ -108,7 +108,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteMsg(1, 0, Message("test-1"), None, writeTarget) // input message
       journal ! WriteAck(1, 1, 1)                                    // output ack
 
-      journal ! Replay(1, 0, 0, replayTarget)
+      journal ! ReplayInput(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
     }
@@ -118,11 +118,32 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteMsg(1, 0, Message("test-1"), None, writeTarget)    // input message
       journal ! WriteMsg(1, 1, Message("test-2"), Some(1), writeTarget) // output message and ack
 
-      journal ! Replay(1, 0, 0, replayTarget) // replay input message
-      journal ! Replay(1, 1, 0, replayTarget) // replay output message
+      journal ! ReplayInput(1, 0, replayTarget)
+      journal ! ReplayOutput(1, 1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
+    }
+    "replay iput messages for n components with a single command" in { fixture =>
+      import fixture._
+
+      journal ! WriteMsg(1, 0, Message("test-1a"), None, writeTarget)
+      journal ! WriteMsg(1, 0, Message("test-1b"), None, writeTarget)
+
+      journal ! WriteMsg(2, 0, Message("test-2a"), None, writeTarget)
+      journal ! WriteMsg(2, 0, Message("test-2b"), None, writeTarget)
+
+      journal ! WriteMsg(3, 0, Message("test-3a"), None, writeTarget)
+      journal ! WriteMsg(3, 0, Message("test-3b"), None, writeTarget)
+
+      journal ! BatchReplayInput(List(
+        ReplayInput(1, 0L, replayTarget),
+        ReplayInput(3, 6L, replayTarget)
+      ))
+
+      dequeue(replayQueue) { _ must be(Message("test-1a", sequenceNr = 1)) }
+      dequeue(replayQueue) { _ must be(Message("test-1b", sequenceNr = 2)) }
+      dequeue(replayQueue) { _ must be(Message("test-3b", sequenceNr = 6)) }
     }
   }
 }

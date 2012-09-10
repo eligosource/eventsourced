@@ -101,7 +101,7 @@ class Component(val id: Int, val journal: ActorRef)(implicit system: ActorSystem
    * Recovers processor state by replaying input events.
    */
   def replay(fromSequenceNr: Long = 0L): Unit = inputProcessor foreach { p =>
-    journal ! Replay(id, inputChannelId, fromSequenceNr, p)
+    journal ! ReplayInput(id, fromSequenceNr, p)
   }
 
   /**
@@ -179,9 +179,25 @@ object Composite {
     deliver(composite)
   }
 
-  def replay(composite: Component) =
-    composite.foreach(_.replay())
+  def replay(composite: Component) = {
+    // group components by the journal they share ...
+    val groupedComponents = composite.foldLeft(Map.empty[ActorRef, List[Component]]) { (a, c) =>
+      a.get(c.journal) match {
+        case Some(cs) => a + (c.journal -> (c :: cs))
+        case None     => a + (c.journal -> List(c))
+      }
+    }
+    // ... and run batch replay for each shared journal
+    for { (journal, components) <- groupedComponents } {
+      val replays = for {
+        component <- components
+        processor <- component.processor
+      } yield ReplayInput(component.id, 0L, processor)
+      journal ! BatchReplayInput(replays)
+    }
+  }
 
-  def deliver(composite: Component) =
+  def deliver(composite: Component) = {
     composite.foreach(_.deliver())
+  }
 }
