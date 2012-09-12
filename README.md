@@ -338,7 +338,7 @@ Current status
 
 The documentation on this page only scratches the surface of what can be done with the library. More examples, a detailed reference documentation and an architecture description will follow.
 
-The development status of the library is still early-access and we expect to have a first release ready in Sep or Oct 2012 (after having implemented some [planned enhancements](https://github.com/eligosource/eventsourced/issues?labels=enhancement)). 
+The development status of the library is still early-access and we expect to have a first milestone release ready in Sep or Oct 2012 (after having implemented some [planned features and enhancements](https://github.com/eligosource/eventsourced/issues?labels=&milestone=1&state=open)).
 
 The library isn't performance-optimized yet. Although we already measured throughputs in the order of 10k msgs/s (including persistence) and latencies around 1 ms for the examples above on a 2010 MacBook Pro with default JVM settings, there's enough room for performance improvements.
 
