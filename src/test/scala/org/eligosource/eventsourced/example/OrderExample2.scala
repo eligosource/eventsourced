@@ -29,7 +29,7 @@ object OrderExample2 extends App {
 
   // create a journal
   val journalDir = new java.io.File("target/example")
-  val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
+  val journal = LeveldbJournal(journalDir)
 
   // create a destination for output events
   val destination = system.actorOf(Props[Destination])

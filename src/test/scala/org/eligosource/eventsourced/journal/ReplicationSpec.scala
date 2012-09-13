@@ -40,7 +40,7 @@ class ReplicationSpec extends WordSpec with MustMatchers {
 
     val dl = system.deadLetters
 
-    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
+    val journal = LeveldbJournal(journalDir)
     val replicatingJournal = system.actorOf(Props(new ReplicatingJournal(journal)))
 
     val queue = new LinkedBlockingQueue[Message]

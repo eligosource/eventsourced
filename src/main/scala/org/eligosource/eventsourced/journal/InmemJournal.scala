@@ -22,7 +22,7 @@ import akka.actor._
 import org.eligosource.eventsourced.core._
 
 /**
- * Journal with transient event log for testing purposes.
+ * In-memory journal for testing purposes.
  */
 class InmemJournal extends Actor {
   var commandListener: Option[ActorRef] = None
@@ -135,4 +135,9 @@ class InmemJournal extends Actor {
       } else channelIds
     } else channelIds
   }
+}
+
+object InmemJournal {
+  def apply()(implicit system: ActorSystem): ActorRef =
+    system.actorOf(Props(new InmemJournal))
 }

@@ -30,7 +30,7 @@ object OrderExample3 extends App {
 
   // create a journal
   val journalDir = new java.io.File("target/example")
-  val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
+  val journal = LeveldbJournal(journalDir)
 
   // create destinations for output events
   val validator = system.actorOf(Props[CreditCardValidator])

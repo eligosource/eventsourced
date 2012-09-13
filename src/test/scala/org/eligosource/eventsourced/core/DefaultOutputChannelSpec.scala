@@ -50,7 +50,7 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
 
     val journalDir = new File("target/journal")
-    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
+    val journal = LeveldbJournal(journalDir)
     val channel = system.actorOf(Props(new DefaultOutputChannel(1, 1, journal)))
 
     channel ! SetDestination(successDestination)

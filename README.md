@@ -61,9 +61,11 @@ To actually event-source the processor it needs to be managed inside a `Componen
     import org.eligosource.eventsourced.core._
     import org.eligosource.eventsourced.journal.LeveldbJournal
 
+    implicit val system = ActorSystem("example")
+    
     // create a journal
     val journalDir = new java.io.File("target/example")
-    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
+    val journal = LeveldbJournal(journalDir)
 
     // create a destination for output events
     val destination = system.actorOf(Props[Destination])
@@ -289,9 +291,11 @@ The event-sourced FSM in the following example is a `Door` which can be in one o
     }
 
 To event-source a `Door`, it must be managed inside a `Component`.
-
+    
+    implicit val system = ActorSystem("example")
+    
     val journalDir = new File("target/example")
-    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
+    val journal = LeveldbJournal(journalDir)
 
     val destination: ActorRef = … 
 

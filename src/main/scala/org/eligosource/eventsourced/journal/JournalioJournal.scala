@@ -19,7 +19,6 @@ import java.io.File
 import java.util.concurrent.Executors
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.{Queue, SortedMap}
 
 import akka.actor._
 import journal.io.api._
@@ -32,8 +31,8 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
   // TODO: make configurable
   val serializer = new JavaSerializer[AnyRef]
 
-  val inputReplayQueue = new InputReplayQueue
-  val outputMessageCache = new OutputMessageCache
+  val inputWriteMsgQueue = new InputWriteMsgQueue
+  val outputWriteMsgCache = new OutputWriteMsgCache[Location]
 
   val disposer = Executors.newSingleThreadScheduledExecutor()
   val journal = new Journal
@@ -47,12 +46,11 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
       val m = c.message.copy(sender = None) // message to be written
 
       // write input or output message
-      val msgLoc = journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
+      val loc = journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
 
       // optionally, add output message (written by reliable output channel) to cache
       if (c.channelId != Channel.inputChannelId) {
-        val msgKey = Key(c.componentId, c.channelId, m.sequenceNr, 0)
-        outputMessageCache.add(msgKey, msgLoc, m)
+        outputWriteMsgCache.update(c, loc)
       }
 
       // optionally, write acknowledgement
@@ -72,10 +70,7 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
       commandListener.foreach(_ ! cmd)
     }
     case cmd: DeleteMsg => {
-      val msgKey = Key(cmd.componentId, cmd.channelId, cmd.msgSequenceNr, 0)
-      val msgLoc = outputMessageCache.delete(msgKey)
-
-      msgLoc.foreach(journal.delete)
+      outputWriteMsgCache.update(cmd).foreach(journal.delete)
 
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
@@ -84,21 +79,23 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
       val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
         a + (r.componentId -> (r.fromSequenceNr, r.target))
       }
-      replayInputMessages { (k, m) =>
-        starts.get(k.componentId) match {
-          case Some((fromSequenceNr, target)) if (m.sequenceNr >= fromSequenceNr) => target ! m.copy(sender = None)
-          case _ => ()
+      replayInput { (cmd, acks) =>
+        starts.get(cmd.componentId) match {
+          case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
+            target ! cmd.message.copy(sender = None, acks = acks)
+          }
+          case _ => {}
         }
       }
       if (sender != context.system.deadLetters) sender ! Ack
     }
-    case r @ ReplayInput(compId, fromNr, target) => {
+    case r: ReplayInput => {
       // call receive directly instead sending to self
       // (replay must not interleave with other commands)
       receive(BatchReplayInput(List(r)))
     }
     case ReplayOutput(compId, chanId, fromNr, target) => {
-      replayOutputMessages(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
+      replayOutput(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
       if (sender != context.system.deadLetters) sender ! Ack
     }
     case GetCounter => {
@@ -109,32 +106,29 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
     }
   }
 
-  def replayInputMessages(p: (Key, Message) => Unit) {
+  def replayInput(p: (WriteMsg, List[Int]) => Unit) {
     journal.redo().asScala.foreach { location =>
       serializer.fromBytes(location.getData) match {
         case cmd: WriteMsg if (cmd.channelId == Channel.inputChannelId) => {
-          val msgKey = Key(cmd.componentId, cmd.channelId, cmd.message.sequenceNr, 0)
-          inputReplayQueue.enqueue(msgKey, cmd.message)
+          inputWriteMsgQueue.enqueue(cmd)
         }
         case cmd: WriteMsg => {
-          val msgKey = Key(cmd.componentId, cmd.channelId, cmd.message.sequenceNr, 0)
-          outputMessageCache.add(msgKey, location, cmd.message)
+          outputWriteMsgCache.update(cmd, location)
         }
         case cmd: WriteAck => {
-          val ackKey = Key(cmd.componentId, Channel.inputChannelId, cmd.ackSequenceNr, cmd.channelId)
-          inputReplayQueue.ack(ackKey)
+          inputWriteMsgQueue.ack(cmd)
         }
       }
-      if (inputReplayQueue.size > 20000 /* TODO: make configurable */ ) {
-        val (k, m) = inputReplayQueue.dequeue(); p(k, m)
+      if (inputWriteMsgQueue.size > 20000 /* TODO: make configurable */ ) {
+        val (cmd, acks) = inputWriteMsgQueue.dequeue(); p(cmd, acks)
       }
     }
-    inputReplayQueue.foreach { km => p(km._1, km._2) }
-    inputReplayQueue.clear()
+    inputWriteMsgQueue.foreach { ca => p(ca._1, ca._2) }
+    inputWriteMsgQueue.clear()
   }
 
-  def replayOutputMessages(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
-    outputMessageCache.messages(componentId, channelId, fromSequenceNr).foreach(p)
+  def replayOutput(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
+    outputWriteMsgCache.messages(componentId, channelId, fromSequenceNr).foreach(p)
   }
 
   def getCounter: Long = {
@@ -162,76 +156,7 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
   }
 }
 
-/**
- * Queues up input messages during replay for taking into account input
- * message acks that have been written after the input messages.
- */
-private [journal] class InputReplayQueue extends Iterable[(Key, Message)] {
-  var acks = Map.empty[Key, List[Int]]
-  var msgs = Queue.empty[(Key, Message)]
-
-  var len = 0
-
-  def enqueue(msgKey: Key, msg: Message) {
-    msgs = msgs.enqueue((msgKey, msg))
-    len = len + 1
-  }
-
-  def dequeue(): (Key, Message) = {
-    val ((msgKey, msg), q) = msgs.dequeue
-    msgs = q
-    len = len - 1
-    acks.get(msgKey) match {
-      case None     => (msgKey, msg)
-      case Some(as) => {
-        acks = acks - msgKey
-        (msgKey, msg.copy(acks = as))
-      }
-    }
-  }
-
-  def ack(ackKey: Key) {
-    val msgKey = ackKey.copy(confirmingChannelId = 0)
-    acks.get(msgKey) match {
-      case Some(as) => acks = acks + (msgKey -> (ackKey.confirmingChannelId :: as))
-      case None     => acks = acks + (msgKey -> List(ackKey.confirmingChannelId))
-    }
-  }
-
-  def iterator =
-    msgs.iterator.map(km => (km._1, km._2.copy(acks = acks.getOrElse(km._1, Nil))))
-
-  override def size =
-    len
-
-  def clear() {
-    acks = Map.empty
-    msgs = Queue.empty
-    len = 0
-  }
-}
-
-/**
- * Cache for output messages stored by reliable output channels.
- */
-private [journal] class OutputMessageCache {
-  var msgs = SortedMap.empty[Key, (Location, Message)]
-
-  def add(msgKey: Key, msgLoc: Location, msg: Message) {
-    msgs = msgs + (msgKey -> (msgLoc, msg))
-  }
-
-  def delete(msgKey: Key): Option[Location] = msgs.get(msgKey) match {
-    case None => None
-    case Some((loc, msg)) => {
-      msgs = msgs - msgKey
-      Some(loc)
-    }
-  }
-
-  def messages(componentId: Int, channelId: Int, fromSequenceNr: Long): Iterable[Message] = {
-    val from = Key(componentId, channelId, fromSequenceNr, 0)
-    val to = Key(componentId, channelId, Long.MaxValue, 0)
-    msgs.range(from, to).values.map(_._2)
-  }
+object JournalioJournal {
+  def apply(dir: File)(implicit system: ActorSystem): ActorRef =
+    system.actorOf(Props(new JournalioJournal(dir)))
 }

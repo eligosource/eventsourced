@@ -40,7 +40,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     implicit val timeout = Timeout(5 seconds)
 
     val journalDir = new File("target/journal")
-    val journal = system.actorOf(Props(new LeveldbJournal(journalDir)))
+    val journal = LeveldbJournal(journalDir)
 
     val destinationQueue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Receiver(destinationQueue)))

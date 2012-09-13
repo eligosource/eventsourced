@@ -57,11 +57,10 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     val writeMsgListener = system.actorOf(Props(new WriteMsgListener(writeMsgListenerQueue)))
 
     val journalDir = new File("target/journal")
+    val journal = LeveldbJournal(journalDir)
 
-    val journal =
-      system.actorOf(Props(new LeveldbJournal(journalDir)))
-    val channel =
-      system.actorOf(Props(new ReliableOutputChannel(1, new ReliableOutputChannelEnv(1, journal, 10 milliseconds, 10 milliseconds, 3))))
+    val channelEnv = new ReliableOutputChannelEnv(1, journal, 10 milliseconds, 10 milliseconds, 3)
+    val channel = system.actorOf(Props(new ReliableOutputChannel(1, channelEnv)))
 
     def write(msg: Message) {
       Await.result(journal ? WriteMsg(1, 1, msg, None, system.deadLetters, false), timeout.duration)
