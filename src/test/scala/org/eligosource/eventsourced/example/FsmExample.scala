@@ -40,14 +40,14 @@ class FsmExample extends WordSpec with MustMatchers {
     val journalDir = new File("target/journal")
     val journal = LeveldbJournal(journalDir)
 
-    val queue = new LinkedBlockingQueue[Message]
-    val destination = system.actorOf(Props(new Destination(queue)))
+    val queue = new LinkedBlockingQueue[Any]
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver))
 
-    def createExampleComponent = Component(1, journal)
-      .addDefaultOutputChannelToActor("dest", destination)
-      .setProcessor(system.actorOf(Props(new Door)))
+    def createExampleContext = Context(journal)
+      .addChannel("dest", destination)
+      .addProcessor(1, decorator(system.actorOf(Props(new Door))))
 
-    def dequeue(timeout: Long = 5000): Message = {
+    def dequeue(timeout: Long = 5000): Any = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
     }
 
@@ -67,27 +67,29 @@ class FsmExample extends WordSpec with MustMatchers {
     }
   }
 
-  "An event-sourced component" must {
-    "recover state from stored event messages" in { fixture =>
+  "An event-sourced context" must {
+    "recover FSM state from stored event messages" in { fixture =>
       import fixture._
 
-      val initialDoor = createExampleComponent.init()
+      val context = createExampleContext.init()
+      val door = context.processors(1)
 
-      initialDoor.inputProducer ! "open"
-      initialDoor.inputProducer ! "close"
-      initialDoor.inputProducer ! "close"
+      door ! Message("open")
+      door ! Message("close")
+      door ! Message("close")
 
-      dequeue().event must be (DoorMoved(1))
-      dequeue().event must be (DoorMoved(2))
-      dequeue().event must be (DoorNotMoved("cannot close door in state Closed"))
+      dequeue() must be (DoorMoved(1))
+      dequeue() must be (DoorMoved(2))
+      dequeue() must be (DoorNotMoved("cannot close door in state Closed"))
 
-      val recoveredDoor = createExampleComponent.init()
+      val recoveredContext = createExampleContext.init()
+      val recoveredDoor = recoveredContext.processors(1)
 
-      recoveredDoor.inputProducer ! "open"
-      recoveredDoor.inputProducer ! "close"
+      recoveredDoor ! Message("open")
+      recoveredDoor ! Message("close")
 
-      dequeue().event must be (DoorMoved(3))
-      dequeue().event must be (DoorMoved(4))
+      dequeue() must be (DoorMoved(3))
+      dequeue() must be (DoorMoved(4))
     }
   }
 
@@ -109,9 +111,9 @@ class FsmExample extends WordSpec with MustMatchers {
     }
   }
 
-  class Destination(queue: LinkedBlockingQueue[Message]) extends Actor {
+  class Destination(queue: LinkedBlockingQueue[Any]) extends Actor {
     def receive = {
-      case msg: Message => { queue.put(msg); sender ! Ack }
+      case event => queue.put(event)
     }
   }
 

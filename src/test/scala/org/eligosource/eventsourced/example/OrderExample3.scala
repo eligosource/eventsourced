@@ -33,23 +33,23 @@ object OrderExample3 extends App {
   val journal = LeveldbJournal(journalDir)
 
   // create destinations for output events
-  val validator = system.actorOf(Props[CreditCardValidator])
-  val destination = system.actorOf(Props[Destination])
+  val validator = system.actorOf(Props(new CreditCardValidator with Responder))
+  val destination = system.actorOf(Props(new Destination with Receiver))
 
-  // create an event-sourcing component
-  val orderComponent = Component(1, journal)
+  // create event sourced processor
+  val processor = system.actorOf(Props(new OrderProcessor with Eventsourced))
 
-  // configure component
-  orderComponent
-    .addReliableOutputChannelToActor("validator", validator, Some(orderComponent))
-    .addDefaultOutputChannelToActor("destination", destination)
-    .setProcessor(outputChannels => system.actorOf(Props(new OrderProcessor(outputChannels))))
-
-  // recover processor state from journaled events
-  orderComponent.init()
+  // create an event-sourcing context
+  // TODO: inline creation of actors
+  // TODO: processor reference by id
+  implicit val context = Context(journal)
+    .addReliableChannel("validator", validator, Some(processor))
+    .addChannel("destination", destination)
+    .addProcessor(1, processor)
+    .init()
 
   // submit an order
-  orderComponent.inputProducer ? OrderSubmitted(Order("jelly beans", "1234")) onSuccess {
+  processor ?? Message(OrderSubmitted(Order("jelly beans", "1234"))) onSuccess {
     case order: Order => println("received order %s" format order)
   }
 
@@ -59,41 +59,37 @@ object OrderExample3 extends App {
   // then shutdown
   system.shutdown()
 
-  class OrderProcessor(outputChannels: Map[String, ActorRef]) extends Actor {
+  class OrderProcessor extends Actor { this: Eventsourced =>
     var orders = Map.empty[Int, Order] // processor state
 
     def receive = {
-      case msg: Message => msg.event match {
-        case OrderSubmitted(order) => {
-          val id = orders.size
-          val upd = order.copy(id = id)
-          orders = orders + (id -> upd)
-          outputChannels("validator") ! msg.copy(event = CreditCardValidationRequested(upd))
-        }
-        case CreditCardValidated(orderId) => {
-          orders.get(orderId).foreach { order =>
-            val upd = order.copy(validated = true)
-            orders = orders + (orderId -> upd)
-            msg.sender.foreach(_ ! upd)
-            outputChannels("destination") ! msg.copy(event = OrderAccepted(upd))
-          }
+      case OrderSubmitted(order) => {
+        val id = orders.size
+        val upd = order.copy(id = id)
+        orders = orders + (id -> upd)
+        emitTo("validator").event(CreditCardValidationRequested(upd))
+      }
+      case CreditCardValidated(orderId) => {
+        orders.get(orderId).foreach { order =>
+          val upd = order.copy(validated = true)
+          orders = orders + (orderId -> upd)
+          initiator ! upd
+          emitTo("destination").event(OrderAccepted(upd))
         }
       }
     }
   }
 
-  class CreditCardValidator extends Actor {
+  trait CreditCardValidator extends Actor { this: Responder =>
     def receive = {
-      case msg: Message => msg.event match {
-        case CreditCardValidationRequested(order) => {
-          val s = sender
-          Future {
-            // do some credit card validation asynchronously
-            // ...
+      case CreditCardValidationRequested(order) => {
+        val r = respond
+        Future {
+          // do some credit card validation asynchronously
+          // ...
 
-            // and send back a successful validation result
-            s ! msg.copy(event = CreditCardValidated(order.id))
-          }
+          // and send back a successful validation result
+          r.withEvent(CreditCardValidated(order.id))
         }
       }
     }
@@ -101,7 +97,7 @@ object OrderExample3 extends App {
 
   class Destination extends Actor {
     def receive = {
-      case msg: Message => { println("received event %s" format msg.event); sender ! Ack }
+      case event => println("received event %s" format event)
     }
   }
 }

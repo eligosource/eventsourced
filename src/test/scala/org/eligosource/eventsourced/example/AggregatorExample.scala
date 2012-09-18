@@ -43,16 +43,12 @@ class AggregatorExample extends WordSpec with MustMatchers {
     val journal = LeveldbJournal(journalDir)
 
     val queue = new LinkedBlockingQueue[Message]
-    val destination = system.actorOf(Props(new Destination(queue)))
 
-    def createExampleComponent = {
-      val component = Component(1, journal)
-
-      component
-        .addDefaultOutputChannelToComponent("self", component)
-        .addReliableOutputChannelToActor("dest", destination)
-        .setProcessor(outputChannels => system.actorOf(Props(new Aggregator(outputChannels))))
-    }
+    def createExampleContext = Context(journal)
+      .addProcessor(1, new Aggregator with Eventsourced)
+      .addProcessor(2, multicast(Nil))
+      .addChannel("self", 1)
+      .addReliableChannel("dest", new Destination(queue) with Receiver)
 
     def dequeue(timeout: Long = 5000): Message = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
@@ -74,80 +70,87 @@ class AggregatorExample extends WordSpec with MustMatchers {
     }
   }
 
-  "An event-sourced component" must {
-    "recover state from stored event messages" in { fixture =>
+  "An event-sourced context" must {
+    "recover processor state from stored event messages" in { fixture =>
         import fixture._
 
-        var component = createExampleComponent.init()
+        {
+          implicit val context = createExampleContext.init()
 
-        // send InputAvailable event to event-sourced component
-        component.inputProducer ! InputAvailable("category-a", "input-1") // no response expected
-        component.inputProducer ! InputAvailable("category-a", "input-2") // no response expected
-        component.inputProducer ! InputAvailable("category-b", "input-7") // no response expected
+          // obtain processor with id == 1 from context
+          val processor = context.processors(1)
 
-        // await aggregation response by business logic to initial sender
-        var future = component.inputProducer ? InputAvailable("category-a", "input-3")
-        Await.result(future, timeout.duration) must be("aggregated 3 messages of category-a")
+          // send InputAvailable event to event-sourced context
+          processor ! Message(InputAvailable("category-a", "input-1")) // no response expected
+          processor ! Message(InputAvailable("category-a", "input-2")) // no response expected
+          processor ! Message(InputAvailable("category-b", "input-7")) // no response expected
 
-        // obtain output event message delivered to destination
-        var delivered = dequeue()
-        delivered.event must be(InputAggregated("category-a", List("input-1", "input-2", "input-3")))
-        delivered.senderMessageId must be(Some("aggregated-1"))
+          // await aggregation response by business logic to initial sender
+          val future = processor ?? Message(InputAvailable("category-a", "input-3"))
+          Await.result(future, timeout.duration) must be("aggregated 3 messages of category-a")
 
-        // now drop all in-memory state by creating a new component
-        component = createExampleComponent
+          // obtain output event message delivered to destination
+          val delivered = dequeue()
+          delivered.event must be(InputAggregated("category-a", List("input-1", "input-2", "input-3")))
+          delivered.senderMessageId must be(Some("aggregated-1"))
+        }
 
-        // recover in-memory state by initializing the new component
-        component.init()
+        {
+          // now start from scratch by creating a new context
+          implicit val context = createExampleContext
 
-        // now trigger the next aggregation (2 messages of category-b missing)
-        component.inputProducer ! InputAvailable("category-b", "input-8") // no response expected
-        future = component.inputProducer ? InputAvailable("category-b", "input-9")
+          // obtain processor with id == 1 from context
+          val processor = context.processors(1)
 
-        // await next aggregation response by business logic to initial sender
-        Await.result(future, timeout.duration) must be("aggregated 3 messages of category-b")
+          // recover in-memory state by initializing the new context
+          context.init()
 
-        // obtain next output event message delivered to destination
-        delivered = dequeue()
-        delivered.event must be(InputAggregated("category-b", List("input-7", "input-8", "input-9")))
-        delivered.senderMessageId must be(Some("aggregated-2"))
+          // now trigger the next aggregation (2 messages of category-b missing)
+          processor ! Message(InputAvailable("category-b", "input-8")) // no response expected
+          val future = processor ?? Message(InputAvailable("category-b", "input-9"))
+
+          // await next aggregation response by business logic to initial sender
+          Await.result(future, timeout.duration) must be("aggregated 3 messages of category-b")
+
+          // obtain next output event message delivered to destination
+          val delivered = dequeue()
+          delivered.event must be(InputAggregated("category-b", List("input-7", "input-8", "input-9")))
+          delivered.senderMessageId must be(Some("aggregated-2"))
+        }
     }
   }
 
   // Event-sourced aggregator
-  class Aggregator(outputChannels: Map[String, ActorRef]) extends Actor {
+  class Aggregator extends Actor { this: Eventsourced =>
     var inputAggregatedCounter = 0
     var inputs = Map.empty[String, List[String]] // category -> inputs
 
     def receive = {
-      case msg: Message => msg.event match {
-        case InputAggregated(category, inputs) => {
-          // count number of InputAggregated receivced
-          inputAggregatedCounter = inputAggregatedCounter + 1
-          // emit InputAggregated event to destination with sender message id containing the counted aggregations
-          outputChannels("dest") ! msg.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter))
-          // reply to initial sender that message has been aggregated
-          msg.sender.foreach(_ ! "aggregated %d messages of %s".format(inputs.size, category))
+      case InputAggregated(category, inputs) => {
+        // count number of InputAggregated receivced
+        inputAggregatedCounter = inputAggregatedCounter + 1
+        // emit InputAggregated event to destination with sender message id containing the counted aggregations
+        emitTo("dest").message(_.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)))
+        // reply to initial sender that message has been aggregated
+        initiator ! "aggregated %d messages of %s".format(inputs.size, category)
+      }
+      case InputAvailable(category, input) => inputs = inputs.get(category) match {
+        case Some(List(i2, i1)) => {
+          // emit InputAggregated event to self when 3 events of same category exist
+          emitTo("self").event(InputAggregated(category, List(i1, i2, input)))
+          inputs - category
         }
-        case InputAvailable(category, input) => inputs = inputs.get(category) match {
-          case Some(List(i2, i1)) => {
-            // emit InputAggregated event to this processor's component (i.e. self) when 3 events of same category exist
-            outputChannels("self") ! msg.copy(event = InputAggregated(category, List(i1, i2, input)));
-            inputs - category
-          }
-          case Some(is) => inputs + (category -> (input :: is))
-          case None => inputs + (category -> List(input))
-        }
+        case Some(is) => inputs + (category -> (input :: is))
+        case None => inputs + (category -> List(input))
       }
     }
   }
 
-  class Destination(queue: LinkedBlockingQueue[Message]) extends Actor {
+  class Destination(queue: LinkedBlockingQueue[Message]) extends Actor { this: Receiver =>
     def receive = {
-      case msg: Message => { queue.put(msg); sender ! Ack }
+      case event => queue.put(message)
     }
   }
-
 }
 
 case class InputAvailable(category: String, input: String)

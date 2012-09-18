@@ -13,19 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal
-
-import java.io.File
+package org.eligosource.eventsourced.core
 
 import akka.actor._
+import akka.dispatch.Future
+import akka.pattern.ask
+import akka.util.Timeout
 
-object LeveldbJournal {
-  def processorStructured(dir: File)(implicit system: ActorSystem): ActorRef =
-    system.actorOf(Props(new LeveldbJournalPS(dir)))
-
-  def sequenceStructured(dir: File)(implicit system: ActorSystem): ActorRef =
-    system.actorOf(Props(new LeveldbJournalSS(dir)))
-
-  def apply(dir: File)(implicit system: ActorSystem) =
-    processorStructured(dir)
+class Initiator(processor: ActorRef) {
+  def ??(msg: Message)(implicit timeout: Timeout, context: Context): Future[Any] =
+    context.producer.ask(Producer.Produce(msg, processor))
 }
+
+private [core] class Producer extends Actor {
+  import Producer._
+
+  def receive = {
+    case Produce(msg: Message, target) => {
+      target ! msg.copy(sender = Some(sender))
+    }
+  }
+}
+
+private [core] object Producer {
+  case class Produce(msg: Message, target: ActorRef)
+}
+

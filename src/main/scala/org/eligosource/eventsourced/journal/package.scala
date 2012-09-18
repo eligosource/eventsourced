@@ -25,8 +25,8 @@ import org.eligosource.eventsourced.util.Serializer
 package object journal {
   private [journal] implicit val ordering = new Ordering[Key] {
     def compare(x: Key, y: Key) =
-      if (x.componentId != y.componentId)
-        x.componentId - y.componentId
+      if (x.processorId != y.processorId)
+        x.processorId - y.processorId
       else if (x.initiatingChannelId != y.initiatingChannelId)
         x.initiatingChannelId - y.initiatingChannelId
       else if (x.sequenceNr != y.sequenceNr)
@@ -48,23 +48,22 @@ package object journal {
   private [journal] implicit def bytesToCounter(bytes: Array[Byte]): Long = ctrSerializer.fromBytes(bytes)
 
   /**
-   * Queue for input WriteMsg commands including a mechanism for matching
-   * corresponding acknowledgements.
+   * Queue for WriteInMsg commands including a mechanism for matching acknowledgements.
    */
-  private [journal] class InputWriteMsgQueue extends Iterable[(WriteMsg, List[Int])] {
-    var cmds = Queue.empty[WriteMsg]
+  private [journal] class WriteInMsgQueue extends Iterable[(WriteInMsg, List[Int])] {
+    var cmds = Queue.empty[WriteInMsg]
     var acks = Map.empty[Key, List[Int]]
 
     var len = 0
 
-    def enqueue(cmd: WriteMsg) {
+    def enqueue(cmd: WriteInMsg) {
       cmds = cmds.enqueue(cmd)
       len = len + 1
     }
 
-    def dequeue(): (WriteMsg, List[Int]) = {
+    def dequeue(): (WriteInMsg, List[Int]) = {
       val (cmd, q) = cmds.dequeue
-      val key = Key(cmd.componentId, cmd.channelId, cmd.message.sequenceNr, 0)
+      val key = Key(cmd.processorId, 0, cmd.message.sequenceNr, 0)
       cmds = q
       len = len - 1
       acks.get(key) match {
@@ -74,7 +73,7 @@ package object journal {
     }
 
     def ack(cmd: WriteAck) {
-      val key = Key(cmd.componentId, Channel.inputChannelId, cmd.ackSequenceNr, 0)
+      val key = Key(cmd.processorId, 0, cmd.ackSequenceNr, 0)
       acks.get(key) match {
         case Some(as) => acks = acks + (key -> (cmd.channelId :: as))
         case None     => acks = acks + (key -> List(cmd.channelId))
@@ -82,7 +81,7 @@ package object journal {
     }
 
     def iterator =
-      cmds.iterator.map(c => (c, acks.getOrElse(Key(c.componentId, c.channelId, c.message.sequenceNr, 0), Nil)))
+      cmds.iterator.map(c => (c, acks.getOrElse(Key(c.processorId, 0, c.message.sequenceNr, 0), Nil)))
 
     override def size =
       len
@@ -95,27 +94,27 @@ package object journal {
   }
 
   /**
-   * Cache for output WriteMsg commands.
+   * Cache for WriteOutMsg commands.
    */
-  private [journal] class OutputWriteMsgCache[L] {
-    var cmds = SortedMap.empty[Key, (L, WriteMsg)]
+  private [journal] class WriteOutMsgCache[L] {
+    var cmds = SortedMap.empty[Key, (L, WriteOutMsg)]
 
-    def update(cmd: WriteMsg, loc: L) {
-      val key = Key(cmd.componentId, cmd.channelId, cmd.message.sequenceNr, 0)
+    def update(cmd: WriteOutMsg, loc: L) {
+      val key = Key(0, cmd.channelId, cmd.message.sequenceNr, 0)
       cmds = cmds + (key -> (loc, cmd))
     }
 
-    def update(cmd: DeleteMsg): Option[L] = {
-      val key = Key(cmd.componentId, cmd.channelId, cmd.msgSequenceNr, 0)
+    def update(cmd: DeleteOutMsg): Option[L] = {
+      val key = Key(0, cmd.channelId, cmd.msgSequenceNr, 0)
       cmds.get(key) match {
         case Some((loc, msg)) => { cmds = cmds - key; Some(loc) }
         case None             => None
       }
     }
 
-    def messages(componentId: Int, channelId: Int, fromSequenceNr: Long): Iterable[Message] = {
-      val from = Key(componentId, channelId, fromSequenceNr, 0)
-      val to = Key(componentId, channelId, Long.MaxValue, 0)
+    def messages(channelId: Int, fromSequenceNr: Long): Iterable[Message] = {
+      val from = Key(0, channelId, fromSequenceNr, 0)
+      val to = Key(0, channelId, Long.MaxValue, 0)
       cmds.range(from, to).values.map(_._2.message)
     }
   }

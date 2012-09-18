@@ -15,6 +15,8 @@
  */
 package org.eligosource.eventsourced.example
 
+import java.io.File
+
 import akka.actor._
 
 import org.eligosource.eventsourced.core._
@@ -24,27 +26,25 @@ object OrderExample1 extends App {
   implicit val system = ActorSystem("example")
 
   // create a journal
-  val journalDir = new java.io.File("target/example")
-  val journal = LeveldbJournal(journalDir)
+  val journal = LeveldbJournal(new File("target/example"))
 
   // create a destination for output events
-  val destination = system.actorOf(Props[Destination])
+  val destination = system.actorOf(Props(new Destination with Receiver))
 
   // create an event-sourced processor
-  val processor = system.actorOf(Props[Processor])
+  val processor = system.actorOf(Props(new Processor with Eventsourced))
 
-  // create and configure an event-sourcing component
-  // with event processor and a named output channel
-  val orderComponent = Component(1, journal)
-    .addDefaultOutputChannelToActor("dest", destination)
-    .setProcessor(processor)
+  // create an event-sourcing context
+  val context = Context(journal)
+    .addChannel("dest", destination)
+    .addProcessor(1, processor)
 
-  // recover processor state from journaled events
-  orderComponent.init()
+  // recover state from (previously) journaled events
+  context.init()
 
-  // send some events
-  orderComponent.inputProducer ! OrderSubmitted(Order("foo"))
-  orderComponent.inputProducer ! OrderSubmitted(Order("bar"))
+  // send some event messages
+  processor ! Message(OrderSubmitted(Order("foo")))
+  processor ! Message(OrderSubmitted(Order("bar")))
 
   // wait for output events to arrive (graceful shutdown coming soon)
   Thread.sleep(1000)
@@ -53,7 +53,7 @@ object OrderExample1 extends App {
   system.shutdown()
 
   // event-sourced processor
-  class Processor extends Actor {
+  class Processor extends Actor { this: Eventsourced =>
     var orders = Map.empty[Int, Order] // processor state
 
     def receive = {
@@ -61,7 +61,7 @@ object OrderExample1 extends App {
         val id = orders.size
         val upd = order.copy(id = id)
         orders = orders + (id -> upd)
-        sender ! Publish("dest", OrderAccepted(upd))
+        emitTo("dest").event(OrderAccepted(upd))
       }
     }
   }
@@ -69,7 +69,7 @@ object OrderExample1 extends App {
   // output event destination
   class Destination extends Actor {
     def receive = {
-      case msg: Message => { println("received event %s" format msg.event); sender ! Ack }
+      case event => println("received event %s" format event)
     }
   }
 }

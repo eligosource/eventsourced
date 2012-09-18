@@ -31,8 +31,8 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
   // TODO: make configurable
   val serializer = new JavaSerializer[AnyRef]
 
-  val inputWriteMsgQueue = new InputWriteMsgQueue
-  val outputWriteMsgCache = new OutputWriteMsgCache[Location]
+  val WriteInMsgQueue = new WriteInMsgQueue
+  val WriteOutMsgCache = new WriteOutMsgCache[Location]
 
   val disposer = Executors.newSingleThreadScheduledExecutor()
   val journal = new Journal
@@ -41,21 +41,29 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
   var counter = 0L
 
   def receive = {
-    case cmd: WriteMsg => {
-      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
+    case cmd: WriteInMsg => {
+      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
       val m = c.message.copy(sender = None) // message to be written
 
-      // write input or output message
+      journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
+
+      if (c.target != context.system.deadLetters) c.target ! c.message
+      if (sender   != context.system.deadLetters) sender ! Ack
+
+      counter = m.sequenceNr + 1
+      commandListener.foreach(_ ! cmd)
+    }
+    case cmd: WriteOutMsg => {
+      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
+      val m = c.message.copy(sender = None) // message to be written
+
       val loc = journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
 
-      // optionally, add output message (written by reliable output channel) to cache
-      if (c.channelId != Channel.inputChannelId) {
-        outputWriteMsgCache.update(c, loc)
-      }
+      WriteOutMsgCache.update(c, loc)
 
-      // optionally, write acknowledgement
-      c.ackSequenceNr.foreach { snr =>
-        journal.write(serializer.toBytes(WriteAck(c.componentId, c.channelId, snr)), Journal.WriteType.SYNC)
+      if (c.ackSequenceNr != SkipAck) {
+        val ac = WriteAck(c.ackProcessorId, c.channelId, c.ackSequenceNr)
+        journal.write(serializer.toBytes(ac), Journal.WriteType.SYNC)
       }
 
       if (c.target != context.system.deadLetters) c.target ! c.message
@@ -69,18 +77,21 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case cmd: DeleteMsg => {
-      outputWriteMsgCache.update(cmd).foreach(journal.delete)
-
+    case cmd: DeleteOutMsg => {
+      WriteOutMsgCache.update(cmd).foreach(journal.delete)
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case BatchReplayInput(replays) => {
+    case BatchDeliverOutMsgs(channels) => {
+      channels.foreach(_ ! Channel.Deliver)
+      if (sender != context.system.deadLetters) sender ! Ack
+    }
+    case BatchReplayInMsgs(replays) => {
       val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
-        a + (r.componentId -> (r.fromSequenceNr, r.target))
+        a + (r.processorId -> (r.fromSequenceNr, r.target))
       }
       replayInput { (cmd, acks) =>
-        starts.get(cmd.componentId) match {
+        starts.get(cmd.processorId) match {
           case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
             target ! cmd.message.copy(sender = None, acks = acks)
           }
@@ -89,13 +100,13 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
       }
       if (sender != context.system.deadLetters) sender ! Ack
     }
-    case r: ReplayInput => {
+    case r: ReplayInMsgs => {
       // call receive directly instead sending to self
       // (replay must not interleave with other commands)
-      receive(BatchReplayInput(List(r)))
+      receive(BatchReplayInMsgs(List(r)))
     }
-    case ReplayOutput(compId, chanId, fromNr, target) => {
-      replayOutput(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
+    case ReplayOutMsgs(chanId, fromNr, target) => {
+      replayOutput(chanId, fromNr, msg => target ! msg.copy(sender = None))
       if (sender != context.system.deadLetters) sender ! Ack
     }
     case GetCounter => {
@@ -106,34 +117,34 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
     }
   }
 
-  def replayInput(p: (WriteMsg, List[Int]) => Unit) {
+  def replayInput(p: (WriteInMsg, List[Int]) => Unit) {
     journal.redo().asScala.foreach { location =>
       serializer.fromBytes(location.getData) match {
-        case cmd: WriteMsg if (cmd.channelId == Channel.inputChannelId) => {
-          inputWriteMsgQueue.enqueue(cmd)
+        case cmd: WriteInMsg => {
+          WriteInMsgQueue.enqueue(cmd)
         }
-        case cmd: WriteMsg => {
-          outputWriteMsgCache.update(cmd, location)
+        case cmd: WriteOutMsg => {
+          WriteOutMsgCache.update(cmd, location)
         }
         case cmd: WriteAck => {
-          inputWriteMsgQueue.ack(cmd)
+          WriteInMsgQueue.ack(cmd)
         }
       }
-      if (inputWriteMsgQueue.size > 20000 /* TODO: make configurable */ ) {
-        val (cmd, acks) = inputWriteMsgQueue.dequeue(); p(cmd, acks)
+      if (WriteInMsgQueue.size > 20000 /* TODO: make configurable */ ) {
+        val (cmd, acks) = WriteInMsgQueue.dequeue(); p(cmd, acks)
       }
     }
-    inputWriteMsgQueue.foreach { ca => p(ca._1, ca._2) }
-    inputWriteMsgQueue.clear()
+    WriteInMsgQueue.foreach { ca => p(ca._1, ca._2) }
+    WriteInMsgQueue.clear()
   }
 
-  def replayOutput(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
-    outputWriteMsgCache.messages(componentId, channelId, fromSequenceNr).foreach(p)
+  def replayOutput(channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
+    WriteOutMsgCache.messages(channelId, fromSequenceNr).foreach(p)
   }
 
   def getCounter: Long = {
     val cmds = journal.undo().asScala.map { location => serializer.fromBytes(location.getData) }
-    val cmdo = cmds.collectFirst { case cmd: WriteMsg => cmd }
+    val cmdo = cmds.collectFirst { case cmd: WriteInMsg => cmd }
     cmdo.map(_.message.sequenceNr + 1).getOrElse(1L)
   }
 

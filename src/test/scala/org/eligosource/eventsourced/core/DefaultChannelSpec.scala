@@ -28,7 +28,7 @@ import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
-class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
+class DefaultChannelSpec extends WordSpec with MustMatchers {
   import Channel._
 
   type FixtureParam = Fixture
@@ -39,21 +39,24 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     val dl = system.deadLetters
 
     val destinationQueue = new LinkedBlockingQueue[Message]
-    val successDestination = system.actorOf(Props(new TestDestination(destinationQueue)))
-    def failureDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(destinationQueue, failAtEvent)))
+    val successDestination = system.actorOf(Props(new TestDestination(destinationQueue) with Responder))
+    def failureDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(destinationQueue, failAtEvent) with Responder))
 
     val replyDestinationQueue = new LinkedBlockingQueue[Message]
-    val successReplyDestination = system.actorOf(Props(new TestDestination(replyDestinationQueue)))
-    def failureReplyDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(replyDestinationQueue, failAtEvent)))
+    val successReplyDestination = system.actorOf(Props(new TestDestination(replyDestinationQueue) with Responder))
+    def failureReplyDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(replyDestinationQueue, failAtEvent) with Responder))
 
     val writeAckListenerQueue = new LinkedBlockingQueue[WriteAck]
     val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
 
     val journalDir = new File("target/journal")
     val journal = LeveldbJournal(journalDir)
-    val channel = system.actorOf(Props(new DefaultOutputChannel(1, 1, journal)))
+    val channel = system.actorOf(Props(new DefaultChannel(1, journal)))
 
     channel ! SetDestination(successDestination)
+
+    def message(event: Any, sequenceNr: Long = 0L, ack: Boolean = true) =
+      Message(event, sequenceNr = sequenceNr, ack = ack, processorId = 1)
 
     def dequeue[A](queue: LinkedBlockingQueue[A], timeout: Long = 5000): A = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
@@ -65,19 +68,19 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       FileUtils.deleteDirectory(journalDir)
     }
 
-    class TestDestination(blockingQueue: LinkedBlockingQueue[Message]) extends Actor {
+    class TestDestination(blockingQueue: LinkedBlockingQueue[Message]) extends Actor { this: Responder =>
       def receive = {
-        case msg: Message => { blockingQueue.put(msg); sender ! msg.copy(event = "re: %s" format msg.event) }
+        case event => { blockingQueue.put(message); respond.withEvent("re: %s" format event) }
       }
     }
 
-    class FailureDestination(queue: LinkedBlockingQueue[Message], failAtEvent: Any) extends Actor {
+    class FailureDestination(queue: LinkedBlockingQueue[Message], failAtEvent: Any) extends Actor { this: Responder =>
       def receive = {
-        case msg: Message => if (msg.event == failAtEvent) {
-          sender ! Status.Failure(new Exception("test"))
+        case event => if (event == failAtEvent) {
+          respond.withFailure(new Exception("test"))
         } else {
-          queue.put(msg)
-          sender ! msg
+          queue.put(message)
+          respond.withMessage(msg => msg)
         }
       }
     }
@@ -94,40 +97,40 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
     try { test(fixture) } finally { fixture.shutdown() }
   }
 
-  "A default output channel" must {
+  "A default channel" must {
     "buffer messages before initial delivery" in { fixture =>
       import fixture._
 
-      channel ! Message("a")
-      channel ! Message("b")
+      channel ! message("a")
+      channel ! message("b")
 
       channel ! Deliver
 
-      dequeue(destinationQueue) must be (Message("a"))
-      dequeue(destinationQueue) must be (Message("b"))
+      dequeue(destinationQueue) must be (message("a"))
+      dequeue(destinationQueue) must be (message("b"))
     }
     "not buffer messages after initial delivery" in { fixture =>
       import fixture._
 
-      channel ! Message("a")
+      channel ! message("a")
 
       channel ! Deliver
 
-      channel ! Message("b")
-      channel ! Message("c")
+      channel ! message("b")
+      channel ! message("c")
 
-      dequeue(destinationQueue) must be (Message("a"))
-      dequeue(destinationQueue) must be (Message("b"))
-      dequeue(destinationQueue) must be (Message("c"))
+      dequeue(destinationQueue) must be (message("a"))
+      dequeue(destinationQueue) must be (message("b"))
+      dequeue(destinationQueue) must be (message("c"))
     }
     "acknowledge messages by default" in { fixture =>
       import fixture._
 
       journal ! SetCommandListener(Some(writeAckListener))
 
-      channel ! Message("a", sequenceNr = 1)
+      channel ! message("a", 1)
       channel ! Deliver
-      channel ! Message("b", sequenceNr = 2)
+      channel ! message("b", 2)
 
       val received = Set(
         dequeue(writeAckListenerQueue),
@@ -146,10 +149,10 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
 
       journal ! SetCommandListener(Some(writeAckListener))
 
-      channel ! Message("a", sequenceNr = 1, ack = false)
+      channel ! message("a", 1, false)
       channel ! Deliver
-      channel ! Message("b", sequenceNr = 2, ack = false)
-      channel ! Message("c", sequenceNr = 3)
+      channel ! message("b", 2, false)
+      channel ! message("c", 3)
 
       dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 3))
     }
@@ -159,12 +162,12 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       journal ! SetCommandListener(Some(writeAckListener))
 
       channel ! SetReplyDestination(successReplyDestination)
-      channel ! Message("a", sequenceNr = 1)
+      channel ! message("a", 1)
       channel ! Deliver
-      channel ! Message("b", sequenceNr = 2)
+      channel ! message("b", 2)
 
-      dequeue(destinationQueue) must be (Message("a", sequenceNr = 1))
-      dequeue(destinationQueue) must be (Message("b", sequenceNr = 2))
+      dequeue(destinationQueue) must be (message("a", 1))
+      dequeue(destinationQueue) must be (message("b", 2))
 
       val receivedReplies = Set(
         dequeue(replyDestinationQueue),
@@ -177,8 +180,8 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       )
 
       val expectedReplies = Set(
-        Message("re: a", sequenceNr = 1),
-        Message("re: b", sequenceNr = 2)
+        message("re: a", 1),
+        message("re: b", 2)
       )
 
       val expectedAcks = Set(
@@ -196,11 +199,11 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
 
       channel ! SetDestination(failureDestination("a"))
       channel ! SetReplyDestination(successReplyDestination)
-      channel ! Message("a", sequenceNr = 1)
+      channel ! message("a", 1)
       channel ! Deliver
-      channel ! Message("b", sequenceNr = 2)
+      channel ! message("b", 2)
 
-      dequeue(replyDestinationQueue) must be (Message("b", sequenceNr = 2))
+      dequeue(replyDestinationQueue) must be (message("b", 2))
       dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 2))
     }
     "not acknowledge messages after delivery failure to a reply destination" in { fixture =>
@@ -209,11 +212,11 @@ class DefaultOutputChannelSpec extends WordSpec with MustMatchers {
       journal ! SetCommandListener(Some(writeAckListener))
 
       channel ! SetReplyDestination(failureReplyDestination("re: a"))
-      channel ! Message("a", sequenceNr = 1)
+      channel ! message("a", 1)
       channel ! Deliver
-      channel ! Message("b", sequenceNr = 2)
+      channel ! message("b", 2)
 
-      dequeue(replyDestinationQueue) must be (Message("re: b", sequenceNr = 2))
+      dequeue(replyDestinationQueue) must be (message("re: b", 2))
       dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 2))
     }
   }

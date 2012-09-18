@@ -15,6 +15,8 @@
  */
 package org.eligosource.eventsourced.example
 
+import java.io.File
+
 import akka.actor._
 import akka.pattern.ask
 import akka.util.duration._
@@ -28,27 +30,26 @@ object OrderExample2 extends App {
   implicit val timeout = Timeout(5 seconds)
 
   // create a journal
-  val journalDir = new java.io.File("target/example")
-  val journal = LeveldbJournal(journalDir)
+  val journal = LeveldbJournal(new File("target/example"))
 
-  // create a destination for output events
-  val destination = system.actorOf(Props[Destination])
+  // create an event-sourcing context
+  implicit val context = Context(journal)
+    // create and add a destination for output events
+    .addChannel("dest", new Destination with Receiver)
+    // create and add an event-sourced processor
+    .addProcessor(1, new Processor with Eventsourced)
+    // recover state from (previously) journaled events
+    .init()
 
-  // create and configure an event-sourcing component
-  // with event processor and a named output channel
-  val orderComponent = Component(1, journal)
-    .addDefaultOutputChannelToActor("dest", destination)
-    .setProcessor(outputChannels => system.actorOf(Props(new Processor(outputChannels))))
+  // get processor with id == 1 from context
+  val p = context.processors(1)
 
-  // recover processor state from journaled events
-  orderComponent.init()
+  // send some event messages
+  p ! Message(OrderSubmitted(Order("foo")))
+  p ! Message(OrderSubmitted(Order("bar")))
 
-  // send some events
-  orderComponent.inputChannel ! Message(OrderSubmitted(Order("foo")))
-  orderComponent.inputChannel ! Message(OrderSubmitted(Order("bar")))
-
-  // and expect a reply
-  orderComponent.inputProducer ? OrderSubmitted(Order("baz")) onSuccess {
+  // and expect an application-level reply
+  p ?? Message(OrderSubmitted(Order("baz"))) onSuccess {
     case order: Order => println("received order %s" format order)
   }
 
@@ -59,18 +60,16 @@ object OrderExample2 extends App {
   system.shutdown()
 
   // event-sourced processor
-  class Processor(outputChannels: Map[String, ActorRef]) extends Actor {
+  class Processor extends Actor { this: Eventsourced =>
     var orders = Map.empty[Int, Order] // processor state
 
     def receive = {
-      case msg: Message => msg.event match {
-        case OrderSubmitted(order) => {
-          val id = orders.size
-          val upd = order.copy(id = id)
-          orders = orders + (id -> upd)
-          msg.sender.foreach(_ ! upd)
-          outputChannels("dest") ! msg.copy(event = OrderAccepted(upd))
-        }
+      case OrderSubmitted(order) => {
+        val id = orders.size
+        val upd = order.copy(id = id)
+        orders = orders + (id -> upd)
+        initiator ! upd
+        emitTo("dest").event(OrderAccepted(upd))
       }
     }
   }
@@ -78,7 +77,7 @@ object OrderExample2 extends App {
   // output event destination
   class Destination extends Actor {
     def receive = {
-      case msg: Message => { println("received event %s" format msg.event); sender ! Ack }
+      case event => println("received event %s" format event)
     }
   }
 }

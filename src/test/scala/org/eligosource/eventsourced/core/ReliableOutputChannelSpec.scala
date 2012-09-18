@@ -44,26 +44,26 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     val replyDestinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
 
     val successDestination =
-      system.actorOf(Props(new TestDesination(destinationQueue, None)))
+      system.actorOf(Props(new TestDesination(destinationQueue, None) with Responder))
     def failureDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new TestDesination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount)))
+      system.actorOf(Props(new TestDesination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
 
     val successReplyDestination =
-      system.actorOf(Props(new TestDesination(replyDestinationQueue, None)))
+      system.actorOf(Props(new TestDesination(replyDestinationQueue, None) with Responder))
     def failureReplyDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new TestDesination(replyDestinationQueue, Some(failAtEvent), enqueueFailures, failureCount)))
+      system.actorOf(Props(new TestDesination(replyDestinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
 
-    val writeMsgListenerQueue = new LinkedBlockingQueue[WriteMsg]
+    val writeMsgListenerQueue = new LinkedBlockingQueue[WriteOutMsg]
     val writeMsgListener = system.actorOf(Props(new WriteMsgListener(writeMsgListenerQueue)))
 
     val journalDir = new File("target/journal")
     val journal = LeveldbJournal(journalDir)
 
-    val channelEnv = new ReliableOutputChannelEnv(1, journal, 10 milliseconds, 10 milliseconds, 3)
-    val channel = system.actorOf(Props(new ReliableOutputChannel(1, channelEnv)))
+    val channelConf = new ReliableChannelConf(10 milliseconds, 10 milliseconds, 3)
+    val channel = system.actorOf(Props(new ReliableChannel(1, journal, channelConf)))
 
-    def write(msg: Message) {
-      Await.result(journal ? WriteMsg(1, 1, msg, None, system.deadLetters, false), timeout.duration)
+    def writeOutMsg(msg: Message) {
+      Await.result(journal ? WriteOutMsg(1, msg, 1, SkipAck, system.deadLetters, false), timeout.duration)
     }
 
     def dequeue[A](queue: LinkedBlockingQueue[A], timeout: Long = 5000): A = {
@@ -84,25 +84,25 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       // if failing messages should be added to queue
       enqueueFailures: Boolean = false,
       // number of messages that will fail
-      var failureCount: Int = 0) extends Actor {
+      var failureCount: Int = 0) extends Actor { this: Responder =>
 
       def receive = {
-        case msg: Message => {
-          if (failAtEvent.map(_ == msg.event).getOrElse(false) && failureCount > 0) {
+        case event => {
+          if (failAtEvent.map(_ == event).getOrElse(false) && failureCount > 0) {
             failureCount = failureCount - 1
-            sender ! Status.Failure(new Exception("test"))
-            if (enqueueFailures) blockingQueue.put(Left(msg))
+            respond.withFailure(new Exception("test"))
+            if (enqueueFailures) blockingQueue.put(Left(message))
           } else {
-            blockingQueue.put(Right(msg))
-            sender ! msg.copy(event = "re: %s" format msg.event)
+            blockingQueue.put(Right(message))
+            respond.withEvent("re: %s" format event)
           }
         }
       }
     }
 
-    class WriteMsgListener(blockingQueue: LinkedBlockingQueue[WriteMsg]) extends Actor {
+    class WriteMsgListener(blockingQueue: LinkedBlockingQueue[WriteOutMsg]) extends Actor {
       def receive = {
-        case cmd: WriteMsg => blockingQueue.put(cmd)
+        case cmd: WriteOutMsg => blockingQueue.put(cmd)
       }
     }
   }
@@ -117,8 +117,8 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       "redeliver stored output messaged during recovery" in { fixture =>
         import fixture._
 
-        write(Message("a", sequenceNr = 4L)) // sequence nr written to journal
-        write(Message("b", sequenceNr = 5L)) // sequence nr written to journal
+        writeOutMsg(Message("a", sequenceNr = 4L)) // sequence nr written to journal
+        writeOutMsg(Message("b", sequenceNr = 5L)) // sequence nr written to journal
 
         channel ! SetDestination(successDestination)
         channel ! Deliver
@@ -211,8 +211,8 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       channel ! Deliver
       channel ! Message("b", sequenceNr = 2)
 
-      dequeue(writeMsgListenerQueue).ackSequenceNr must be (Some(1))
-      dequeue(writeMsgListenerQueue).ackSequenceNr must be (Some(2))
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (1)
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (2)
     }
     "not acknowledge messages on request" in { fixture =>
       import fixture._
@@ -224,9 +224,9 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       channel ! Message("b", sequenceNr = 2, ack = false)
       channel ! Message("c", sequenceNr = 3)
 
-      dequeue(writeMsgListenerQueue).ackSequenceNr must be (None)
-      dequeue(writeMsgListenerQueue).ackSequenceNr must be (None)
-      dequeue(writeMsgListenerQueue).ackSequenceNr must be (Some(3))
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (SkipAck)
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (SkipAck)
+      dequeue(writeMsgListenerQueue).ackSequenceNr must be (3)
     }
   }
 }

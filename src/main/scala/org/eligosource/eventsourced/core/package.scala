@@ -18,18 +18,24 @@ package org.eligosource.eventsourced
 import akka.actor.ActorRef
 
 package object core {
-  case class WriteAck(componentId: Int, channelId: Int, ackSequenceNr: Long)
-  case class WriteMsg(componentId: Int, channelId: Int, message: Message, ackSequenceNr: Option[Long], target: ActorRef, genSequenceNr: Boolean = true) {
-    def forSequenceNr(snr: Long) = copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
+  private [core] case class SetId(id: Int)
+  private [core] case class SetContext(context: Context)
+
+  case object Ack
+
+  val SkipAck: Long = -1L
+
+  implicit def processorRef2Initiator(processor: ActorRef) = {
+    new Initiator(processor)
   }
 
-  case class DeleteMsg(componentId: Int, channelId: Int, msgSequenceNr: Long)
-  case class ReplayOutput(componentId: Int, channelId: Int, fromSequenceNr: Long, target: ActorRef)
-  case class ReplayInput(componentId: Int, fromSequenceNr: Long, target: ActorRef)
-  case class BatchReplayInput(replays: List[ReplayInput])
+  // ------------------------------------------------------------
+  //  Factories for special-purpose processors
+  // ------------------------------------------------------------
 
-  case class SetCommandListener(listener: Option[ActorRef])
+  def decorator(target: ActorRef): Eventsourced =
+    new Decorator(target) with Eventsourced
 
-  case object GetCounter
-  case object Ack
+  def multicast(targets: Seq[ActorRef]): Eventsourced =
+    new Multicast(targets) with Eventsourced with ForwardSetContext
 }

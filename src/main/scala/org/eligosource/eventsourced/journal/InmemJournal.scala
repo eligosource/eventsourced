@@ -30,34 +30,44 @@ class InmemJournal extends Actor {
   var counter = 0L
 
   def receive = {
-    case cmd: WriteMsg => {
-      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
-      store(c)
+    case cmd: WriteInMsg => {
+      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
+      storeInMsg(c)
+      if (c.target != context.system.deadLetters) c.target ! c.message
+      if (sender   != context.system.deadLetters) sender ! Ack
+      commandListener.foreach(_ ! cmd)
+    }
+    case cmd: WriteOutMsg => {
+      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
+      storeOutMsg(c)
       if (c.target != context.system.deadLetters) c.target ! c.message
       if (sender   != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteAck => {
-      store(cmd)
+      storeAck(cmd)
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case cmd: DeleteMsg => {
-      store(cmd)
+    case cmd: DeleteOutMsg => {
+      storeDel(cmd)
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case BatchReplayInput(replays) => {
-      // call receive directly instead sending to self
-      // (replay must not interleave with other commands)
-      replays.foreach(receive)
-    }
-    case ReplayInput(compId, fromNr, target) => {
-      replay(compId, Channel.inputChannelId, fromNr, msg => target ! msg.copy(sender = None))
+    case BatchDeliverOutMsgs(channels) => {
+      channels.foreach(_ ! Channel.Deliver)
       if (sender != context.system.deadLetters) sender ! Ack
     }
-    case ReplayOutput(compId, chanId, fromNr, target) => {
-      replay(compId, chanId, fromNr, msg => target ! msg.copy(sender = None))
+    case BatchReplayInMsgs(replays) => {
+      replays.foreach(replayInMsgs)
+      if (sender != context.system.deadLetters) sender ! Ack
+    }
+    case cmd: ReplayInMsgs => {
+      replayInMsgs(cmd)
+      if (sender != context.system.deadLetters) sender ! Ack
+    }
+    case ReplayOutMsgs(chanId, fromNr, target) => {
+      replay(Int.MaxValue, chanId, fromNr, msg => target ! msg.copy(sender = None))
       if (sender != context.system.deadLetters) sender ! Ack
     }
     case GetCounter => {
@@ -68,29 +78,40 @@ class InmemJournal extends Actor {
     }
   }
 
-  def store(cmd: WriteMsg) {
+  def storeInMsg(cmd: WriteInMsg) {
     val msg = cmd.message
-
     counter = msg.sequenceNr
-    val k = Key(cmd.componentId, cmd.channelId, msg.sequenceNr, 0)
+
+    val k = Key(cmd.processorId, 0, counter, 0)
     val m = msg.copy(sender = None)
     redoMap = redoMap + (k -> m)
 
-    cmd.ackSequenceNr.foreach { snr =>
-      val k = Key(cmd.componentId, Channel.inputChannelId, snr, cmd.channelId)
+    counter = counter + 1
+  }
+
+  def storeOutMsg(cmd: WriteOutMsg) {
+    val msg = cmd.message
+    counter = msg.sequenceNr
+
+    val k = Key(Int.MaxValue, cmd.channelId, counter, 0)
+    val m = msg.copy(sender = None)
+    redoMap = redoMap + (k -> m)
+
+    if (cmd.ackSequenceNr != SkipAck) {
+      val k = Key(cmd.ackProcessorId, 0, cmd.ackSequenceNr, cmd.channelId)
       redoMap = redoMap + (k -> null)
     }
 
     counter = counter + 1
   }
 
-  def store(cmd: WriteAck) {
-    val k = Key(cmd.componentId, Channel.inputChannelId, cmd.ackSequenceNr, cmd.channelId)
+  def storeAck(cmd: WriteAck) {
+    val k = Key(cmd.processorId, 0, cmd.ackSequenceNr, cmd.channelId)
     redoMap = redoMap + (k -> null)
   }
 
-  def store(cmd: DeleteMsg) {
-    val k = Key(cmd.componentId, cmd.channelId, cmd.msgSequenceNr, 0)
+  def storeDel(cmd: DeleteOutMsg) {
+    val k = Key(Int.MaxValue, cmd.channelId, cmd.msgSequenceNr, 0)
     redoMap = redoMap - k
   }
 
@@ -100,8 +121,12 @@ class InmemJournal extends Actor {
     counter = getCounter
   }
 
-  def replay(componentId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
-    val startKey = Key(componentId, channelId, fromSequenceNr, 0)
+  def replayInMsgs(cmd: ReplayInMsgs) {
+    replay(cmd.processorId, 0, cmd.fromSequenceNr, msg => cmd.target ! msg.copy(sender = None))
+  }
+
+  def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
+    val startKey = Key(processorId, channelId, fromSequenceNr, 0)
     val iter = redoMap.from(startKey).iterator.buffered
     replay(iter, startKey, p)
   }
@@ -112,7 +137,7 @@ class InmemJournal extends Actor {
       val nextEntry = iter.next()
       val nextKey   = nextEntry._1
       assert(nextKey.confirmingChannelId == 0)
-      if (key.componentId         == nextKey.componentId &&
+      if (key.processorId         == nextKey.processorId &&
           key.initiatingChannelId == nextKey.initiatingChannelId) {
         val msg = nextEntry._2.asInstanceOf[Message]
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
@@ -127,7 +152,7 @@ class InmemJournal extends Actor {
     if (iter.hasNext) {
       val nextEntry = iter.head
       val nextKey = nextEntry._1
-      if (key.componentId         == nextKey.componentId &&
+      if (key.processorId         == nextKey.processorId &&
           key.initiatingChannelId == nextKey.initiatingChannelId &&
           key.sequenceNr          == nextKey.sequenceNr) {
         iter.next()

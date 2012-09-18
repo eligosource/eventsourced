@@ -57,10 +57,6 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
     val replayQueue = new LinkedBlockingQueue[Message]
     val replayTarget = system.actorOf(Props(new CommandTarget(replayQueue)))
 
-    def journal(cmd: Any) {
-      Await.result(journal ? cmd, timeout.duration)
-    }
-
     def dequeue(queue: LinkedBlockingQueue[Message])(p: Message => Unit) {
       p(queue.poll(5000, TimeUnit.MILLISECONDS))
     }
@@ -83,21 +79,21 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
     "persist input messages" in { fixture =>
       import fixture._
 
-      journal ! WriteMsg(1, 0, Message("test-1"), None, writeTarget) // input message
-      journal ! WriteMsg(1, 0, Message("test-2"), None, writeTarget) // input message
+      journal ! WriteInMsg(1, Message("test-1"), writeTarget)
+      journal ! WriteInMsg(1, Message("test-2"), writeTarget)
 
-      journal ! ReplayInput(1, 0, replayTarget)
+      journal ! ReplayInMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1)) }
-      //dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
+      dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
     }
     "persist messages with client-defined sequence numbers" in { fixture =>
       import fixture._
 
-      journal ! WriteMsg(1, 0, Message("test-1", sequenceNr = 5), None, writeTarget, false) // input message with client-defined sequence nr
-      journal ! WriteMsg(1, 0, Message("test-2"), None, writeTarget)                        // input message
+      journal ! WriteInMsg(1, Message("test-1", sequenceNr = 5), writeTarget, false)
+      journal ! WriteInMsg(1, Message("test-2"), writeTarget)
 
-      journal ! ReplayInput(1, 0, replayTarget)
+      journal ! ReplayInMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 5)) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 6)) }
@@ -105,40 +101,40 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
     "persist input messages and acknowledgements" in { fixture =>
       import fixture._
 
-      journal ! WriteMsg(1, 0, Message("test-1"), None, writeTarget) // input message
-      journal ! WriteAck(1, 1, 1)                                    // output ack
+      journal ! WriteInMsg(1, Message("test-1"), writeTarget)
+      journal ! WriteAck(1, 1, 1)
 
-      journal ! ReplayInput(1, 0, replayTarget)
+      journal ! ReplayInMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
     }
     "persist input messages and acknowledgements along with output messages" in { fixture =>
       import fixture._
 
-      journal ! WriteMsg(1, 0, Message("test-1"), None, writeTarget)    // input message
-      journal ! WriteMsg(1, 1, Message("test-2"), Some(1), writeTarget) // output message and ack
+      journal ! WriteInMsg(1, Message("test-1"), writeTarget)
+      journal ! WriteOutMsg(1, Message("test-2"), 1, 1, writeTarget)
 
-      journal ! ReplayInput(1, 0, replayTarget)
-      journal ! ReplayOutput(1, 1, 0, replayTarget)
+      journal ! ReplayInMsgs(1, 0, replayTarget)
+      journal ! ReplayOutMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
     }
-    "replay iput messages for n components with a single command" in { fixture =>
+    "replay iput messages for n processors with a single command" in { fixture =>
       import fixture._
 
-      journal ! WriteMsg(1, 0, Message("test-1a"), None, writeTarget)
-      journal ! WriteMsg(1, 0, Message("test-1b"), None, writeTarget)
+      journal ! WriteInMsg(1, Message("test-1a"), writeTarget)
+      journal ! WriteInMsg(1, Message("test-1b"), writeTarget)
 
-      journal ! WriteMsg(2, 0, Message("test-2a"), None, writeTarget)
-      journal ! WriteMsg(2, 0, Message("test-2b"), None, writeTarget)
+      journal ! WriteInMsg(2, Message("test-2a"), writeTarget)
+      journal ! WriteInMsg(2, Message("test-2b"), writeTarget)
 
-      journal ! WriteMsg(3, 0, Message("test-3a"), None, writeTarget)
-      journal ! WriteMsg(3, 0, Message("test-3b"), None, writeTarget)
+      journal ! WriteInMsg(3, Message("test-3a"), writeTarget)
+      journal ! WriteInMsg(3, Message("test-3b"), writeTarget)
 
-      journal ! BatchReplayInput(List(
-        ReplayInput(1, 0L, replayTarget),
-        ReplayInput(3, 6L, replayTarget)
+      journal ! BatchReplayInMsgs(List(
+        ReplayInMsgs(1, 0L, replayTarget),
+        ReplayInMsgs(3, 6L, replayTarget)
       ))
 
       dequeue(replayQueue) { _ must be(Message("test-1a", sequenceNr = 1)) }
@@ -153,9 +149,9 @@ class InmenJournalSpec extends JournalSpec {
     InmemJournal()
 }
 
-class LeveldbJournalCSSpec extends JournalSpec {
+class LeveldbJournalPSSpec extends JournalSpec {
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    LeveldbJournal.componentStructured(journalDir)
+    LeveldbJournal.processorStructured(journalDir)
 }
 
 class LeveldbJournalSSSpec extends JournalSpec {

@@ -23,27 +23,20 @@ import akka.pattern.ask
 import akka.util.duration._
 import akka.util._
 
-/**
- * A communication channel used by an event-sourced component to interact with
- * its environment via event messages.
- */
 trait Channel extends Actor {
   def id: Int
-  def componentId: Int
 
   implicit val executionContext = context.dispatcher
 
-  def journal: ActorRef
-  val journalTimeout = Timeout(10 seconds)
+  var destination: Option[ActorRef] = None
+  var replyDestination: Option[ActorRef] = None
 }
 
 object Channel {
-  val inputChannelId = 0
+  val JournalTimeout = Timeout(10 seconds)
+  val DestinationTimeout = Timeout(5 seconds)
+  val ReplyDestinationTimeout = Timeout(5 seconds)
 
-  val destinationTimeout = Timeout(5 seconds)
-  val replyDestinationTimeout = Timeout(5 seconds)
-
-  case class SetProcessor(processor: ActorRef)
   case class SetDestination(destination: ActorRef)
   case class SetReplyDestination(replayDestination: ActorRef)
 
@@ -51,48 +44,11 @@ object Channel {
 }
 
 /**
- * An input channel is used by applications to send event messages to an event-sourced
- * component. This channel writes event messages to a journal before sending it to the
- * component's processor.
+ * A channel that sends event messages to a destination. If the destination responds,
+ * an acknowledgement is written to the journal. If the destination does not respond
+ * or responds with Status.Failure, no acknowledgement is written.
  */
-class InputChannel(val componentId: Int, val journal: ActorRef) extends Channel {
-  import Channel._
-
-  val id = inputChannelId
-
-  var processor: Option[ActorRef] = None
-
-  def receive = {
-    case msg: Message => {
-      processor foreach { p => journal forward WriteMsg(componentId, id, msg, None, p) }
-    }
-    case SetProcessor(p) => {
-      processor = Some(p)
-    }
-  }
-}
-
-class InputChannelProducer(inputChannel: ActorRef) extends Actor {
-  def receive = {
-    case msg: Message => inputChannel.!(msg.copy(sender = Some(sender)))(null)
-    case evt          => inputChannel.!(Message(evt, Some(sender)))(null)
-  }
-}
-
-/**
- * A channel used by a component's processor (actor) to send event messages
- * to destinations.
- */
-trait OutputChannel extends Channel {
-  var destination: Option[ActorRef] = None
-  var replyDestination: Option[ActorRef] = None
-}
-
-/**
- * An output channel that sends event messages to a destination. If the destination successfully
- * responds, an acknowledgement is written to the journal.
- */
-class DefaultOutputChannel(val componentId: Int, val id: Int, val journal: ActorRef) extends OutputChannel {
+class DefaultChannel(val id: Int, val journal: ActorRef) extends Channel {
   import Channel._
 
   assert(id > 0)
@@ -101,7 +57,7 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journal: Actor
   var buffer = List.empty[Message]
 
   def receive = {
-    case msg: Message if (!msg.acks.contains(id) && !msg.replicated) => {
+    case msg: Message if (!msg.acks.contains(id)) => {
       if (retain) buffer = msg :: buffer
       else send(msg)
     }
@@ -120,46 +76,49 @@ class DefaultOutputChannel(val componentId: Int, val id: Int, val journal: Actor
 
   def send(msg: Message): Unit = destination foreach { d =>
     val r = for {
-      r1 <- d.ask(msg)(destinationTimeout)
+      r1 <- d.ask(msg)(DestinationTimeout)
       r2 <- reply(r1)
     } yield r2
 
     r onSuccess {
-      case _ if (msg.ack) => journal.!(WriteAck(componentId, id, msg.sequenceNr))(null)
+      case _ if (msg.ack) => journal.!(WriteAck(msg.processorId, id, msg.sequenceNr))(null)
     }
   }
 
   def reply(msg: Any): Future[Any] =
-    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(Ack))
+    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(Promise.successful(Ack))
 }
 
-case class ReliableOutputChannelEnv(
-  componentId: Int,
-  journal: ActorRef,
+case class ReliableChannelConf(
   recoveryDelay: Duration,
   retryDelay: Duration,
   retryMax: Int
 )
 
+object ReliableChannelConf {
+  val DefaultRecoveryDelay = 5 seconds
+  val DefaultRetryDelay = 1 second
+  val DefaultRetryMax = 3
+
+  def apply() = new ReliableChannelConf(DefaultRecoveryDelay, DefaultRetryDelay, DefaultRetryMax)
+}
+
 /**
- * An output channel that stores output messages in the journal before sending it to a
- * destination. If the destination successfully responds, the stored output message is
- * removed from the journal, otherwise a re-delivery is attempted.
+ * A channel that stores output messages in the journal before sending them to a destination.
+ * If the destination responds, the stored output message is removed from the journal. If
+ * the destination does not respond or responds with Status.Failure, a re-delivery is attempted.
  */
-class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends OutputChannel {
+class ReliableChannel(val id: Int, journal: ActorRef, conf: ReliableChannelConf) extends Channel {
   import Channel._
 
   assert(id > 0)
 
-  val componentId = env.componentId
-  val journal = env.journal
-
   var buffer: Option[ActorRef] = None
 
   def receive = {
-    case msg: Message if (!msg.acks.contains(id) && !msg.replicated) => {
-      val ackSequenceNr = if (msg.ack) Some(msg.sequenceNr) else None
-      journal.!(WriteMsg(componentId, id, msg, ackSequenceNr, buffer.getOrElse(context.system.deadLetters)))(null)
+    case msg: Message if (!msg.acks.contains(id)) => {
+      val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
+      journal.!(WriteOutMsg(id, msg, msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters)))(null)
     }
     case Deliver => destination foreach { d =>
       buffer = Some(createBuffer(d))
@@ -167,7 +126,7 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
     }
     case Terminated(s) => buffer foreach { b =>
       buffer = None
-      context.system.scheduler.scheduleOnce(env.recoveryDelay, self, Deliver)
+      context.system.scheduler.scheduleOnce(conf.recoveryDelay, self, Deliver)
     }
     case SetDestination(d) => {
       destination = Some(d)
@@ -178,20 +137,15 @@ class ReliableOutputChannel(val id: Int, env: ReliableOutputChannelEnv) extends 
   }
 
   def deliverPendingMessages(destination: ActorRef) {
-    journal.!(ReplayOutput(componentId, id, 0L, destination))(null)
+    journal.!(ReplayOutMsgs(id, 0L, destination))(null)
   }
 
   def createBuffer(destination: ActorRef) = {
-    context.watch(context.actorOf(Props(new ReliableOutputChannelBuffer(id, destination, replyDestination, env))))
+    context.watch(context.actorOf(Props(new ReliableChannelBuffer(id, journal, destination, replyDestination, conf))))
   }
 }
 
-object ReliableOutputChannel {
-  val defaultReplayTimeout = Timeout(5 seconds)
-  val defaultRecoveryDelay = 5 seconds
-  val defaultRetryDelay = 1 second
-  val defaultRetryMax = 3
-
+private [core] object ReliableChannel {
   case class Next(retries: Int)
   case class Retry(msg: Message)
 
@@ -199,13 +153,13 @@ object ReliableOutputChannel {
   case object FeedMe
 }
 
-class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, replyDestination: Option[ActorRef], env: ReliableOutputChannelEnv) extends Actor {
-  import ReliableOutputChannel._
+private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], conf: ReliableChannelConf) extends Actor {
+  import ReliableChannel._
 
   var rocSenderQueue = Queue.empty[Message]
   var rocSenderBusy = false //
 
-  val rocSender = context.actorOf(Props(new ReliableOutputChannelSender(channelId, destination, replyDestination, env)))
+  val rocSender = context.actorOf(Props(new ReliableChannelSender(channelId, journal, destination, replyDestination, conf)))
 
   def receive = {
     case msg: Message => {
@@ -226,9 +180,9 @@ class ReliableOutputChannelBuffer(channelId: Int, destination: ActorRef, replyDe
   }
 }
 
-class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDestination: Option[ActorRef], env: ReliableOutputChannelEnv) extends Actor {
+private [core] class ReliableChannelSender(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], conf: ReliableChannelConf) extends Actor {
   import Channel._
-  import ReliableOutputChannel._
+  import ReliableChannel._
 
   implicit val executionContext = context.dispatcher
 
@@ -258,13 +212,13 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDe
 
       future onSuccess {
         case _ => {
-          env.journal.!(DeleteMsg(env.componentId, channelId, msg.sequenceNr))(null)
+          journal.!(DeleteOutMsg(channelId, msg.sequenceNr))(null)
           self ! Next(0)
         }
       }
 
       future onFailure {
-        case e => ctx.system.scheduler.scheduleOnce(env.retryDelay, self, Retry(msg))
+        case e => ctx.system.scheduler.scheduleOnce(conf.retryDelay, self, Retry(msg))
       }
     } else {
       sequencer.foreach(_ ! FeedMe)
@@ -273,15 +227,15 @@ class ReliableOutputChannelSender(channelId: Int, destination: ActorRef, replyDe
       // undo dequeue
       queue = (msg +: queue)
       // and try again ...
-      if (retries < env.retryMax) self ! Next(retries + 1) else sequencer.foreach(s => context.stop(s))
+      if (retries < conf.retryMax) self ! Next(retries + 1) else sequencer.foreach(s => context.stop(s))
     }
   }
 
   def send(msg: Message): Future[Any] = for {
-    r1 <- destination.ask(msg)(destinationTimeout)
+    r1 <- destination.ask(msg)(DestinationTimeout)
     r2 <- reply(r1)
   } yield r2
 
   def reply(msg: Any): Future[Any] =
-    replyDestination.map(_.ask(msg)(replyDestinationTimeout)).getOrElse(Promise.successful(Ack))
+    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(Promise.successful(Ack))
 }

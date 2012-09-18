@@ -33,13 +33,13 @@ import org.eligosource.eventsourced.util._
  * Pros:
  *
  *  - efficient replay of input messages for composites i.e. single scan
- *    (with optional lower bound) for n components.
- *  - efficient replay of output messages for individual components
+ *    (with optional lower bound) for n processors.
+ *  - efficient replay of output messages
  *  - efficient deletion of old entries
  *
  * Cons:
  *
- *  - replay of input messages for individual component requires full scan
+ *  - replay of input messages for individual processors requires full scan
  *    (with optional lower bound)
  */
 class LeveldbJournalSS(dir: File) extends Actor {
@@ -49,33 +49,38 @@ class LeveldbJournalSS(dir: File) extends Actor {
   val levelDbWriteOptions = new WriteOptions().sync(false)
   val leveldb = factory.open(dir, new Options().createIfMissing(true))
 
-  val outputWriteMsgCache = new OutputWriteMsgCache[Long]
+  val writeOutMsgCache = new WriteOutMsgCache[Long]
 
   var commandListener: Option[ActorRef] = None
   var counter = 0L
 
   def receive = {
-    case cmd: WriteMsg => {
-      val c = if(cmd.genSequenceNr) cmd.forSequenceNr(counter) else cmd
+    case cmd: WriteInMsg => {
+      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
       val m = c.message.copy(sender = None) // message to be written
-      val b = leveldb.createWriteBatch()
 
-      val key = if (c.channelId == Channel.inputChannelId) {
-        SSKey(In, m.sequenceNr, Channel.inputChannelId)
-      } else {
-        outputWriteMsgCache.update(c, m.sequenceNr)
-        SSKey(Out, m.sequenceNr, cmd.channelId)
-      }
+      val ck = SSKey(In, m.sequenceNr, 0)
+      val sc = writeInMsgSerializer.toBytes(c.copy(message = m, target = null))
+      leveldb.put(ck, sc)
 
-      try {
-        // add command to batch
-        b.put(key, cmdSerializer.toBytes(c.copy(message = m, target = null)))
-        // optionally, add acknowledgement to batch
-        c.ackSequenceNr.foreach { snr => b.put(SSKey(In, snr, c.channelId), Array.empty[Byte]) }
-        // write batch
-        leveldb.write(b, levelDbWriteOptions)
-      } finally {
-        b.close()
+      if (c.target != context.system.deadLetters) c.target ! c.message
+      if (sender   != context.system.deadLetters) sender ! Ack
+
+      counter = m.sequenceNr + 1
+      commandListener.foreach(_ ! cmd)
+    }
+    case cmd: WriteOutMsg => withBatch { batch =>
+      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
+      val m = c.message.copy(sender = None) // message to be written
+
+      writeOutMsgCache.update(c, m.sequenceNr)
+
+      val ck = SSKey(Out, m.sequenceNr, cmd.channelId)
+      val sc = writeOutMsgSerializer.toBytes(c.copy(message = m, target = null))
+      batch.put(ck, sc)
+      if (c.ackSequenceNr != SkipAck) {
+        val ak = SSKey(In, c.ackSequenceNr, c.channelId)
+        batch.put(ak, Array.empty[Byte])
       }
 
       if (c.target != context.system.deadLetters) c.target ! c.message
@@ -89,17 +94,21 @@ class LeveldbJournalSS(dir: File) extends Actor {
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case cmd: DeleteMsg => {
-      outputWriteMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
+    case cmd: DeleteOutMsg => {
+      writeOutMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case BatchReplayInput(replays) => {
+    case BatchDeliverOutMsgs(channels) => {
+      channels.foreach(_ ! Channel.Deliver)
+      if (sender != context.system.deadLetters) sender ! Ack
+    }
+    case BatchReplayInMsgs(replays) => {
       val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
-        a + (r.componentId -> (r.fromSequenceNr, r.target))
+        a + (r.processorId -> (r.fromSequenceNr, r.target))
       }
-      replay(In, starts.values.map(_._1).min) { (cmd, acks) =>
-        starts.get(cmd.componentId) match {
+      replay(In, starts.values.map(_._1).min, writeInMsgSerializer) { (cmd, acks) =>
+        starts.get(cmd.processorId) match {
           case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
             target ! cmd.message.copy(sender = None, acks = acks)
           }
@@ -108,13 +117,13 @@ class LeveldbJournalSS(dir: File) extends Actor {
       }
       if (sender != context.system.deadLetters) sender ! Ack
     }
-    case r: ReplayInput => {
+    case r: ReplayInMsgs => {
       // call receive directly instead sending to self
       // (replay must not interleave with other commands)
-      receive(BatchReplayInput(List(r)))
+      receive(BatchReplayInMsgs(List(r)))
     }
-    case ReplayOutput(compId, chanId, fromNr, target) => {
-      outputWriteMsgCache.messages(compId, chanId, fromNr).foreach(msg => target ! msg.copy(sender = None))
+    case ReplayOutMsgs(chanId, fromNr, target) => {
+      writeOutMsgCache.messages(chanId, fromNr).foreach(msg => target ! msg.copy(sender = None))
       if (sender != context.system.deadLetters) sender ! Ack
     }
     case GetCounter => {
@@ -125,30 +134,56 @@ class LeveldbJournalSS(dir: File) extends Actor {
     }
   }
 
-  def replay(direction: Int, fromSequenceNr: Long)(p: (WriteMsg, List[Int]) => Unit): Unit = {
+  override def preStart() {
+    counter = getCounter
+    replay(Out, 0L, writeOutMsgSerializer) { (cmd, acks) =>
+      writeOutMsgCache.update(cmd, cmd.message.sequenceNr)
+    }
+  }
+
+  override def postStop() {
+    leveldb.close()
+  }
+
+  def getCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
+    case null  => 1L
+    case bytes => bytesToCounter(bytes) + 1L
+  }
+
+  def withBatch(p: WriteBatch => Unit) {
+    val batch = leveldb.createWriteBatch()
+    try {
+      p(batch)
+      leveldb.write(batch, levelDbWriteOptions)
+    } finally {
+      batch.close()
+    }
+  }
+
+  def replay[T](direction: Int, fromSequenceNr: Long, serializer: Serializer[T])(p: (T, List[Int]) => Unit): Unit = {
     val iter = leveldb.iterator(levelDbReadOptions.snapshot(leveldb.getSnapshot))
     try {
       val startKey = SSKey(In, fromSequenceNr, 0)
       iter.seek(startKey)
-      replay(iter, startKey)(p)
+      replay(iter, startKey, serializer)(p)
     } finally {
       iter.close()
     }
   }
 
   @scala.annotation.tailrec
-  private def replay(iter: DBIterator, key: SSKey)(p: (WriteMsg, List[Int]) => Unit): Unit = {
+  private def replay[T](iter: DBIterator, key: SSKey, serializer: Serializer[T])(p: (T, List[Int]) => Unit): Unit = {
     if (iter.hasNext) {
       val nextEntry = iter.next()
       val nextKey = bytesToKey(nextEntry.getKey)
       if (nextKey.confirmingChannelId != 0) {
         // phantom ack (just advance iterator)
-        replay(iter, nextKey)(p)
+        replay(iter, nextKey, serializer)(p)
       } else if (key.direction == nextKey.direction) {
-        val cmd = cmdSerializer.fromBytes(nextEntry.getValue)
+        val cmd = serializer.fromBytes(nextEntry.getValue)
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(cmd, channelIds)
-        replay(iter, nextKey)(p)
+        replay(iter, nextKey, serializer)(p)
       }
     }
   }
@@ -165,20 +200,6 @@ class LeveldbJournalSS(dir: File) extends Actor {
       } else channelIds
     } else channelIds
   }
-
-  def getCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
-    case null  => 1L
-    case bytes => bytesToCounter(bytes) + 1L
-  }
-
-  override def preStart() {
-    counter = getCounter
-    replay(Out, 0L) { (cmd, acks) => outputWriteMsgCache.update(cmd, cmd.message.sequenceNr) }
-  }
-
-  override def postStop() {
-    leveldb.close()
-  }
 }
 
 private object LeveldbJournalSS {
@@ -193,7 +214,8 @@ private object LeveldbJournalSS {
   )
 
   // TODO: make configurable
-  private val cmdSerializer = new JavaSerializer[WriteMsg]
+  private val writeInMsgSerializer = new JavaSerializer[WriteInMsg]
+  private val writeOutMsgSerializer = new JavaSerializer[WriteOutMsg]
 
   val keySerializer = new Serializer[SSKey] {
     def toBytes(key: SSKey): Array[Byte] = {
