@@ -61,7 +61,7 @@ object OrderExample1 extends App {
         val id = orders.size
         val upd = order.copy(id = id)
         orders = orders + (id -> upd)
-        emitTo("dest").event(OrderAccepted(upd))
+        emitter("dest").emitEvent(OrderAccepted(upd))
       }
     }
   }

@@ -37,5 +37,5 @@ package object core {
     new Decorator(target) with Eventsourced
 
   def multicast(targets: Seq[ActorRef]): Eventsourced =
-    new Multicast(targets) with Eventsourced with ForwardSetContext
+    new Multicast(targets) with Eventsourced with ForwardContext with ForwardMessage
 }

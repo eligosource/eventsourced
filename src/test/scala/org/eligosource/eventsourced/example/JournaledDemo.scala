@@ -99,8 +99,8 @@ class ActorB extends Actor { this: Eventsourced =>
       println("received event = %s (processor id = %d, sequence nr = %d)" format(event, prcid, seqnr))
 
       // Eventsourced actors can emit events (or commands) to named channels
-      emitTo("channelA").event("out-a")
-      emitTo("channelB").event("out-b")
+      emitter("channelA").emitEvent("out-a")
+      emitter("channelB").emitEvent("out-b")
 
       // optionally respond to initial sender (initiator)
       // (intitiator == context.system.deadLetters if unknown)

@@ -130,14 +130,14 @@ class AggregatorExample extends WordSpec with MustMatchers {
         // count number of InputAggregated receivced
         inputAggregatedCounter = inputAggregatedCounter + 1
         // emit InputAggregated event to destination with sender message id containing the counted aggregations
-        emitTo("dest").message(_.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)))
+        emitter("dest").emit(_.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)))
         // reply to initial sender that message has been aggregated
         initiator ! "aggregated %d messages of %s".format(inputs.size, category)
       }
       case InputAvailable(category, input) => inputs = inputs.get(category) match {
         case Some(List(i2, i1)) => {
           // emit InputAggregated event to self when 3 events of same category exist
-          emitTo("self").event(InputAggregated(category, List(i1, i2, input)))
+          emitter("self").emitEvent(InputAggregated(category, List(i1, i2, input)))
           inputs - category
         }
         case Some(is) => inputs + (category -> (input :: is))

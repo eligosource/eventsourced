@@ -67,14 +67,14 @@ object OrderExample3 extends App {
         val id = orders.size
         val upd = order.copy(id = id)
         orders = orders + (id -> upd)
-        emitTo("validator").event(CreditCardValidationRequested(upd))
+        emitter("validator").emitEvent(CreditCardValidationRequested(upd))
       }
       case CreditCardValidated(orderId) => {
         orders.get(orderId).foreach { order =>
           val upd = order.copy(validated = true)
           orders = orders + (orderId -> upd)
           initiator ! upd
-          emitTo("destination").event(OrderAccepted(upd))
+          emitter("destination").emitEvent(OrderAccepted(upd))
         }
       }
     }
@@ -83,13 +83,13 @@ object OrderExample3 extends App {
   trait CreditCardValidator extends Actor { this: Responder =>
     def receive = {
       case CreditCardValidationRequested(order) => {
-        val r = respond
+        val r = responder
         Future {
           // do some credit card validation asynchronously
           // ...
 
           // and send back a successful validation result
-          r.withEvent(CreditCardValidated(order.id))
+          r.sendEvent(CreditCardValidated(order.id))
         }
       }
     }

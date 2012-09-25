@@ -69,7 +69,7 @@ object OrderExample2 extends App {
         val upd = order.copy(id = id)
         orders = orders + (id -> upd)
         initiator ! upd
-        emitTo("dest").event(OrderAccepted(upd))
+        emitter("dest").emitEvent(OrderAccepted(upd))
       }
     }
   }

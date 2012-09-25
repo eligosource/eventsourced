@@ -20,16 +20,17 @@ import akka.pattern.ask
 import akka.util.duration._
 
 /**
- * A multicast processor that forwards input messages to targets. This will store the
- * input message only once for all targets.
+ * A multicast processor that forwards input messages to targets.
  */
-class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced with ForwardSetContext =>
+class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced with ForwardContext with ForwardMessage =>
   def receive = {
     case cmd: SetContext => {
       targets.foreach(_ ! cmd)
     }
-    case _ => {
-      val msg = message
+    case msg: Message => {
+      targets.foreach(_ ! msg)
+    }
+    case msg => {
       targets.foreach(_ ! msg)
     }
   }
@@ -39,31 +40,37 @@ class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced with 
  * A decorating processor for actors that cannot add Eventsourced as stackable modification.
  */
 class Decorator(target: ActorRef) extends Actor { this: Eventsourced =>
+  import Decorator._
+
   val sequencer = context.actorOf(Props(new ResponseSequencer))
   var counter = 1L
 
   def receive = {
     case event => {
       val ctr = counter
-      val emt = emit
+      val emt = emitter
 
       target.ask(event)(5 seconds /* TODO: make configurable */)
-      .onSuccess { case Publish(channel, event) => sequencer ! (ctr, (emt.to(channel), event)) }
-      .onFailure { case t                       => sequencer ! (ctr, (emt.to("error"), t)) } // TODO: error handling
+      .onSuccess { case Emit(channel, event) => sequencer ! (ctr, (emt.forChannel(channel), event)) }
+      .onFailure { case t                    => sequencer ! (ctr, (emt.forChannel("error"), t)) } // TODO: error handling
       counter = counter + 1
     }
   }
 }
 
-/**
- * Used by decorated actors to publish events to (named) channels.
- */
-case class Publish(channel: String, event: Any)
+object Decorator {
+
+  /**
+   * Used by decorated actors to emit events to (named) channels.
+   */
+  case class Emit(channel: String, event: Any)
+}
+
 
 private [core] class ResponseSequencer extends Sequencer {
   def receiveSequenced = {
-    case (emit: EmitTo, t: Throwable) => ()
-    case (emit: EmitTo, event)        => emit.event(event)
+    case (emit: OutputMessageEmitter1, t: Throwable) => ()
+    case (emit: OutputMessageEmitter1, event)        => emit.emitEvent(event)
   }
 }
 

@@ -30,6 +30,7 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
 
     val context = Context(journal)
       .addChannel("dest", destination)
+      .addProcessor(2, new Changing with Eventsourced)
       .addProcessor(1, multicast(List(
         system.actorOf(Props(new Target with Emitter)),
         system.actorOf(Props(new Target with Emitter))
@@ -55,9 +56,26 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
     }
   }
 
+  class Changing extends Actor { this: Eventsourced =>
+    val changed: Receive = {
+      case "bar" => { emitter("dest").emitEvent("bar"); context.unbecome() }
+    }
+
+    def receive = {
+      case "foo" => { emitter("dest").emitEvent("foo"); context.become(changed) }
+      case "baz" => { emitter("dest").emitEvent("baz") }
+    }
+
+    override def unhandled(msg: Any) = msg match {
+      case s: String => emitter("dest").emitEvent("unhandled")
+      case _         => super.unhandled(msg)
+    }
+  }
+
   class Target extends Actor { this: Emitter =>
     def receive = {
-      case event => emitTo("dest").event(event)
+      case "blah" => channels("dest") ! Message("blah", ack = false)
+      case event  => emitter("dest").emitEvent(event)
     }
   }
 
@@ -68,13 +86,38 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
   }
 
   "A multicast processor" must {
-    "send received messages to its targets" in { fixture =>
+    "forward received event messages to its targets" in { fixture =>
       import fixture._
 
       context.processors(1) ! Message("test")
 
       dequeue() must be ("test")
       dequeue() must be ("test")
+    }
+    "forward received non-event messages to its targets" in { fixture =>
+      import fixture._
+
+      context.processors(1) ! "blah"
+
+      dequeue() must be ("blah")
+      dequeue() must be ("blah")
+    }
+  }
+  "A receiver" must {
+    "support behavior changes and overriding unhandled" in { fixture =>
+      import fixture._
+
+      context.processors(2) ! Message("foo")
+      context.processors(2) ! Message("bar")
+      context.processors(2) ! Message("baz")
+
+      dequeue() must be ("foo")
+      dequeue() must be ("bar")
+      dequeue() must be ("baz")
+
+      context.processors(2) ! Message("xyz")
+
+      dequeue() must be ("unhandled")
     }
   }
 }

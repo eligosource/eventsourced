@@ -17,31 +17,46 @@ package org.eligosource.eventsourced.core
 
 import akka.actor._
 
-trait Receiver extends Actor {
+trait Receiver extends ReceiverBehavior {
   private var _message: Option[Message] = None
 
   val autoAck = true
 
-  def messageOption = _message
-  def message = messageOption.getOrElse(throw new IllegalStateException("no current event or command message"))
+  /**
+   * If true, concrete receivers will receive the whole event message
+   * instead of the event only.
+   */
+  val forwardMessage = false
 
-  def senderMessageId = message.senderMessageId
-  def sequenceNr = message.sequenceNr
+  /** Current event message option. */
+  def messageOption: Option[Message] = _message
 
-  /** Application-defined initial message sender. */
-  def initiator = message.sender.getOrElse(context.system.deadLetters)
+  /** Current event message. */
+  def message: Message = messageOption.getOrElse(throw new IllegalStateException("no current event or command message"))
 
-  /** Acknowledges receipt of message to sending channel. */
+  /** Sender message id of current event message */
+  def senderMessageId: Option[String] = message.senderMessageId
+
+  /** Sequence number of current event message */
+  def sequenceNr: Long = message.sequenceNr
+
+  /** Initial message sender (initiator) option of current event message. */
+  def initiatorOption: Option[ActorRef] = message.sender
+
+  /** Initial message option (initiator) of current event message or deadLetters if the initiator is unknown. */
+  def initiator: ActorRef = message.sender.getOrElse(context.system.deadLetters)
+
+  /** Acknowledges receipt of current event message. */
   def ack() = sender ! Ack
 
-  /** Negatively acknowledges receipt of message to sending channel. */
+  /** Negatively acknowledges receipt of current event message. */
   def nak(t: Throwable) = sender ! Status.Failure(t)
 
   abstract override def receive = {
     case msg: Message => {
       _message = Some(msg)
-      super.receive(msg.event)
-      if (autoAck) sender ! Ack
+      super.receive(if (forwardMessage) msg else msg.event)
+      if (autoAck) ack()
     }
     case msg => {
       _message = None
@@ -50,36 +65,6 @@ trait Receiver extends Actor {
   }
 }
 
-trait Responder extends Receiver {
-  override val autoAck = false
-
-  /**
-   * Returns a responder that can be used for asynchronously sending
-   * responses to sending channels.
-   */
-  def respond: Respond = {
-    new Respond(sender, message)
-  }
-
-  abstract override def receive = {
-    case msg => super.receive(msg)
-  }
-}
-
-/**
- * Responder that can be used for asynchronously sending
- * responses to sending channels.
- */
-class Respond(val chn: ActorRef, val msg: Message) {
-  def withMessage(f: Message => Message) {
-    chn ! f(msg)
-  }
-
-  def withEvent(event: Any) = {
-    chn ! msg.copy(event = event)
-  }
-
-  def withFailure(t: Throwable) = {
-    chn ! Status.Failure(t)
-  }
+trait ForwardMessage extends Receiver {
+  override val forwardMessage = true
 }

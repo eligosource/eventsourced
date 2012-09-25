@@ -70,17 +70,17 @@ class DefaultChannelSpec extends WordSpec with MustMatchers {
 
     class TestDestination(blockingQueue: LinkedBlockingQueue[Message]) extends Actor { this: Responder =>
       def receive = {
-        case event => { blockingQueue.put(message); respond.withEvent("re: %s" format event) }
+        case event => { blockingQueue.put(message); responder.sendEvent("re: %s" format event) }
       }
     }
 
     class FailureDestination(queue: LinkedBlockingQueue[Message], failAtEvent: Any) extends Actor { this: Responder =>
       def receive = {
         case event => if (event == failAtEvent) {
-          respond.withFailure(new Exception("test"))
+          responder.sendFailure(new Exception("test"))
         } else {
           queue.put(message)
-          respond.withMessage(msg => msg)
+          responder.send(msg => msg)
         }
       }
     }

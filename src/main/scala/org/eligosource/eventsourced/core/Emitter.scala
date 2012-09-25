@@ -24,28 +24,33 @@ trait Emitter extends Receiver {
   def channels = _context.channels
 
   override val autoAck = false
-  val forwardSetContext = false
+
+  /**
+   * If true, concrete emitters will additionally receive receive SetContext
+   * commands.
+   */
+  val forwardContext = false
 
   /**
    * Returns an emitter that can be used for asynchronously emitting events
    * to channels.
    */
-  def emit = {
-    new Emit(channels, message)(context.system)
+  def emitter = {
+    new OutputMessageEmitterN(channels, message)(context.system)
   }
 
   /**
    * Returns an emitter that can be used for asynchronously emitting events
    * to an channel.
    */
-  def emitTo(channelName: String) = {
-    new EmitTo(channels.getOrElse(channelName, context.system.deadLetters), message)
+  def emitter(channelName: String) = {
+    new OutputMessageEmitter1(channels.getOrElse(channelName, context.system.deadLetters), message)
   }
 
   abstract override def receive = {
     case cmd: SetContext => {
       _context = cmd.context
-      if (forwardSetContext) super.receive(cmd)
+      if (forwardContext) super.receive(cmd)
     }
     case msg: Message => {
       super.receive(msg)
@@ -60,20 +65,20 @@ trait Emitter extends Receiver {
  * Emitter that can be used for asynchronously emitting events
  * to channels.
  */
-class Emit(val chns: Map[String, ActorRef], val msg: Message)(implicit system: ActorSystem) {
-  def to(channelName: String) = new EmitTo(chns.getOrElse(channelName, system.deadLetters), msg)
+class OutputMessageEmitterN(val chns: Map[String, ActorRef], val msg: Message)(implicit system: ActorSystem) {
+  def forChannel(channelName: String) = new OutputMessageEmitter1(chns.getOrElse(channelName, system.deadLetters), msg)
 }
 
 /**
  * Emitter that can be used for asynchronously emitting events
- * to an channel.
+ * to a channel.
  */
-class EmitTo(val chn: ActorRef, val msg: Message) {
-  def message(f: Message => Message) = {
+class OutputMessageEmitter1(val chn: ActorRef, val msg: Message) {
+  def emit(f: Message => Message) = {
     chn ! f(msg)
   }
 
-  def event(event: Any) = {
+  def emitEvent(event: Any) = {
     chn ! msg.copy(event = event)
   }
 }
@@ -82,6 +87,6 @@ class EmitTo(val chn: ActorRef, val msg: Message) {
  * Stackable modification that enables forwarding of SetContext commands
  * to concrete emitters.
  */
-trait ForwardSetContext extends Emitter {
-  override val forwardSetContext = true
+trait ForwardContext extends Emitter {
+  override val forwardContext = true
 }

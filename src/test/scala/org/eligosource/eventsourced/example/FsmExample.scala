@@ -28,6 +28,7 @@ import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Decorator.Emit
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
 class FsmExample extends WordSpec with MustMatchers {
@@ -97,16 +98,16 @@ class FsmExample extends WordSpec with MustMatchers {
     startWith(Closed, 0)
 
     when(Closed) {
-      case Event("open", counter) => goto(Open) using(counter + 1) replying(Publish("dest", DoorMoved(counter + 1)))
+      case Event("open", counter) => goto(Open) using(counter + 1) replying(Emit("dest", DoorMoved(counter + 1)))
     }
 
     when(Open) {
-      case Event("close", counter) => goto(Closed) using(counter + 1) replying(Publish("dest", DoorMoved(counter + 1)))
+      case Event("close", counter) => goto(Closed) using(counter + 1) replying(Emit("dest", DoorMoved(counter + 1)))
     }
 
     whenUnhandled {
       case Event(cmd, counter) => {
-        stay replying(Publish("dest", DoorNotMoved("cannot %s door in state %s" format (cmd, stateName))))
+        stay replying(Emit("dest", DoorNotMoved("cannot %s door in state %s" format (cmd, stateName))))
       }
     }
   }

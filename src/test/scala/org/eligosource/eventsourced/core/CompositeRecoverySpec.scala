@@ -41,9 +41,9 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     val journal = LeveldbJournal(journalDir)
 
     val destinationQueue = new LinkedBlockingQueue[Message]
-    val destination = system.actorOf(Props(new Receiver(destinationQueue)))
+    val destination = system.actorOf(Props(new Destination(destinationQueue) with Receiver))
 
-    val echo = system.actorOf(Props(new Echo))
+    val echo = system.actorOf(Props(new Echo with Responder))
     val dl = system.deadLetters
 
     val processor1 = system.actorOf(Props(new Processor1 with Eventsourced))
@@ -67,8 +67,12 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
       journal ! cmd
     }
 
+    def dequeue(): Message = {
+      destinationQueue.poll(5000, TimeUnit.MILLISECONDS)
+    }
+
     def dequeue(p: Message => Unit) {
-      p(destinationQueue.poll(5000, TimeUnit.MILLISECONDS))
+      p(dequeue())
     }
 
     def shutdown() {
@@ -83,15 +87,15 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
 
       def receive = {
         case InputCreated(s)  => {
-          emitTo("processor2").event(InputModified("%s-%d" format (s, numProcessed)))
+          emitter("processor2").emitEvent(InputModified("%s-%d" format (s, numProcessed)))
           numProcessed = numProcessed + 1
         }
         case InputModified(s) => {
           val sid = senderMessageId.get.toLong
           if (sid <= lastSenderMessageId) { // duplicate detected
-            emitTo("dest").event(InputModified("%s-%s" format (s, "dup")))
+            emitter("dest").emitEvent(InputModified("%s-%s" format (s, "dup")))
           } else {
-            emitTo("dest").event(InputModified("%s-%d" format (s, numProcessed)))
+            emitter("dest").emitEvent(InputModified("%s-%d" format (s, numProcessed)))
             numProcessed = numProcessed + 1
             lastSenderMessageId = sid
           }
@@ -108,20 +112,22 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
           val sid = Some(sequenceNr.toString) // for detecting duplicates
 
           // emit InputAggregated event to destination with sender message id containing the counted aggregations
-          emitTo("echo").message(_.copy(event = evt, senderMessageId = sid))
+          emitter("echo").emit(_.copy(event = evt, senderMessageId = sid))
 
           numProcessed = numProcessed + 1
         }
       }
     }
 
-    class Echo extends Actor {
-      def receive = { case msg: Message => sender ! msg }
+    class Echo extends Actor { this: Responder =>
+      def receive = {
+        case event => responder.send(identity)
+      }
     }
 
-    class Receiver(queue: LinkedBlockingQueue[Message]) extends Actor {
+    class Destination(queue: LinkedBlockingQueue[Message]) extends Actor { this: Receiver =>
       def receive = {
-        case msg: Message => { queue.put(msg); sender ! Ack }
+        case _ => queue.put(message)
       }
     }
   }
@@ -192,8 +198,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         createExampleContext(journal, destination, true).init()
 
         dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("4"), m.sequenceNr, 1)) }
-        dequeue { m => m must be(Message(InputModified("a-0-0-dup"), None, Some("4"), m.sequenceNr, 1)) }
-        dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr, 1)) }
+        // message order is not preserved when sending echos (i.e responses from echo actor) to reply destination
+        Set(dequeue(), dequeue()).map(_.event) must be (Set(InputModified("a-0-0-dup"), InputModified("b-1-1-3")))
       }
     }
     "using default channels" must {
@@ -247,8 +253,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         createExampleContext(journal, destination, false).init()
 
         dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("3"), m.sequenceNr, 1)) }
-        dequeue { m => m must be(Message(InputModified("a-0-0-dup"), None, Some("3"), m.sequenceNr, 1)) }
-        dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr, 1)) }
+        // message order is not preserved when sending echos (i.e responses from echo actor) to reply destination
+        Set(dequeue(), dequeue()).map(_.event) must be (Set(InputModified("a-0-0-dup"), InputModified("b-1-1-3")))
       }
     }
   }

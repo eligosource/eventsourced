@@ -90,11 +90,11 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
         case event => {
           if (failAtEvent.map(_ == event).getOrElse(false) && failureCount > 0) {
             failureCount = failureCount - 1
-            respond.withFailure(new Exception("test"))
+            responder.sendFailure(new Exception("test"))
             if (enqueueFailures) blockingQueue.put(Left(message))
           } else {
             blockingQueue.put(Right(message))
-            respond.withEvent("re: %s" format event)
+            responder.sendEvent("re: %s" format event)
           }
         }
       }
