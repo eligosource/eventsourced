@@ -18,19 +18,28 @@ package org.eligosource.eventsourced.core
 import akka.actor.ActorRef
 
 /**
- * A message to communicate application events (or commands).
+ * A message to communicate application events. Application events are not interpreted
+ * by the library and can have any type. Hence, applications may also choose to send
+ * application ''commands'' with [[org.eligosource.eventsourced.core.Message]]s. In
+ * other words, the [[https://github.com/eligosource/eventsourced eventsourced library]]
+ * can be used for both, event-sourcing and command-sourcing.
  *
- * @param event the event (or commands).
- * @param sender an optional, application-defined sender reference that can be used
- *        by processors to send responses.
- * @param senderMessageId an optional, application-defined message id in order to
- *        allow receivers to detect duplicates (which may occur during recovery or
- *        fail-over).
- * @param sequenceNr the message's sequence number (only relevant to processors).
- * @param acks list of channel ids that have acknowledged an output message
- *        delivery or output message storage. This list is only non-empty during a
- *        replay.
- * @param ack whether or not a channel should write an acknowledgement.
+ * @param event Application event (or command).
+ * @param sender Optional, application-defined sender reference that can be used
+ *        by event processors to send responses to initial event message senders.
+ * @param senderMessageId Optional, sender-defined message id that allows receivers
+ *        to detect duplicates (which may occur during recovery or fail-over).
+ * @param sequenceNr Sequence number which is generated when messages are written
+ *        to a journal. Can also be used for detecting duplicates, in special cases.
+ * @param processorId id of the event processor that stored (and emitted) this message
+ *        The processor id is given by [[org.eligosource.eventsourced.core.Eventsourced]]`.id`.
+ *@param acks List of channel ids that have acknowledged the delivery (or storage)
+ *        of an emitted message (output message). This list is only non-empty during
+ *        context recovery (i.e. message replay).
+ * @param ack Whether or not a channel should write an acknowledgement to the journal.
+ *        Used by event processors to indicate a series of output messages (for a single
+ *        input message) where only for the last output message an acknowledgement should
+ *        be written.
  */
 case class Message(
   event: Any,

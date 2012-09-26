@@ -55,7 +55,7 @@ class InmemJournal extends Actor {
       commandListener.foreach(_ ! cmd)
     }
     case BatchDeliverOutMsgs(channels) => {
-      channels.foreach(_ ! Channel.Deliver)
+      channels.foreach(_ ! Deliver)
       if (sender != context.system.deadLetters) sender ! Ack
     }
     case BatchReplayInMsgs(replays) => {

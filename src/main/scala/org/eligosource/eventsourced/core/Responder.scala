@@ -17,12 +17,51 @@ package org.eligosource.eventsourced.core
 
 import akka.actor._
 
+/**
+ * Stackable modification for actors that receive event [[org.eligosource.eventsourced.core.Message]]s
+ * and generate response [[org.eligosource.eventsourced.core.Message]]s. Concrete
+ * responders are usually destinations of channels with a reply destination. Example:
+ *
+ * {{{
+ *   val myResponder = system.actorOf(Props(new MyResponder with Receiver))
+ *
+ *   myResponder ! Message("foo event")
+ *
+ *   class MyResponder extends Actor { this: Responder =>
+ *     def receive = {
+ *       case "foo event" => {
+ *         assert(message.sequenceNr > 0L)
+ *         // ...
+ *
+ *         // create a responder object for the current event message
+ *         val rsp = responder
+ *
+ *         // send a response message by updating the current message
+ *         rsp.sendEvent("bar event")
+ *       }
+ *     }
+ *   }
+ * }}}
+ *
+ * Applications need not send the response during execution of `receive`. They can
+ * use the created responder object (`rsp` in the above example) to send a response
+ * any time later (e.g. in another thread). The object created by `responder` captures
+ * the current event message and sender.
+ *
+ * When using [[org.eligosource.eventsourced.core.Responder]] for destinations of
+ * channels with no reply destination, concrete responders  must explicitly acknowledge
+ * a message receipt by calling `ack()` (or `nak()` for replying with `Status.Failure`).
+ * This way, applications can implement application-level acknowledgements, in contrast
+ * to auto-acknowledgements as done with [[org.eligosource.eventsourced.core.Receiver]].
+ */
 trait Responder extends Receiver {
+
+  /** Overrides to `false` */
   override val autoAck = false
 
   /**
-   * Returns a responder that can be used for asynchronously sending
-   * responses to sending channels.
+   * Returns a response message sender (responder) that captures the current
+   * event message and sender.
    */
   def responder: ResponseMessageSender = {
     new ResponseMessageSender(sender, message)
@@ -34,19 +73,31 @@ trait Responder extends Receiver {
 }
 
 /**
- * Responder that can be used for asynchronously sending
- * responses to sending channels.
+ * A response message sender (responder).
+ *
+ * @param sender sender reference.
+ * @param message event message.
  */
-class ResponseMessageSender(val chn: ActorRef, val msg: Message) {
+class ResponseMessageSender(val sender: ActorRef, val message: Message) {
+  /**
+   * Updates `message` with function `f` and sends the updated
+   * message to `sender`.
+   */
   def send(f: Message => Message) {
-    chn ! f(msg)
+    sender ! f(message)
   }
 
+  /**
+   * Updates `message` with `event` and sends the updated message to `sender`.
+   */
   def sendEvent(event: Any) = {
-    chn ! msg.copy(event = event)
+    sender ! message.copy(event = event)
   }
 
+  /**
+   * Sends a `Status.Failure` with given `t` to `sender`.
+   */
   def sendFailure(t: Throwable) = {
-    chn ! Status.Failure(t)
+    sender ! Status.Failure(t)
   }
 }

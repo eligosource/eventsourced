@@ -17,24 +17,25 @@ package org.eligosource.eventsourced.core
 
 import akka.actor._
 
-case class WriteInMsg(processorId: Int, message: Message, target: ActorRef, genSequenceNr: Boolean = true) {
+private [eventsourced] case class WriteInMsg(processorId: Int, message: Message, target: ActorRef, genSequenceNr: Boolean = true) {
   def withSequenceNr(snr: Long) = copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
 }
 
-case class WriteOutMsg(channelId: Int, message: Message, ackProcessorId: Int, ackSequenceNr: Long, target: ActorRef, genSequenceNr: Boolean = true) {
+private [eventsourced] case class WriteOutMsg(channelId: Int, message: Message, ackProcessorId: Int, ackSequenceNr: Long, target: ActorRef, genSequenceNr: Boolean = true) {
   def withSequenceNr(snr: Long) = copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
 }
 
-case class DeleteOutMsg(channelId: Int, msgSequenceNr: Long)
-case class WriteAck(processorId: Int, channelId: Int, ackSequenceNr: Long)
+private [eventsourced] case class DeleteOutMsg(channelId: Int, msgSequenceNr: Long)
+private [eventsourced] case class WriteAck(processorId: Int, channelId: Int, ackSequenceNr: Long)
 
-case class ReplayInMsgs(processorId: Int, fromSequenceNr: Long, target: ActorRef)
-case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, target: ActorRef)
+private [eventsourced] case class ReplayInMsgs(processorId: Int, fromSequenceNr: Long, target: ActorRef)
+private [eventsourced] case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, target: ActorRef)
 
-case class BatchReplayInMsgs(replays: Seq[ReplayInMsgs])
-case class BatchDeliverOutMsgs(channels: Seq[ActorRef])
+private [eventsourced] case class BatchReplayInMsgs(replays: Seq[ReplayInMsgs])
+private [eventsourced] case class BatchDeliverOutMsgs(channels: Seq[ActorRef])
 
-case class SetCommandListener(listener: Option[ActorRef])
+private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
 
-case object GetCounter
+private [eventsourced] case object Deliver
+private [eventsourced] case object GetCounter
 

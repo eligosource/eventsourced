@@ -17,39 +17,110 @@ package org.eligosource.eventsourced.core
 
 import akka.actor._
 
+/**
+ * Stackable modification for actors that receive event [[org.eligosource.eventsourced.core.Message]]s.
+ * Example:
+ *
+ * {{{
+ *   val myReceiver = system.actorOf(Props(new MyReceiver with Receiver))
+ *
+ *   myReceiver ! Message("foo event")
+ *
+ *   class MyReceiver extends Actor { this: Receiver =>
+ *     def receive = {
+ *       case "foo event" => {
+ *         assert(message.sequenceNr > 0L)
+ *         // ...
+ *       }
+ *     }
+ *   }
+ * }}}
+ *
+ * Event messages received by concrete [[org.eligosource.eventsourced.core.Receiver]]s are stored
+ * in a private field and can be obtained via the `message` or `messageOption` method. The `receive`
+ * method of the concrete receiver is called to the message `event` only. The receipt of an event
+ * message is automatically acknowledged by [[org.eligosource.eventsourced.core.Receiver]].
+ *
+ * Often channel destinations use this trait for receiving event messages from their channel and
+ * acknowledging their receipt. The receipt is not acknowledged if the concrete receiver throws
+ * an exception.
+ */
 trait Receiver extends ReceiverBehavior {
   private var _message: Option[Message] = None
 
-  val autoAck = true
+  /**
+   * If `true`, auto-acknowledges the receipt of an event [[org.eligosource.eventsourced.core.Message]].
+   * Default is `true` and can be overridden.
+   */
+  protected [core] val autoAck = true
 
   /**
-   * If true, concrete receivers will receive the whole event message
-   * instead of the event only.
+   * If `true`, concrete receivers will receive the whole event [[org.eligosource.eventsourced.core.Message]]
+   * instead of the event only. Default is `false` and can be set to `true`
+   * by mixing in [[org.eligosource.eventsourced.core.ForwardMessage]].
    */
   val forwardMessage = false
 
-  /** Current event message option. */
+  /**
+   * Current event message option. `None` if the last message received by this receiver
+   * is not of type [[org.eligosource.eventsourced.core.Message]].
+   */
   def messageOption: Option[Message] = _message
 
-  /** Current event message. */
+  /**
+   * Current event message.
+   *
+   * @throws IllegalStateException if the the last message received by this receiver
+   * is not of type [[org.eligosource.eventsourced.core.Message]]
+   *
+   * @see `messageOption`
+   */
   def message: Message = messageOption.getOrElse(throw new IllegalStateException("no current event or command message"))
 
-  /** Sender message id of current event message */
+  /**
+   * Sender message id of current event message.
+   *
+   * @throws IllegalStateException if the the last message received by this receiver
+   * is not of type [[org.eligosource.eventsourced.core.Message]]
+   */
   def senderMessageId: Option[String] = message.senderMessageId
 
-  /** Sequence number of current event message */
+  /**
+   * Sequence number of current event message
+   *
+   * @throws IllegalStateException if the the last message received by this receiver
+   * is not of type [[org.eligosource.eventsourced.core.Message]]
+   */
   def sequenceNr: Long = message.sequenceNr
 
-  /** Initial message sender (initiator) option of current event message. */
+  /**
+   * Initial event message sender (initiator) option of current event message.
+   *
+   * @throws IllegalStateException if the the last message received by this receiver
+   * is not of type [[org.eligosource.eventsourced.core.Message]]
+   */
   def initiatorOption: Option[ActorRef] = message.sender
 
-  /** Initial message option (initiator) of current event message or deadLetters if the initiator is unknown. */
+  /**
+   * Initial message option (initiator) of current event message or deadLetters
+   * if the initiator is unknown.
+   *
+   * @throws IllegalStateException if the the last message received by this receiver
+   * is not of type [[org.eligosource.eventsourced.core.Message]]
+   */
   def initiator: ActorRef = message.sender.getOrElse(context.system.deadLetters)
 
-  /** Acknowledges receipt of current event message. */
+  /**
+   * Acknowledges the receipt of current event message by replying with `Ack`.
+   * The reply goes to `Actor.sender` (a channel, for example) not the initiator.
+   */
   def ack() = sender ! Ack
 
-  /** Negatively acknowledges receipt of current event message. */
+  /**
+   * Negatively acknowledges the receipt of current event message by replying with
+   * `Status.Failure`. The reply goes to `Actor.sender` (a channel, for example)
+   * not the initiator.
+   */
   def nak(t: Throwable) = sender ! Status.Failure(t)
 
   abstract override def receive = {
@@ -65,6 +136,10 @@ trait Receiver extends ReceiverBehavior {
   }
 }
 
+/**
+ * Stackable modification for [[org.eligosource.eventsourced.core.Receiver]] to set
+ * `Receiver.forwardMessage` to `true`. Usually not used by applications.
+ */
 trait ForwardMessage extends Receiver {
   override val forwardMessage = true
 }

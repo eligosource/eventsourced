@@ -18,12 +18,21 @@ package org.eligosource.eventsourced
 import akka.actor.ActorRef
 
 package object core {
+  private [eventsourced] val SkipAck: Long = -1L
+
   private [core] case class SetId(id: Int)
-  private [core] case class SetContext(context: Context)
 
+  /**
+   * Sent to actors modified with [[org.eligosource.eventsourced.core.Emitter]]
+   * for injecting a [[org.eligosource.eventsourced.core.Context]].
+   */
+  case class SetContext(context: Context)
+
+  /**
+   * Sent by [[org.eligosource.eventsourced.core.Message]] receivers to
+   * `Actor.sender` to indicate successful receipt of an event message.
+   */
   case object Ack
-
-  val SkipAck: Long = -1L
 
   implicit def processorRef2Initiator(processor: ActorRef) = {
     new Initiator(processor)

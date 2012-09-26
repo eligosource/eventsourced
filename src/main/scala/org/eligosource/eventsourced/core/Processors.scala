@@ -69,8 +69,8 @@ object Decorator {
 
 private [core] class ResponseSequencer extends Sequencer {
   def receiveSequenced = {
-    case (emit: OutputMessageEmitter1, t: Throwable) => ()
-    case (emit: OutputMessageEmitter1, event)        => emit.emitEvent(event)
+    case (emit: MessageEmitter, t: Throwable) => ()
+    case (emit: MessageEmitter, event)        => emit.emitEvent(event)
   }
 }
 
