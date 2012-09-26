@@ -42,7 +42,7 @@ class FsmExample extends WordSpec with MustMatchers {
     val journal = LeveldbJournal(journalDir)
 
     val queue = new LinkedBlockingQueue[Any]
-    val destination = system.actorOf(Props(new Destination(queue) with Receiver))
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent))
 
     def createExampleContext = Context(journal)
       .addChannel("dest", destination)
