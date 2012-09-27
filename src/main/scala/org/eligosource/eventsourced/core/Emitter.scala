@@ -24,8 +24,8 @@ import akka.actor._
  * injected into an `Emitter` via a `SetContext` message.
  *
  * `Emitter`s are all actors that are modified with the [[org.eligosource.eventsourced.core.Eventsourced]]
- * trait. Examples of actors that are directly modified with the `Emitter` trait are the `targets` of event-
- * sourced [[org.eligosource.eventsourced.core.Multicast]] processors.
+ * trait. An example of actors that are directly modified with the `Emitter` trait are the `targets` of
+ * [[org.eligosource.eventsourced.core.Multicast]] processors.
  *
  * @see [[org.eligosource.eventsourced.core.Eventsourced]] for a usage example.
  */
@@ -46,15 +46,15 @@ trait Emitter extends Receiver {
   override val autoAck = false
 
   /**
-   * If `true`, concrete emitters will be forwarded the `SetContext` message which is
+   * If `true`, concrete `Emitter`s will be forwarded the `SetContext` message which is
    * otherwise retained by this trait. Default is `false` and can be set to `true` by
    * mixing in [[org.eligosource.eventsourced.core.ForwardContext]].
    */
   val forwardContext = false
 
   /**
-   * Returns a message emitter factory that captures the current event message and the
-   * channel map of the injected context. Applications can run the returned emitter factory
+   * Returns a message emitter factory that captures the current event `message` and the
+   * `channels` map of the injected context. Applications can run the returned emitter factory
    * from within any thread.
    */
   def emitter = {
@@ -62,11 +62,11 @@ trait Emitter extends Receiver {
   }
 
   /**
-   * Returns a message emitter that captures the current event message and a channel
-   * mapped with `channelName` in the channel map of the injected context. If the mapping
+   * Returns a message emitter that captures the current event `message` and a channel
+   * mapped with `channelName` in the `channels` map of the injected context. If the mapping
    * doesn't exist, the channel will be `context.system.deadLetters`. Applications can run
-   * the returned emitter from within any thread for sending output messages (which are
-   * derived from the captured event message).
+   * the returned emitter from within any thread for sending output messages (which will be
+   * derived from the captured event `message`).
    */
   def emitter(channelName: String) = {
     new MessageEmitter(channels.getOrElse(channelName, context.system.deadLetters), message)

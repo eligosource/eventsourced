@@ -24,9 +24,11 @@ import akka.util.duration._
 import akka.util._
 
 /**
- * A channel is used by event processors to send event messages to destinations.
- * Destinations can be any actor that acknowledge the message receipt by replying
- * with an `Ack` or a response message when there's a `replyDestination` set for the channel.
+ * A channel is used by [[org.eligosource.eventsourced.core.Eventsourced]] processors
+ * to send event [[org.eligosource.eventsourced.core.Message]]s to destinations. Destinations
+ * can be any actor that acknowledges the receipt of an event message receipt by replying
+ * with an `Ack` (or a response [[org.eligosource.eventsourced.core.Message]] when there's a
+ * `replyDestination` set for the channel).
  *
  * @see [[org.eligosource.eventsourced.core.DefaultChannel]]
  *      [[org.eligosource.eventsourced.core.ReliableChannel]]
@@ -49,10 +51,11 @@ trait Channel extends Actor {
   var destination: Option[ActorRef] = None
 
   /**
-   * Channel reply destination. If set, responses from destinations are routed to the reply
-   * destination. The order of messages sent to the reply destination does not necessarily
-   * correlate with the order of messages sent to the destination. Optionally set when a
-   * channel is added to a [[org.eligosource.eventsourced.core.Context]].
+   * Channel reply destination. Optionally set when a channel is added to a
+   * [[org.eligosource.eventsourced.core.Context]]. If set, responses from
+   * destinations are routed to the reply destination. The order of messages
+   * sent to the reply destination does not necessarily correlate with the
+   * order of messages sent to the destination.
    */
   var replyDestination: Option[ActorRef] = None
 }
@@ -67,14 +70,17 @@ private [core] object Channel {
 }
 
 /**
- * A transient channel that sends event messages to destinations. If the `destination`
- * responds an acknowledgement is written to the `journal`. If a `replyDestination`
- * is set, the acknowledgement will be written when the reply destination responds.
- * If the `destination` or the `replyDestination` do not respond (i.e. a timeout
- * occured) or responds with `Status.Failure` then no acknowledgement is written.
+ * A transient channel that sends event [[org.eligosource.eventsourced.core.Message]]s
+ * to destinations. If the `destination` responds, an acknowledgement is written to the
+ * `journal`. If a `replyDestination` is set, the acknowledgement will be written when
+ * the reply destination responds. If the `destination` or the `replyDestination` do
+ * not respond (i.e. when timeout occurs) or respond with `Status.Failure` then no
+ * acknowledgement is written.
  *
  * @param id channel id.
  * @param journal journal of the context that created this channel.
+ *
+ * @see [[org.eligosource.eventsourced.core.Channel]]
  */
 class DefaultChannel(val id: Int, val journal: ActorRef) extends Channel {
   import Channel._
@@ -146,19 +152,22 @@ object ReliableChannelConf {
 }
 
 /**
- * A persistent channel that sends event messages to destinations. Every message sent to this channel
- * is stored in the journal together with an acknowledgement. If the `destination` responds, the stored
- * message will be deleted from the journal (but not the acknowledgement). If a `replyDestination` is
- * set, the message will be deleted when the reply destination responded. If the `destination` or
- * `replyDestination` do not respond (i.e. a timeout occured) or responds with `Status.Failure`, a
- * re-delivery is attempted. If the maximum number of re-delivery attempts have been made the channel
- * restarts itself after a certain recovery delay (and starts again with re-deliveries).
+ * A persistent channel that sends event [[org.eligosource.eventsourced.core.Message]]s to
+ * destinations. Every event message sent to this channel is stored in the journal together
+ * with an acknowledgement (for the input message the sent message was derived from). If the
+ * `destination` responds, the stored message will be deleted from the journal (but not the
+ * acknowledgement). If a `replyDestination` is set, the message will be deleted when the
+ * reply destination responds. If the `destination` or `replyDestination` do not respond
+ * (i.e. when a timeout occurs) or respond with `Status.Failure`, a re-delivery is attempted.
+ * If the maximum number of re-delivery attempts have been made the channel restarts itself
+ * after a certain ''recovery delay'' (and starts again with re-deliveries).
  *
  * @param id channel id.
  * @param journal journal of the context that created this channel.
  * @param conf configuration options for the channel.
  *
- * @see [[org.eligosource.eventsourced.core.ReliableChannelConf]]
+ * @see [[org.eligosource.eventsourced.core.Channel]]
+ *      [[org.eligosource.eventsourced.core.ReliableChannelConf]]
  */
 class ReliableChannel(val id: Int, journal: ActorRef, conf: ReliableChannelConf) extends Channel {
   import Channel._

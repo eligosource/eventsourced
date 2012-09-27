@@ -18,17 +18,18 @@ package org.eligosource.eventsourced.core
 import akka.actor._
 
 /**
- * A context for event-sourced processors and channels that are used by processors
- * to emit event messages to destinations. Destinations can be any actors including
- * processors of this context.
+ * A context for [[org.eligosource.eventsourced.core.Eventsourced]] processors and
+ * [[org.eligosource.eventsourced.core.Channel]]s that are used by processors to emit
+ * event [[org.eligosource.eventsourced.core.Message]]s to destinations. A Destination
+ * can be any actor including a processor of this context.
  *
- * @param journal Journal for this context. This journal instance should not be
- *        used by any other context.
- * @param processors Event-sourced actors that use the [[org.eligosource.eventsourced.core.Eventsourced]]
- *        trait as stackable modification.
- * @param channels [[org.eligosource.eventsourced.core.Channel]] references used by
- *        processors to emit event [[org.eligosource.eventsourced.core.Message]]s. Keys
- *        of the `channels` map are application-defined channel names.
+ * @param journal Journal for this context. A journal must not be shared between
+ *        contexts.
+ * @param processors Actors modified with the [[org.eligosource.eventsourced.core.Eventsourced]]
+ *        trait.
+ * @param channels [[org.eligosource.eventsourced.core.Channel]] actor map used by
+ *        processors to emit event messages. Keys of the `channels` map are application-
+ *        defined channel names.
  */
 case class Context(
     journal: ActorRef,
@@ -51,7 +52,7 @@ case class Context(
    * Adds an event processor and returns an updated context.
    *
    * @param id event processor id.
-   * @param processor event processor reference.
+   * @param processor event processor.
    * @return updated context.
    */
   def addProcessor(id: Int, processor: ActorRef): Context = {
@@ -62,7 +63,7 @@ case class Context(
   /**
    * Creates and adds a named [[org.eligosource.eventsourced.core.DefaultChannel]]
    * and returns an updated context. Channel destination is a processor of this
-   * context.
+   * context, referenced by `processorId`.
    *
    * @param name channel name.
    * @param processorId destination processor id.
@@ -89,11 +90,10 @@ case class Context(
    * and returns an updated context.
    *
    * @param name channel name.
-   * @param destination channel destination reference which can be any actor including
-   *        processors of this context.
+   * @param destination channel destination which can be any actor including processors of
+   *        this context.
    * @param replyDestination optional reply destination where responses from the destination
-   *        are routed to. The order of messages sent to the reply destination does not
-   *        necessarily correlate with the order of messages sent to the destination.
+   *        are routed to.
    * @return updated context.
    */
   def addChannel(name: String, destination: ActorRef, replyDestination: Option[ActorRef] = None): Context = {
@@ -109,7 +109,7 @@ case class Context(
   /**
    * Creates and adds a named [[org.eligosource.eventsourced.core.ReliableChannel]]
    * and returns an updated context. Channel destination is a processor of this
-   * context.
+   * context, referenced by `processorId`.
    *
    * @param name channel name.
    * @param processorId destination processor id.
@@ -136,11 +136,10 @@ case class Context(
    * and returns an updated context.
    *
    * @param name channel name.
-   * @param destination channel destination reference which can be any actor including
-   *        processors of this context.
+   * @param destination channel destination which can be any actor including processors
+   *        of this context.
    * @param replyDestination optional reply destination where responses from the destination
-   *        are routed to. The order of messages sent to the reply destination does not
-   *        necessarily correlate with the order of messages sent to the destination.
+   *        are routed to.
    * @return updated context.
    */
   def addReliableChannel(name: String, destination: ActorRef, replyDestination: Option[ActorRef] = None, conf: ReliableChannelConf = ReliableChannelConf()): Context = {
@@ -154,7 +153,7 @@ case class Context(
   }
 
   /**
-   * Injects this context into processors (including their ids).
+   * Injects this context and their ids into processors.
    *
    * @return this context.
    */
@@ -193,25 +192,16 @@ case class Context(
 
   /**
    * Initializes this context by calling `inject()`, `replay()` and `deliver()`
-   * in that order. Replay is done with no lower bound i.e. with all messages
-   * in the journal. When this method returns the processors of this context
-   * are ready to receive event messages.
+   * in that order. Replay is done with no lower bound (i.e. with all messages
+   * in the journal) for all processors of this context. When this method returns
+   * the processors of this context are ready to receive event messages.
    *
-   *@return this context.
+   * @return this context.
    */
   def init(): Context = {
     init(_ => Some(0))
   }
 
-  /**
-   * Initilizes this context by injecting this context into processors,
-   * replaying journaled events to processors and initializing channels.
-   *
-   * @param f called by the initialization procodure to determine to which
-   *        processors event messages should be replayed and from which
-   *        sequence number.
-   * @return this context.
-   */
   /**
    * Initializes this context by calling `inject()`, `replay()` and `deliver()`
    * in that order. Replay is done with lower bounds given by function `f`. When
@@ -232,7 +222,7 @@ case class Context(
 
 object Context {
   /**
-   * Creates a new context.
+   * Creates a new context with no processors and an empty channel map.
    *
    * @param journal journal for the new context.
    * @return new context.

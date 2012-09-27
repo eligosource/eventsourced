@@ -36,21 +36,19 @@ import akka.actor._
  *   }
  * }}}
  *
- * Event messages received by concrete [[org.eligosource.eventsourced.core.Receiver]]s are stored
- * in a private field and can be obtained via the `message` or `messageOption` method. The `receive`
- * method of the concrete receiver is called to the message `event` only. The receipt of an event
- * message is automatically acknowledged by [[org.eligosource.eventsourced.core.Receiver]].
- *
- * Often channel destinations use this trait for receiving event messages from their channel and
- * acknowledging their receipt. The receipt is not acknowledged if the concrete receiver throws
- * an exception.
+ * Event messages received by concrete `Receiver`s are stored in a private field
+ * and can be obtained via the `message` or `messageOption` method. The `receive`
+ * method of the concrete receiver is called with the message's `event` only. The
+ * receipt of an event message is automatically acknowledged by `Receiver`. The
+ * receipt is not acknowledged if the concrete receiver throws an exception. Often,
+ * channel destinations are modified with `Receiver`.
  */
 trait Receiver extends ReceiverBehavior {
   private var _message: Option[Message] = None
 
   /**
    * If `true`, auto-acknowledges the receipt of an event [[org.eligosource.eventsourced.core.Message]].
-   * Default is `true` and can be overridden.
+   * Default is `true`.
    */
   protected [core] val autoAck = true
 
@@ -111,15 +109,15 @@ trait Receiver extends ReceiverBehavior {
   def initiator: ActorRef = message.sender.getOrElse(context.system.deadLetters)
 
   /**
-   * Acknowledges the receipt of current event message by replying with `Ack`.
-   * The reply goes to `Actor.sender` (a channel, for example) not the initiator.
+   * Acknowledges the receipt of the current event message by replying with `Ack`.
+   * The reply goes to `Actor.sender` (a channel, for example) not the `initiator`.
    */
   def ack() = sender ! Ack
 
   /**
    * Negatively acknowledges the receipt of current event message by replying with
    * `Status.Failure`. The reply goes to `Actor.sender` (a channel, for example)
-   * not the initiator.
+   * not the `initiator`.
    */
   def nak(t: Throwable) = sender ! Status.Failure(t)
 

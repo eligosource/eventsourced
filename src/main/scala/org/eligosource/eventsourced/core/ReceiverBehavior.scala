@@ -21,6 +21,11 @@ import scala.collection.immutable.Stack
  * Allow actors with a stackable [[org.eligosource.eventsourced.core.Receiver]]
  * modification to change their behavior with `context.become()` and `context.unbecome()`
  * without loosing the additional [[org.eligosource.eventsourced.core.Receiver]] behavior.
+ * This also holds for sub-traits of [[org.eligosource.eventsourced.core.Receiver]].
+ *
+ * @see [[org.eligosource.eventsourced.core.Eventsourced]]
+ *      [[org.eligosource.eventsourced.core.Responder]]
+ *      [[org.eligosource.eventsourced.core.Emitter]]
  */
 trait ReceiverBehavior extends Actor {
   private var behaviorStack = Stack.empty[Receive].push(super.receive)

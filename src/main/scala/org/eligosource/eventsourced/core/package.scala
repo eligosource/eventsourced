@@ -29,8 +29,8 @@ package object core {
   case class SetContext(context: Context)
 
   /**
-   * Sent by [[org.eligosource.eventsourced.core.Message]] receivers to
-   * `Actor.sender` to indicate successful receipt of an event message.
+   * Reply from [[org.eligosource.eventsourced.core.Message]] receivers to indicate
+   * successful receipt of an event message.
    */
   case object Ack
 

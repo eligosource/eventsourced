@@ -19,11 +19,10 @@ import akka.actor._
 
 /**
  * Stackable modification for actors that receive event [[org.eligosource.eventsourced.core.Message]]s
- * and generate response [[org.eligosource.eventsourced.core.Message]]s. Concrete
- * responders are usually destinations of channels with a reply destination. Example:
+ * and generate response [[org.eligosource.eventsourced.core.Message]]s. Example:
  *
  * {{{
- *   val myResponder = system.actorOf(Props(new MyResponder with Receiver))
+ *   val myResponder = system.actorOf(Props(new MyResponder with Responder))
  *
  *   myResponder ! Message("foo event")
  *
@@ -43,16 +42,17 @@ import akka.actor._
  *   }
  * }}}
  *
- * Applications need not send the response during execution of `receive`. They can
- * use the created responder object (`rsp` in the above example) to send a response
- * any time later (e.g. in another thread). The object created by `responder` captures
- * the current event message and sender.
+ * Concrete `Responder`s need not send the response during execution of `receive`. They
+ * can use the created `responder` object (`rsp` in the above example) to send a response
+ * message any time later (such as in another thread). The object created by `responder`
+ * captures the current event `message` and `sender`.
  *
- * When using [[org.eligosource.eventsourced.core.Responder]] for destinations of
- * channels with no reply destination, concrete responders  must explicitly acknowledge
- * a message receipt by calling `ack()` (or `nak()` for replying with `Status.Failure`).
- * This way, applications can implement application-level acknowledgements, in contrast
- * to auto-acknowledgements as done with [[org.eligosource.eventsourced.core.Receiver]].
+ * Concrete `Responder`s are usually destinations of channels with a reply destination.
+ * When using `Responder` for destinations of channels with no reply destination, they
+ * must explicitly acknowledge a message receipt by calling `ack()` (or `nak()` for
+ * responding with `Status.Failure`). This way, applications can implement application-
+ * level acknowledgements, in contrast to auto-acknowledgements as done with
+ * [[org.eligosource.eventsourced.core.Receiver]].
  */
 trait Responder extends Receiver {
 
@@ -61,7 +61,7 @@ trait Responder extends Receiver {
 
   /**
    * Returns a response message sender (responder) that captures the current
-   * event message and sender.
+   * event `message` and `sender`.
    */
   def responder: ResponseMessageSender = {
     new ResponseMessageSender(sender, message)

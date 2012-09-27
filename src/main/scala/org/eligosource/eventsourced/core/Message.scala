@@ -19,10 +19,21 @@ import akka.actor.ActorRef
 
 /**
  * A message to communicate application events. Application events are not interpreted
- * by the library and can have any type. Hence, applications may also choose to send
- * application ''commands'' with [[org.eligosource.eventsourced.core.Message]]s. In
- * other words, the [[https://github.com/eligosource/eventsourced eventsourced library]]
- * can be used for both, event-sourcing and command-sourcing.
+ * by the library and can have any type.
+ *
+ * Messages sent to an [[org.eligosource.eventsourced.core.Eventsourced]] processor
+ * are called ''input'' messages. Processors process input messages by deriving zero
+ * or more ''output'' messages from it that the processor ''emits'' to a channel. When
+ * a channel successfully delivered (or stored, in case of a reliable channel) the
+ * emitted output message(s), an acknowledgement (with a reference to the input message)
+ * is written to the journal. During a replay (recovery), output messages that are derived
+ * from already acknowledged input messages are ignored by channels, avoiding unnecessary
+ * re-deliveries to channel destinations.
+ *
+ * Since the [[https://github.com/eligosource/eventsourced eventsourced library]] doesn't
+ * make any assumptions about the structure and semantics of `event`, applications may also
+ * choose to send ''commands'' with [[org.eligosource.eventsourced.core.Message]]s. In other
+ * words, the library can be used for both, event-sourcing and command-sourcing.
  *
  * @param event Application event (or command).
  * @param sender Optional, application-defined sender reference that can be used
@@ -32,14 +43,14 @@ import akka.actor.ActorRef
  * @param sequenceNr Sequence number which is generated when messages are written
  *        to a journal. Can also be used for detecting duplicates, in special cases.
  * @param processorId id of the event processor that stored (and emitted) this message
- *        The processor id is given by [[org.eligosource.eventsourced.core.Eventsourced]]`.id`.
- *@param acks List of channel ids that have acknowledged the delivery (or storage)
- *        of an emitted message (output message). This list is only non-empty during
- *        context recovery (i.e. message replay).
+ *        The processor id is given by `Eventsourced.id`.
+ * @param acks List of channel ids that have acknowledged message delivery (or storage).
+ *        This sequence is only non-empty during recovery (i.e. message replay). Usually
+ *        not used by applications.
  * @param ack Whether or not a channel should write an acknowledgement to the journal.
- *        Used by event processors to indicate a series of output messages (for a single
- *        input message) where only for the last output message an acknowledgement should
- *        be written.
+ *        Used by event processors to emit a series of messages (derived from a single
+ *        input message) where only for the last emitted message an acknowledgement
+ *        should be written.
  */
 case class Message(
   event: Any,
