@@ -24,7 +24,7 @@ import org.eligosource.eventsourced.core._
 /**
  * In-memory journal for testing purposes.
  */
-class InmemJournal extends Actor {
+private [eventsourced] class InmemJournal extends Actor {
   var commandListener: Option[ActorRef] = None
   var redoMap = SortedMap.empty[Key, Any]
   var counter = 0L
@@ -162,6 +162,9 @@ class InmemJournal extends Actor {
   }
 }
 
+/**
+ * Creates an in-memory journal for testing purposes.
+ */
 object InmemJournal {
   def apply()(implicit system: ActorSystem): ActorRef =
     system.actorOf(Props(new InmemJournal))

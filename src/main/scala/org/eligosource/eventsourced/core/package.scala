@@ -29,22 +29,34 @@ package object core {
   case class SetContext(context: Context)
 
   /**
-   * Reply from [[org.eligosource.eventsourced.core.Message]] receivers to indicate
-   * successful receipt of an event message.
+   *  - Reply from [[org.eligosource.eventsourced.core.Eventsourced]] processors to indicate
+   *    the successful write of an event [[org.eligosource.eventsourced.core.Message]] to a journal.
+   *  - Reply from event [[org.eligosource.eventsourced.core.Message]] receivers to indicate
+   *    the successful receipt of an event message.
    */
   case object Ack
 
-  implicit def processorRef2Initiator(processor: ActorRef) = {
-    new Initiator(processor)
+  implicit def actorRef2ReceiverRef(processor: ActorRef) = {
+    new ReceiverRef(processor)
   }
 
   // ------------------------------------------------------------
   //  Factories for special-purpose processors
   // ------------------------------------------------------------
 
-  def decorator(target: ActorRef): Eventsourced =
+  /**
+   * Returns a decorating processor.
+   *
+   * @param target decorated target.
+   */
+  def decorator(target: ActorRef): Decorator with Eventsourced =
     new Decorator(target) with Eventsourced
 
-  def multicast(targets: Seq[ActorRef]): Eventsourced =
+  /**
+   * Returns a mutlicast processor.
+   *
+   * @param targets multicast targets.
+   */
+  def multicast(targets: Seq[ActorRef]): Multicast with Eventsourced =
     new Multicast(targets) with Eventsourced with ForwardContext with ForwardMessage
 }

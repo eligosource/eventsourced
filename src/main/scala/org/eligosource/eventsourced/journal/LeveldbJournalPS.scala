@@ -39,7 +39,7 @@ import org.eligosource.eventsourced.util._
  *
  *  - deletion of old entries requires full scan
  */
-class LeveldbJournalPS(dir: File) extends Actor {
+private [eventsourced] class LeveldbJournalPS(dir: File) extends Actor {
   import LeveldbJournalPS._
 
   val levelDbReadOptions = new ReadOptions

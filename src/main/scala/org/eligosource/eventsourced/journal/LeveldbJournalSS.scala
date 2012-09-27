@@ -42,7 +42,7 @@ import org.eligosource.eventsourced.util._
  *  - replay of input messages for individual processors requires full scan
  *    (with optional lower bound)
  */
-class LeveldbJournalSS(dir: File) extends Actor {
+private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
   import LeveldbJournalSS._
 
   val levelDbReadOptions = new ReadOptions

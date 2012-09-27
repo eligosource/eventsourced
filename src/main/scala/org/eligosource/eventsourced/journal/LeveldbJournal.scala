@@ -20,12 +20,52 @@ import java.io.File
 import akka.actor._
 
 object LeveldbJournal {
+  /**
+   * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
+   * organizes entries primarily based on processor id.
+   *
+   * Pros:
+   *
+   *  - efficient replay of input messages for composites
+   *  - efficient replay of input messages for individual processors
+   *  - efficient replay of output messages
+   *
+   * Cons:
+   *
+   *  - deletion of old entries requires full scan
+   *
+   * @param dir journal directory
+   */
   def processorStructured(dir: File)(implicit system: ActorSystem): ActorRef =
     system.actorOf(Props(new LeveldbJournalPS(dir)))
 
+  /**
+   * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
+   * organizes entries primarily based on sequence numbers, keeping input and
+   * output entries separated.
+   *
+   * Pros:
+   *
+   *  - efficient replay of input messages for composites i.e. single scan
+   *    (with optional lower bound) for n processors.
+   *  - efficient replay of output messages
+   *  - efficient deletion of old entries
+   *
+   * Cons:
+   *
+   *  - replay of input messages for individual processors requires full scan
+   *    (with optional lower bound)
+   *
+   * @param dir journal directory
+   */
   def sequenceStructured(dir: File)(implicit system: ActorSystem): ActorRef =
     system.actorOf(Props(new LeveldbJournalSS(dir)))
 
+  /**
+   * Creates a LevelDB based journal that organizes entries primarily based on processor id.
+   *
+   * @see `LeveldbJournal.processorStructured`
+   */
   def apply(dir: File)(implicit system: ActorSystem) =
     processorStructured(dir)
 }

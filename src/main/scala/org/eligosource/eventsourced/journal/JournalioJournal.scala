@@ -26,7 +26,23 @@ import journal.io.api._
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.util.JavaSerializer
 
-class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
+/**
+ * Journal.IO based journal.
+ *
+ * Pros:
+ *
+ *  - efficient replay of input messages for composites i.e. single scan
+ *    (with optional lower bound) for n processors.
+ *  - efficient replay of output messages
+ *    (after initial replay of input messages)
+ *  - efficient deletion of old entries
+ *
+ * Cons:
+ *
+ *  - replay of input messages for individual processors requires full scan
+ *    (with optional lower bound)
+ */
+private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
 
   // TODO: make configurable
   val serializer = new JavaSerializer[AnyRef]
@@ -168,6 +184,24 @@ class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
 }
 
 object JournalioJournal {
+  /**
+   * Creates a [[https://github.com/sbtourist/Journal.IO Journal.IO]] based journal.
+   *
+   * Pros:
+   *
+   *  - efficient replay of input messages for composites i.e. single scan
+   *    (with optional lower bound) for n processors.
+   *  - efficient replay of output messages
+   *    (after initial replay of input messages)
+   *  - efficient deletion of old entries
+   *
+   * Cons:
+   *
+   *  - replay of input messages for individual processors requires full scan
+   *    (with optional lower bound)
+   *
+   * @param dir journal directory
+   */
   def apply(dir: File)(implicit system: ActorSystem): ActorRef =
     system.actorOf(Props(new JournalioJournal(dir)))
 }

@@ -32,24 +32,25 @@ object JournaledDemo extends App {
   // create a journal
   val journal = LeveldbJournal(new File("target/example"))
 
-  // Creation 'with Eventsourced' makes actor persistent (using event/command-sourcing)
+  // Modification 'with Eventsourced' makes actor persistent (using event/command-sourcing)
   def processorA = new ActorA with Eventsourced
 
-  // Creation 'with Eventsourced' makes actor persistent (unsing event/command-sourcing)
+  // Modification 'with Eventsourced' makes actor persistent (unsing event/command-sourcing)
   def processorB = new ActorB with Eventsourced
 
-   // Creation 'with Receiver' makes actor an acknowledging event/command receiver
+   // Modification 'with Receiver' makes actor an acknowledging event/command message receiver
    // (similar to 'with Eventsourced' but not persistent).
   def destination = new Destination with Receiver
 
   // Put actors into an event/command-sourcing context and wire them via channels
   implicit val context = Context(journal)
-    .addProcessor(1, processorA)         // add processorA instance with id == 1
-    .addProcessor(2, processorB)         // add processorB instance with id == 2
+    .addProcessor(1, processorA)         // add processorA with id == 1
+    .addProcessor(2, processorB)         // add processorB with id == 2
     .addChannel("channelA", 1)           // channel to processorA
     .addChannel("channelB", destination) // channel to destination
 
   // Recover context from existing journal entries (if any)
+  // - initializes processors
   // - replays events/commands to processors
   // - delivers messages via channels that
   //   haven't been acknowledged so far
@@ -62,11 +63,11 @@ object JournaledDemo extends App {
   p ! Message("some event")
 
   // send event message to p and receive response (Ack) once the event has been persisted
-  // (event is persisted before the processor receives it)
+  // (event message is persisted before the processor receives it)
   p ? Message("some event") onSuccess { case Ack => println("event written to journal") }
 
   // send event message to p but receive application-level response from processor (or any of its destinations)
-  // (event is persisted before receiving the response)
+  // (event message is persisted before receiving the response)
   p ?? Message("some event") onSuccess { case resp => println("received response %s" format resp) }
 
   // send message to p (bypasses journaling because it's not an instance of Message)
@@ -98,7 +99,7 @@ class ActorB extends Actor { this: Eventsourced =>
       // do something with event
       println("received event = %s (processor id = %d, sequence nr = %d)" format(event, prcid, seqnr))
 
-      // Eventsourced actors can emit events (or commands) to named channels
+      // Eventsourced actors can emit events to named channels
       emitter("channelA").emitEvent("out-a")
       emitter("channelB").emitEvent("out-b")
 
@@ -111,9 +112,9 @@ class ActorB extends Actor { this: Eventsourced =>
 
 /**
  * Receiver extracts payload (event or command) from received Message
- * and acknowledges receipt
+ * and (automatically) acknowledges receipt
  */
-trait Destination extends Actor { this: Receiver =>
+class Destination extends Actor { this: Receiver =>
   def receive = {
     case event => {
       // Receiver actors have access to:

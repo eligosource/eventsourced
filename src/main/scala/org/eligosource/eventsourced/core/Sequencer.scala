@@ -18,23 +18,24 @@ package org.eligosource.eventsourced.core
 import akka.actor.Actor
 
 /**
- * A (stateful) message sequencer. Senders send (sequenceNr, msg) pairs.
+ * Stackable modification for actors that need to receive a re-sequenced message stream.
+ * `(sequence number, message)` tuples will be resequenced by this trait according to
+ * `sequence number` where the modified actor's `receive` method is called with the re-
+ * sequenced `message`s. Messages with types other than `(Long, Any)` by-pass the re-
+ * sequencing algorithm.
  */
 trait Sequencer extends Actor {
   import scala.collection.mutable.Map
 
-  val delayed = Map.empty[Long, Any]
-  var delivered = 0L
+  private val delayed = Map.empty[Long, Any]
+  private var delivered = 0L
 
-  /** Implemented by subclasses to received sequenced messages. */
-  def receiveSequenced: Receive
-
-  def receive = {
+  abstract override def receive = {
     case (seqnr: Long, msg) => {
       resequence(seqnr, msg)
     }
     case msg => {
-      receiveSequenced(msg)
+      super.receive(msg)
     }
   }
 
@@ -42,7 +43,7 @@ trait Sequencer extends Actor {
   private def resequence(seqnr: Long, msg: Any) {
     if (seqnr == delivered + 1) {
       delivered = seqnr
-      receiveSequenced(msg)
+      super.receive(msg)
     } else {
       delayed += (seqnr -> msg)
     }

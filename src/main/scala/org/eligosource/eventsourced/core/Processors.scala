@@ -20,7 +20,15 @@ import akka.pattern.ask
 import akka.util.duration._
 
 /**
- * A multicast processor that forwards input messages to targets.
+ * An [[org.eligosource.eventsourced.core.Eventsourced]] processor that forwards
+ * received event [[org.eligosource.eventsourced.core.Message]]s to `targets`.
+ *
+ * Using `Multicast` is useful in situtations where mutliple processors should
+ * receive the same event messages but an application doesn't want them to journal
+ * these messages redundantly.
+ *
+ * Usually, `targets` are actors modified with [[org.eligosource.eventsourced.core.Emitter]]
+ * (if they want to emit event messages to channels) or [[org.eligosource.eventsourced.core.Receiver]].
  */
 class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced with ForwardContext with ForwardMessage =>
   def receive = {
@@ -37,12 +45,19 @@ class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced with 
 }
 
 /**
- * A decorating processor for actors that cannot add Eventsourced as stackable modification.
+ * An [[org.eligosource.eventsourced.core.Eventsourced]] decorator for actors that
+ * cannot be modified with [[org.eligosource.eventsourced.core.Eventsourced]] (such
+ * as Akka FSMs since they implement `Actor.receive` as `final`).
+ *
+ * A `Decorator` extracts events from received event [[org.eligosource.eventsourced.core.Message]]s
+ * and sends them to the decorated actor. The decorated actor must reply with
+ * `Emit(channelName, event)` messages to instruct the decorator to emit `event`
+ * to a named channel.
  */
 class Decorator(target: ActorRef) extends Actor { this: Eventsourced =>
   import Decorator._
 
-  val sequencer = context.actorOf(Props(new ResponseSequencer))
+  val sequencer = context.actorOf(Props(new ResponseSequencer with Sequencer))
   var counter = 1L
 
   def receive = {
@@ -61,14 +76,14 @@ class Decorator(target: ActorRef) extends Actor { this: Eventsourced =>
 object Decorator {
 
   /**
-   * Used by decorated actors to emit events to (named) channels.
+   * Used by decorated actors to emit an `event` to a named channel.
    */
-  case class Emit(channel: String, event: Any)
+  case class Emit(channelName: String, event: Any)
 }
 
 
-private [core] class ResponseSequencer extends Sequencer {
-  def receiveSequenced = {
+private [core] class ResponseSequencer extends Actor { this: Sequencer =>
+  def receive = {
     case (emit: MessageEmitter, t: Throwable) => ()
     case (emit: MessageEmitter, event)        => emit.emitEvent(event)
   }
