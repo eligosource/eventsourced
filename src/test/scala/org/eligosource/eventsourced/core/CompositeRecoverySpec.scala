@@ -40,27 +40,27 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
     val journalDir = new File("target/journal")
     val journal = LeveldbJournal(journalDir)
 
+    val extension = EventsourcingExtension(system, journal)
+
+    val processor1 = extension.processorOf(ProcessorProps(1, new Processor1 with Emitter with Eventsourced))
+    val processor2 = extension.processorOf(ProcessorProps(2, new Processor2 with Emitter with Eventsourced))
+
     val destinationQueue = new LinkedBlockingQueue[Message]
     val destination = system.actorOf(Props(new Destination(destinationQueue) with Receiver))
 
     val echo = system.actorOf(Props(new Echo with Responder))
     val dl = system.deadLetters
 
-    val processor1 = system.actorOf(Props(new Processor1 with Eventsourced))
-    val processor2 = system.actorOf(Props(new Processor2 with Eventsourced))
+    def setupDefaultChannels() {
+      extension.channelOf(DefaultChannelProps(1, processor2).withName("processor2"))
+      extension.channelOf(DefaultChannelProps(2, echo).withName("echo").withReplyDestination(processor1))
+      extension.channelOf(DefaultChannelProps(3, destination).withName("dest"))
+    }
 
-    def createExampleContext(journal: ActorRef, destination: ActorRef, reliable: Boolean) = {
-      val context = if (reliable) Context(journal)
-        .addReliableChannel("processor2", processor2)       // channel id == 1
-        .addReliableChannel("echo", echo, Some(processor1)) // channel id == 2
-        .addReliableChannel("dest", destination)            // channel id == 3
-      else Context(journal)
-        .addChannel("processor2", processor2)               // channel id == 1
-        .addChannel("echo", echo, Some(processor1))         // channel id == 2
-        .addChannel("dest", destination)                    // channel id == 3
-      context
-        .addProcessor(1, processor1)
-        .addProcessor(2, processor2)
+    def setupReliableChannels() {
+      extension.channelOf(ReliableChannelProps(1, processor2).withName("processor2"))
+      extension.channelOf(ReliableChannelProps(2, echo).withName("echo").withReplyDestination(processor1))
+      extension.channelOf(ReliableChannelProps(3, destination).withName("dest"))
     }
 
     def journal(cmd: Any) {
@@ -81,7 +81,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
       FileUtils.deleteDirectory(journalDir)
     }
 
-    class Processor1 extends Actor { this: Eventsourced =>
+    class Processor1 extends Actor { this: Emitter =>
       var numProcessed = 0
       var lastSenderMessageId = 0L
 
@@ -103,7 +103,7 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
       }
     }
 
-    class Processor2 extends Actor { this: Eventsourced =>
+    class Processor2 extends Actor { this: Emitter =>
       var numProcessed = 0
 
       def receive = {
@@ -163,7 +163,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // 8.) output message from processor 2 is again input message 1'' for processor 1
         journal(WriteInMsg(1, Message(InputModified("a-0-0"), None, Some("4"), 6), dl, false))
 
-        createExampleContext(journal, destination, true).init()
+        setupReliableChannels()
+        extension.recover()
 
         dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("4"), m.sequenceNr, 1)) }
         dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr, 1)) }
@@ -195,7 +196,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // 8.) output message from processor 2 is again input message 1'' for processor 1
         journal(WriteInMsg(1, Message(InputModified("a-0-0"), None, Some("4"), 6), dl, false))
 
-        createExampleContext(journal, destination, true).init()
+        setupReliableChannels()
+        extension.recover()
 
         dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("4"), m.sequenceNr, 1)) }
         // message order is not preserved when sending echos (i.e responses from echo actor) to reply destination
@@ -223,7 +225,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // 6.) ACK that output message of processor 2 has been stored by processor 1
         journal(WriteAck(2, 2, 3))
 
-        createExampleContext(journal, destination, false).init()
+        setupDefaultChannels()
+        extension.recover()
 
         dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("3"), m.sequenceNr, 1)) }
         dequeue { m => m must be(Message(InputModified("b-1-1-3"), None, m.senderMessageId, m.sequenceNr, 1)) }
@@ -250,7 +253,8 @@ class CompositeRecoverySpec extends WordSpec with MustMatchers {
         // NOT YET ACKNOWLEDGED: WILL CAUSE A DUPLICATE (which is detected via senderMessageId)
         //journal(WriteAck(2, 2, 3))
 
-        createExampleContext(journal, destination, false).init()
+        setupDefaultChannels()
+        extension.recover()
 
         dequeue { m => m must be(Message(InputModified("a-0-0-2"), None, Some("3"), m.sequenceNr, 1)) }
         // message order is not preserved when sending echos (i.e responses from echo actor) to reply destination

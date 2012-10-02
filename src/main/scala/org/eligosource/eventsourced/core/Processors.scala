@@ -30,17 +30,9 @@ import akka.util.duration._
  * Usually, `targets` are actors modified with [[org.eligosource.eventsourced.core.Emitter]]
  * (if they want to emit event messages to channels) or [[org.eligosource.eventsourced.core.Receiver]].
  */
-class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced with ForwardContext with ForwardMessage =>
+class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced =>
   def receive = {
-    case cmd: SetContext => {
-      targets.foreach(_ ! cmd)
-    }
-    case msg: Message => {
-      targets.foreach(_ ! msg)
-    }
-    case msg => {
-      targets.foreach(_ ! msg)
-    }
+    case msg => targets.foreach(_ ! msg)
   }
 }
 
@@ -54,7 +46,7 @@ class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced with 
  * `Emit(channelName, event)` messages to instruct the decorator to emit `event`
  * to a named channel.
  */
-class Decorator(target: ActorRef) extends Actor { this: Eventsourced =>
+class Decorator(target: ActorRef) extends Actor { this: Emitter with Eventsourced =>
   import Decorator._
 
   val sequencer = context.actorOf(Props(new ResponseSequencer with Sequencer))

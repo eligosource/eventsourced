@@ -25,26 +25,31 @@ import akka.util.Timeout
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
-object JournaledDemo extends App {
+object ExtensionDemo extends App {
   implicit val system = ActorSystem("example")
   implicit val timeout = Timeout(5 seconds)
 
+  // Event sourcing extension
+  // (any actor created 'with Eventsourced' will be automatically registered at this extension)
   implicit val extension = EventsourcingExtension(system, LeveldbJournal(new File("target/example")))
 
+  // Modification 'with Eventsourced' makes actor persistent
+  val processorA = extension.processorOf(ProcessorProps(1, new ProcessorA with Receiver with Eventsourced))
+  val processorB = extension.processorOf(ProcessorProps(2, new ProcessorB with Emitter with Eventsourced))
 
-  //def processorA = new ActorA with Eventsourced
-  //def processorB = new ActorB with Emitter with Eventsourced
-  //def destination = new Destination with Receiver
-
-  val processorA = extension.processorOf(ProcessorProps(1, new ActorA with Receiver with Eventsourced))
-  val processorB = extension.processorOf(ProcessorProps(2, new ActorB with Emitter with Eventsourced))
+  // Modification 'with Receiver' makes actor an acknowledging event/command message receiver
   val destination = system.actorOf(Props(new Destination with Receiver))
 
-  extension.channelOf(DefaultChannelProps(1, processorA).withName("channelA"))
-  extension.channelOf(DefaultChannelProps(2, destination).withName("channelB"))
+  val channelA = extension.channelOf(DefaultChannelProps(1, processorA).withName("channelA"))
+  val channelB = extension.channelOf(ReliableChannelProps(2, destination).withName("channelB"))
+
+  // Modification 'with Eventsourced' makes actor persistent (dependent channels given via constructor)
+  val processorC = extension.processorOf(ProcessorProps(3, new ProcessorC(channelA, channelB) with Eventsourced))
+
+  // recover all registered processors from journal
   extension.recover()
 
-  val p: ActorRef = processorB
+  val p: ActorRef = processorC // can be replaced with processorB
 
   // send event message to p
   p ! Message("some event")
@@ -64,7 +69,7 @@ object JournaledDemo extends App {
   //  Actor definitions
   // -----------------------------------------------------------
 
-  class ActorA extends Actor {
+  class ProcessorA extends Actor {
     def receive = {
       case event => {
         // do something with event
@@ -73,7 +78,7 @@ object JournaledDemo extends App {
     }
   }
 
-  class ActorB extends Actor { this: Emitter with Eventsourced =>
+  class ProcessorB extends Actor { this: Emitter with Eventsourced =>
     def receive = {
       case "blah" => {
         println("received non-journaled message")
@@ -96,6 +101,23 @@ object JournaledDemo extends App {
         // optionally respond to initial sender (initiator)
         // (intitiator == context.system.deadLetters if unknown)
         initiator ! "done"
+      }
+    }
+  }
+
+  // does the same as ProcessorB but doesn't use any attributes of trait Eventsourced
+  class ProcessorC(channelA: ActorRef, channelB: ActorRef) extends Actor {
+    def receive = {
+      case "blah" => {
+        println("received non-journaled message")
+      }
+      case msg: Message => {
+        println("received event = %s (processor id = 3, sequence nr = %d)" format(msg.event, msg.sequenceNr))
+
+        channelA ! msg.copy(event = "out-a")
+        channelB ! msg.copy(event = "out-b")
+
+        msg.sender.foreach(_ ! "done")
       }
     }
   }

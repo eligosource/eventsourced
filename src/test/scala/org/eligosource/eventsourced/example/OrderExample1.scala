@@ -28,19 +28,20 @@ object OrderExample1 extends App {
   // create a journal
   val journal = LeveldbJournal(new File("target/example"))
 
+  // create an event-sourcing extension
+  val extension = EventsourcingExtension(system, journal)
+
   // create a destination for output events
   val destination = system.actorOf(Props(new Destination with Receiver))
 
   // create an event-sourced processor
-  val processor = system.actorOf(Props(new Processor with Eventsourced))
+  val processor = extension.processorOf(ProcessorProps(1, new Processor with Emitter with Eventsourced))
 
-  // create an event-sourcing context
-  val context = Context(journal)
-    .addChannel("dest", destination)
-    .addProcessor(1, processor)
+  // create and register a channel
+  extension.channelOf(DefaultChannelProps(1, destination).withName("dest"))
 
   // recover state from (previously) journaled events
-  context.init()
+  extension.recover()
 
   // send some event messages
   processor ! Message(OrderSubmitted(Order("foo")))
@@ -53,7 +54,7 @@ object OrderExample1 extends App {
   system.shutdown()
 
   // event-sourced processor
-  class Processor extends Actor { this: Eventsourced =>
+  class Processor extends Actor { this: Emitter =>
     var orders = Map.empty[Int, Order] // processor state
 
     def receive = {

@@ -30,19 +30,16 @@ import akka.actor._
  * @see [[org.eligosource.eventsourced.core.Eventsourced]] for a usage example.
  */
 trait Emitter extends Receiver {
-  private var _context: Context = _
-
-  /**
-   * Returns the journal of the injected [[org.eligosource.eventsourced.core.Context]]
-   */
-  def journal: ActorRef = _context.journal
+  private val extension = EventsourcingExtension(context.system)
 
   /**
    * Returns the channel map of the injected [[org.eligosource.eventsourced.core.Context]]
    */
-  def channels: Map[String, ActorRef] = _context.channels
+  def channels: Map[String, ActorRef] = extension.channels
 
-  /** Overrides to `false` */
+  /**
+   * Overrides to `false`
+   */
   override val autoAck = false
 
   /**
@@ -73,13 +70,6 @@ trait Emitter extends Receiver {
   }
 
   abstract override def receive = {
-    case cmd: SetContext => {
-      _context = cmd.context
-      if (forwardContext) super.receive(cmd)
-    }
-    case msg: Message => {
-      super.receive(msg)
-    }
     case msg => {
       super.receive(msg)
     }
@@ -124,12 +114,4 @@ class MessageEmitter(val channel: ActorRef, val message: Message) {
   def emitEvent(event: Any) = {
     channel ! message.copy(event = event)
   }
-}
-
-/**
- * Stackable modification for [[org.eligosource.eventsourced.core.Emitter]] to set
- * `Emitter.forwardContext` to `true`. Usually not used by applications.
- */
-trait ForwardContext extends Emitter {
-  override val forwardContext = true
 }

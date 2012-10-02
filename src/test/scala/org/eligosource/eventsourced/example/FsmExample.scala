@@ -44,9 +44,12 @@ class FsmExample extends WordSpec with MustMatchers {
     val queue = new LinkedBlockingQueue[Any]
     val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent))
 
-    def createExampleContext = Context(journal)
-      .addChannel("dest", destination)
-      .addProcessor(1, decorator(system.actorOf(Props(new Door))))
+    val extension = EventsourcingExtension(system, journal)
+
+    def configureExtension(): ActorRef = {
+      extension.channelOf(DefaultChannelProps(1, destination).withName("dest"))
+      extension.processorOf(ProcessorProps(1, decorator(system.actorOf(Props(new Door)))))
+    }
 
     def dequeue(timeout: Long = 5000): Any = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
@@ -72,8 +75,8 @@ class FsmExample extends WordSpec with MustMatchers {
     "recover FSM state from stored event messages" in { fixture =>
       import fixture._
 
-      val context = createExampleContext.init()
-      val door = context.processors(1)
+      val door = configureExtension()
+      extension.recover()
 
       door ! Message("open")
       door ! Message("close")
@@ -83,8 +86,8 @@ class FsmExample extends WordSpec with MustMatchers {
       dequeue() must be (DoorMoved(2))
       dequeue() must be (DoorNotMoved("cannot close door in state Closed"))
 
-      val recoveredContext = createExampleContext.init()
-      val recoveredDoor = recoveredContext.processors(1)
+      val recoveredDoor = configureExtension()
+      extension.recover()
 
       recoveredDoor ! Message("open")
       recoveredDoor ! Message("close")

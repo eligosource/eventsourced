@@ -43,12 +43,16 @@ class AggregatorExample extends WordSpec with MustMatchers {
     val journal = LeveldbJournal(journalDir)
 
     val queue = new LinkedBlockingQueue[Message]
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver))
 
-    def createExampleContext = Context(journal)
-      .addProcessor(1, new Aggregator with Eventsourced)
-      .addProcessor(2, multicast(Nil))
-      .addChannel("self", 1)
-      .addReliableChannel("dest", new Destination(queue) with Receiver)
+    implicit val extension = EventsourcingExtension(system, journal)
+
+    def configureExtension(): ActorRef = {
+      val processor = extension.processorOf(ProcessorProps(1, new Aggregator with Emitter with Eventsourced))
+      extension.channelOf(DefaultChannelProps(1, processor).withName("self"))
+      extension.channelOf(ReliableChannelProps(2, destination).withName("dest"))
+      processor
+    }
 
     def dequeue(timeout: Long = 5000): Message = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
@@ -70,15 +74,14 @@ class AggregatorExample extends WordSpec with MustMatchers {
     }
   }
 
-  "An event-sourced context" must {
+  "The event-sourcinging extension" must {
     "recover processor state from stored event messages" in { fixture =>
         import fixture._
 
         {
-          implicit val context = createExampleContext.init()
+          val processor = configureExtension()
 
-          // obtain processor with id == 1 from context
-          val processor = context.processors(1)
+          extension.deliver()
 
           // send InputAvailable event to event-sourced context
           processor ! Message(InputAvailable("category-a", "input-1")) // no response expected
@@ -96,14 +99,9 @@ class AggregatorExample extends WordSpec with MustMatchers {
         }
 
         {
-          // now start from scratch by creating a new context
-          implicit val context = createExampleContext
+          val processor = configureExtension()
 
-          // obtain processor with id == 1 from context
-          val processor = context.processors(1)
-
-          // recover in-memory state by initializing the new context
-          context.init()
+          extension.recover()
 
           // now trigger the next aggregation (2 messages of category-b missing)
           processor ! Message(InputAvailable("category-b", "input-8")) // no response expected
@@ -121,7 +119,7 @@ class AggregatorExample extends WordSpec with MustMatchers {
   }
 
   // Event-sourced aggregator
-  class Aggregator extends Actor { this: Eventsourced =>
+  class Aggregator extends Actor { this: Emitter =>
     var inputAggregatedCounter = 0
     var inputs = Map.empty[String, List[String]] // category -> inputs
 

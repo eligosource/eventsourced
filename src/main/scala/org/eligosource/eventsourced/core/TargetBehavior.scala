@@ -27,7 +27,8 @@ import scala.collection.immutable.Stack
  *      [[org.eligosource.eventsourced.core.Responder]]
  *      [[org.eligosource.eventsourced.core.Emitter]]
  */
-trait ReceiverBehavior extends Actor {
+
+trait TargetBehavior extends Actor {
   private var behaviorStack = Stack.empty[Receive].push(super.receive)
 
   abstract override def receive = {

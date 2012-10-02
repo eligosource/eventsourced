@@ -43,7 +43,7 @@ import akka.actor._
  * receipt is not acknowledged if the concrete receiver throws an exception. Often,
  * channel destinations are modified with `Receiver`.
  */
-trait Receiver extends ReceiverBehavior {
+trait Receiver extends TargetBehavior {
   private var _message: Option[Message] = None
 
   /**
@@ -132,12 +132,4 @@ trait Receiver extends ReceiverBehavior {
       super.receive(msg)
     }
   }
-}
-
-/**
- * Stackable modification for [[org.eligosource.eventsourced.core.Receiver]] to set
- * `Receiver.forwardMessage` to `true`. Usually not used by applications.
- */
-trait ForwardMessage extends Receiver {
-  override val forwardMessage = true
 }

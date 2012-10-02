@@ -31,7 +31,7 @@ import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
-class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
+class ReliableChannelSpec extends WordSpec with MustMatchers {
   import Channel._
 
   type FixtureParam = Fixture
@@ -44,14 +44,14 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
     val replyDestinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
 
     val successDestination =
-      system.actorOf(Props(new TestDesination(destinationQueue, None) with Responder))
+      system.actorOf(Props(new TestDestination(destinationQueue, None) with Responder))
     def failureDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new TestDesination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
+      system.actorOf(Props(new TestDestination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
 
     val successReplyDestination =
-      system.actorOf(Props(new TestDesination(replyDestinationQueue, None) with Responder))
+      system.actorOf(Props(new TestDestination(replyDestinationQueue, None) with Responder))
     def failureReplyDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new TestDesination(replyDestinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
+      system.actorOf(Props(new TestDestination(replyDestinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
 
     val writeMsgListenerQueue = new LinkedBlockingQueue[WriteOutMsg]
     val writeMsgListener = system.actorOf(Props(new WriteMsgListener(writeMsgListenerQueue)))
@@ -76,7 +76,7 @@ class ReliableOutputChannelSpec extends WordSpec with MustMatchers {
       FileUtils.deleteDirectory(journalDir)
     }
 
-    class TestDesination(
+    class TestDestination(
       // for interaction with test code
       blockingQueue: LinkedBlockingQueue[Either[Message, Message]],
       // event where first failure should occur

@@ -12,7 +12,6 @@ import org.apache.commons.io.FileUtils
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
-import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
 class ProcessorsSpec extends WordSpec with MustMatchers {
@@ -28,13 +27,16 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
     val queue = new LinkedBlockingQueue[Any]
     val destination = system.actorOf(Props(new Destination(queue) with Emitter))
 
-    val context = Context(journal)
-      .addChannel("dest", destination)
-      .addProcessor(2, new Changing with Eventsourced)
-      .addProcessor(1, multicast(List(
-        system.actorOf(Props(new Target with Emitter)),
-        system.actorOf(Props(new Target with Emitter))
-      ))).init()
+    val extension = EventsourcingExtension(system, journal)
+
+    val changing = extension.processorOf(ProcessorProps(2, new Changing with Emitter with Eventsourced))
+    val multicast = extension.processorOf(ProcessorProps(1, org.eligosource.eventsourced.core.multicast(List(
+      system.actorOf(Props(new Target with Emitter)),
+      system.actorOf(Props(new Target with Emitter))
+    ))))
+
+    extension.channelOf(DefaultChannelProps(1, destination).withName("dest"))
+    extension.recover()
 
     def dequeue(timeout: Long = 5000): Any = {
       queue.poll(timeout, TimeUnit.MILLISECONDS)
@@ -56,7 +58,7 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
     }
   }
 
-  class Changing extends Actor { this: Eventsourced =>
+  class Changing extends Actor { this: Emitter =>
     val changed: Receive = {
       case "bar" => { emitter("dest").emitEvent("bar"); context.unbecome() }
     }
@@ -89,7 +91,7 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
     "forward received event messages to its targets" in { fixture =>
       import fixture._
 
-      context.processors(1) ! Message("test")
+      multicast ! Message("test")
 
       dequeue() must be ("test")
       dequeue() must be ("test")
@@ -97,7 +99,7 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
     "forward received non-event messages to its targets" in { fixture =>
       import fixture._
 
-      context.processors(1) ! "blah"
+      multicast ! "blah"
 
       dequeue() must be ("blah")
       dequeue() must be ("blah")
@@ -107,15 +109,15 @@ class ProcessorsSpec extends WordSpec with MustMatchers {
     "support behavior changes and overriding unhandled" in { fixture =>
       import fixture._
 
-      context.processors(2) ! Message("foo")
-      context.processors(2) ! Message("bar")
-      context.processors(2) ! Message("baz")
+      changing ! Message("foo")
+      changing ! Message("bar")
+      changing ! Message("baz")
 
       dequeue() must be ("foo")
       dequeue() must be ("bar")
       dequeue() must be ("baz")
 
-      context.processors(2) ! Message("xyz")
+      changing ! Message("xyz")
 
       dequeue() must be ("unhandled")
     }

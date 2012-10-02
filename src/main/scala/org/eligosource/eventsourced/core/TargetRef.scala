@@ -25,7 +25,7 @@ import akka.util.Timeout
  *
  * @param receiver receiver actor reference.
  */
-class ReceiverRef(receiver: ActorRef) {
+class TargetRef(receiver: ActorRef) {
 
   /**
    * Sends an event `message` to `receiver` where the `receiver` will receive
@@ -46,8 +46,8 @@ class ReceiverRef(receiver: ActorRef) {
    * @param message event message.
    * @param timeout reply timeout.
    */
-  def ??(message: Message)(implicit timeout: Timeout, context: Context): Future[Any] =
-    context.producer.ask(Producer.Produce(message, receiver))
+  def ??(message: Message)(implicit timeout: Timeout, extension: EventsourcingExtension): Future[Any] =
+    extension.producer.ask(Producer.Produce(message, receiver))
 }
 
 private [core] class Producer extends Actor {

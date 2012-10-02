@@ -32,21 +32,20 @@ object OrderExample3 extends App {
   val journalDir = new java.io.File("target/example")
   val journal = LeveldbJournal(journalDir)
 
+  // create an event-sourcing extension
+  implicit val extension = EventsourcingExtension(system, journal)
+
   // create destinations for output events
   val validator = system.actorOf(Props(new CreditCardValidator with Responder))
   val destination = system.actorOf(Props(new Destination with Receiver))
 
   // create event sourced processor
-  val processor = system.actorOf(Props(new OrderProcessor with Eventsourced))
+  val processor = extension.processorOf(ProcessorProps(1, new OrderProcessor with Emitter with Eventsourced))
 
-  // create an event-sourcing context
-  // TODO: inline creation of actors
-  // TODO: processor reference by id
-  implicit val context = Context(journal)
-    .addReliableChannel("validator", validator, Some(processor))
-    .addChannel("destination", destination)
-    .addProcessor(1, processor)
-    .init()
+  extension.channelOf(ReliableChannelProps(2, validator).withName("validator").withReplyDestination(processor))
+  extension.channelOf(DefaultChannelProps(2, destination).withName("destination"))
+
+  extension.recover()
 
   // submit an order
   processor ?? Message(OrderSubmitted(Order("jelly beans", "1234"))) onSuccess {
@@ -59,7 +58,7 @@ object OrderExample3 extends App {
   // then shutdown
   system.shutdown()
 
-  class OrderProcessor extends Actor { this: Eventsourced =>
+  class OrderProcessor extends Actor { this: Emitter =>
     var orders = Map.empty[Int, Order] // processor state
 
     def receive = {

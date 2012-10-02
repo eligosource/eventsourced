@@ -32,24 +32,27 @@ object OrderExample2 extends App {
   // create a journal
   val journal = LeveldbJournal(new File("target/example"))
 
-  // create an event-sourcing context
-  implicit val context = Context(journal)
-    // create and add a destination for output events
-    .addChannel("dest", new Destination with Receiver)
-    // create and add an event-sourced processor
-    .addProcessor(1, new Processor with Eventsourced)
-    // recover state from (previously) journaled events
-    .init()
+  // create an event-sourcing extension
+  implicit val extension = EventsourcingExtension(system, journal)
 
-  // get processor with id == 1 from context
-  val p = context.processors(1)
+  // create a destination for output events
+  val destination = system.actorOf(Props(new Destination with Receiver))
+
+  // create an event-sourced processor
+  val processor = extension.processorOf(ProcessorProps(1, new Processor with Emitter with Eventsourced))
+
+  // create and register a channel
+  extension.channelOf(DefaultChannelProps(1, destination).withName("dest"))
+
+  // recover state from (previously) journaled events
+  extension.recover()
 
   // send some event messages
-  p ! Message(OrderSubmitted(Order("foo")))
-  p ! Message(OrderSubmitted(Order("bar")))
+  processor ! Message(OrderSubmitted(Order("foo")))
+  processor ! Message(OrderSubmitted(Order("bar")))
 
   // and expect an application-level reply
-  p ?? Message(OrderSubmitted(Order("baz"))) onSuccess {
+  processor ?? Message(OrderSubmitted(Order("baz"))) onSuccess {
     case order: Order => println("received order %s" format order)
   }
 
@@ -60,7 +63,7 @@ object OrderExample2 extends App {
   system.shutdown()
 
   // event-sourced processor
-  class Processor extends Actor { this: Eventsourced =>
+  class Processor extends Actor { this: Emitter =>
     var orders = Map.empty[Int, Order] // processor state
 
     def receive = {

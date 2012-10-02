@@ -134,8 +134,7 @@ class DefaultChannel(val id: Int, val journal: ActorRef) extends Channel {
 case class ReliableChannelConf(
   recoveryDelay: Duration,
   retryDelay: Duration,
-  retryMax: Int
-)
+  retryMax: Int)
 
 object ReliableChannelConf {
   /** Default recovery delay: 5 seconds */
