@@ -18,8 +18,9 @@ package org.eligosource.eventsourced.core
 import akka.actor._
 
 /**
- * Stackable modification for actors that receive event [[org.eligosource.eventsourced.core.Message]]s.
- * Example:
+ * Stackable modification for extracting `event` from received event
+ * [[org.eligosource.eventsourced.core.Message]]s and calling the modified
+ * actor's `receive` method with that event. Example:
  *
  * {{{
  *   val myReceiver = system.actorOf(Props(new MyReceiver with Receiver))
@@ -29,7 +30,12 @@ import akka.actor._
  *   class MyReceiver extends Actor { this: Receiver =>
  *     def receive = {
  *       case "foo event" => {
- *         assert(message.sequenceNr > 0L)
+ *         val msg = message          // current message
+ *         val snr = sequenceNr       // sequence number of message
+ *         val sid = senderMessageId  // sender message id of current message (for duplicate detection)
+ *         val ini = initiator        // initial sender of current message (usually different from current 'sender')
+ *
+ *         assert(snr > 0L)
  *         // ...
  *       }
  *     }
@@ -51,13 +57,6 @@ trait Receiver extends TargetBehavior {
    * Default is `true`.
    */
   protected [core] val autoAck = true
-
-  /**
-   * If `true`, concrete receivers will receive the whole event [[org.eligosource.eventsourced.core.Message]]
-   * instead of the event only. Default is `false` and can be set to `true`
-   * by mixing in [[org.eligosource.eventsourced.core.ForwardMessage]].
-   */
-  val forwardMessage = false
 
   /**
    * Current event message option. `None` if the last message received by this receiver
@@ -124,7 +123,7 @@ trait Receiver extends TargetBehavior {
   abstract override def receive = {
     case msg: Message => {
       _message = Some(msg)
-      super.receive(if (forwardMessage) msg else msg.event)
+      super.receive(msg.event)
       if (autoAck) ack()
     }
     case msg => {

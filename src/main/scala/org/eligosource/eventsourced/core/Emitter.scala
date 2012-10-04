@@ -18,22 +18,38 @@ package org.eligosource.eventsourced.core
 import akka.actor._
 
 /**
- * Stackable modification for actors that need access to the channels of
- * a [[org.eligosource.eventsourced.core.Context]]. Actors modified with
- * `Emitter` can ''emit'' event messages to these channels. A context is
- * injected into an `Emitter` via a `SetContext` message.
+ * Stackable modification for actors to provide ''convenient'' access to registered
+ * [[org.eligosource.eventsourced.core.Channel]]s and to ''emit'' event messages to
+ * these channels. Registered channels are those that have been created with the
+ * `EventsourcingExtension.channelOf` method.
  *
- * `Emitter`s are all actors that are modified with the [[org.eligosource.eventsourced.core.Eventsourced]]
- * trait. An example of actors that are directly modified with the `Emitter` trait are the `targets` of
- * [[org.eligosource.eventsourced.core.Multicast]] processors.
+ * {{{
+ *   val myEmitter = system.actorOf(Props(new MyEmitter with Emitter))
  *
- * @see [[org.eligosource.eventsourced.core.Eventsourced]] for a usage example.
+ *   myEmitter ! Message("foo event")
+ *
+ *   class MyEmitter extends Actor { this: Emitter =>
+ *     def receive = {
+ *       case "foo event" => {
+ *         // emit event messages to named channels (where emitted
+ *         // event messages are derived from the current message)
+ *         emitter("channelA").emitEvent("bar event")
+ *         emitter("channelB").emitEvent("baz event")
+ *         // ...
+ *       }
+ *     }
+ *   }
+ * }}}
+ *
+ *
+ * @see [[org.eligosource.eventsourced.core.MessageEmitter]]
+ *      [[org.eligosource.eventsourced.core.MessageEmitterFactory]]
  */
 trait Emitter extends Receiver {
   private val extension = EventsourcingExtension(context.system)
 
   /**
-   * Returns the channel map of the injected [[org.eligosource.eventsourced.core.Context]]
+   * Returns a map of registered [[org.eligosource.eventsourced.core.Channel]]s.
    */
   def channels: Map[String, ActorRef] = extension.channels
 
@@ -43,15 +59,8 @@ trait Emitter extends Receiver {
   override val autoAck = false
 
   /**
-   * If `true`, concrete `Emitter`s will be forwarded the `SetContext` message which is
-   * otherwise retained by this trait. Default is `false` and can be set to `true` by
-   * mixing in [[org.eligosource.eventsourced.core.ForwardContext]].
-   */
-  val forwardContext = false
-
-  /**
    * Returns a message emitter factory that captures the current event `message` and the
-   * `channels` map of the injected context. Applications can run the returned emitter factory
+   * map of registered `channels`. Applications can run the returned emitter factory
    * from within any thread.
    */
   def emitter = {
@@ -60,10 +69,10 @@ trait Emitter extends Receiver {
 
   /**
    * Returns a message emitter that captures the current event `message` and a channel
-   * mapped with `channelName` in the `channels` map of the injected context. If the mapping
-   * doesn't exist, the channel will be `context.system.deadLetters`. Applications can run
-   * the returned emitter from within any thread for sending output messages (which will be
-   * derived from the captured event `message`).
+   * that has been registered under `channelName`. If no channel exists for `channelName`
+   * it will be `context.system.deadLetters`. Applications can run the returned emitter
+   * from within any thread for sending output messages (which will be derived from the
+   * captured event `message`).
    */
   def emitter(channelName: String) = {
     new MessageEmitter(channels.getOrElse(channelName, context.system.deadLetters), message)

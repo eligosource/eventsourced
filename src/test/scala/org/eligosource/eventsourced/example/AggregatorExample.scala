@@ -20,7 +20,6 @@ import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 import akka.actor._
 import akka.dispatch._
-import akka.pattern.ask
 import akka.util.duration._
 import akka.util.Timeout
 
@@ -74,22 +73,22 @@ class AggregatorExample extends WordSpec with MustMatchers {
     }
   }
 
-  "The event-sourcinging extension" must {
-    "recover processor state from stored event messages" in { fixture =>
+  "An event-sourced aggregator" must {
+    "recover its state from stored event messages" in { fixture =>
         import fixture._
 
         {
-          val processor = configureExtension()
+          val aggregator = configureExtension()
 
-          extension.deliver()
+          extension.recover()
 
-          // send InputAvailable event to event-sourced context
-          processor ! Message(InputAvailable("category-a", "input-1")) // no response expected
-          processor ! Message(InputAvailable("category-a", "input-2")) // no response expected
-          processor ! Message(InputAvailable("category-b", "input-7")) // no response expected
+          // send InputAvailable event to event-sourced aggregator
+          aggregator ! Message(InputAvailable("category-a", "input-1")) // no response expected
+          aggregator ! Message(InputAvailable("category-a", "input-2")) // no response expected
+          aggregator ! Message(InputAvailable("category-b", "input-7")) // no response expected
 
-          // await aggregation response by business logic to initial sender
-          val future = processor ?? Message(InputAvailable("category-a", "input-3"))
+          // await aggregation response by aggregator to initiator
+          val future = aggregator ?? Message(InputAvailable("category-a", "input-3"))
           Await.result(future, timeout.duration) must be("aggregated 3 messages of category-a")
 
           // obtain output event message delivered to destination
@@ -99,15 +98,17 @@ class AggregatorExample extends WordSpec with MustMatchers {
         }
 
         {
-          val processor = configureExtension()
+          // replace old processors and channels with new ones
+          val aggregator = configureExtension()
 
+          // recover processor state from journaled messages
           extension.recover()
 
           // now trigger the next aggregation (2 messages of category-b missing)
-          processor ! Message(InputAvailable("category-b", "input-8")) // no response expected
-          val future = processor ?? Message(InputAvailable("category-b", "input-9"))
+          aggregator ! Message(InputAvailable("category-b", "input-8")) // no response expected
+          val future = aggregator ?? Message(InputAvailable("category-b", "input-9"))
 
-          // await next aggregation response by business logic to initial sender
+          // await next aggregation response by aggregator to initiator
           Await.result(future, timeout.duration) must be("aggregated 3 messages of category-b")
 
           // obtain next output event message delivered to destination

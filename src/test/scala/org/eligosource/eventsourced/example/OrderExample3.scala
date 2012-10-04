@@ -42,9 +42,11 @@ object OrderExample3 extends App {
   // create event sourced processor
   val processor = extension.processorOf(ProcessorProps(1, new OrderProcessor with Emitter with Eventsourced))
 
+  // create and register channels
   extension.channelOf(ReliableChannelProps(2, validator).withName("validator").withReplyDestination(processor))
   extension.channelOf(DefaultChannelProps(2, destination).withName("destination"))
 
+  // recover state from (previously) journaled events
   extension.recover()
 
   // submit an order

@@ -71,8 +71,8 @@ class FsmExample extends WordSpec with MustMatchers {
     }
   }
 
-  "An event-sourced context" must {
-    "recover FSM state from stored event messages" in { fixture =>
+  "A decorated FSM actor" must {
+    "recover its state from stored event messages" in { fixture =>
       import fixture._
 
       val door = configureExtension()
@@ -120,7 +120,6 @@ class FsmExample extends WordSpec with MustMatchers {
       case event => queue.put(event)
     }
   }
-
 }
 
 sealed trait DoorState

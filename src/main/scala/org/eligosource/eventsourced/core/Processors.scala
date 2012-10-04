@@ -26,9 +26,6 @@ import akka.util.duration._
  * Using `Multicast` is useful in situtations where mutliple processors should
  * receive the same event messages but an application doesn't want them to journal
  * these messages redundantly.
- *
- * Usually, `targets` are actors modified with [[org.eligosource.eventsourced.core.Emitter]]
- * (if they want to emit event messages to channels) or [[org.eligosource.eventsourced.core.Receiver]].
  */
 class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced =>
   def receive = {
@@ -42,9 +39,9 @@ class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced =>
  * as Akka FSMs since they implement `Actor.receive` as `final`).
  *
  * A `Decorator` extracts events from received event [[org.eligosource.eventsourced.core.Message]]s
- * and sends them to the decorated actor. The decorated actor must reply with
- * `Emit(channelName, event)` messages to instruct the decorator to emit `event`
- * to a named channel.
+ * and sends them to the decorated actor. The decorated actor must reply with `Emit(channelName, event)`
+ * messages to instruct the decorator to emit a [[org.eligosource.eventsourced.core.Message]] containing
+ * `event` to a named channel.
  */
 class Decorator(target: ActorRef) extends Actor { this: Emitter with Eventsourced =>
   import Decorator._

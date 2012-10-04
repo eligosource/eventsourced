@@ -21,7 +21,8 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 /**
- * Event [[org.eligosource.eventsourced.core.Message]] `receiver` extension.
+ * Pimps an actor ref with special-purpose event [[org.eligosource.eventsourced.core.Message]]
+ * sending methods.
  *
  * @param receiver receiver actor reference.
  */
@@ -35,13 +36,13 @@ class TargetRef(receiver: ActorRef) {
    * Actors that are modified with [[org.eligosource.eventsourced.core.Receiver]]
    * or any of its sub-traits can obtain the `sender` from the current event message
    * via the `Receiver.initiator` method. Sending a message to `initiator` (via
-   * `initiator ! msg`) will complete the returned future.
+   * `initiator ! msg`) will complete the returned future. In contrast, when using
+   * Akka's `?` (ask) to send an event message, the future will be completed with an
+   * `Ack` which is a reply from [[org.eligosource.eventsourced.core.Receiver]] to
+   * `Actor.sender`.
    *
    * Completion of the future also works when a receiver further sends the received
    * `message` to other receivers, either directly or via channels.
-   *
-   * In contrast, when using Akka's `?` (ask) to send an event message, the future
-   * will be completed with an `Ack` once the message has been written to the journal.
    *
    * @param message event message.
    * @param timeout reply timeout.

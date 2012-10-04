@@ -22,8 +22,9 @@ import akka.actor.ActorRef
  * by the library and can have any type.
  *
  * Messages sent to an [[org.eligosource.eventsourced.core.Eventsourced]] processor
- * are called ''input'' messages. Processors process input messages by deriving zero
- * or more ''output'' messages from it that the processor ''emits'' to a channel. When
+ * are called ''input'' messages. Processors process input messages (e.g. by modifying
+ * internal state) and optionally ''emit'' zero or more ''output'' messages to one or
+ * more channels (where output messages are ''derived'' from an input message). When
  * a channel successfully delivered (or stored, in case of a reliable channel) the
  * emitted output message(s), an acknowledgement (with a reference to the input message)
  * is written to the journal. During a replay (recovery), output messages that are derived

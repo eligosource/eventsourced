@@ -18,15 +18,16 @@ package org.eligosource.eventsourced.core
 import akka.actor.Actor
 
 /**
- * Makes receivers idempotent based on message sequence number. Experimental.
+ * Makes event [[org.eligosource.eventsourced.core.Message]] receivers idempotent
+ * based on message sequence number. Experimental.
  */
-trait Idempotent extends Actor { this: Receiver =>
+trait Idempotent extends Actor {
   var lastSequenceNr = 0L
 
   abstract override def receive = {
     case msg: Message => if (msg.sequenceNr > lastSequenceNr) {
       lastSequenceNr = msg.sequenceNr; super.receive(msg)
-    } else { ack() }
+    } else { sender ! Ack }
     case msg => {
       super.receive(msg)
     }

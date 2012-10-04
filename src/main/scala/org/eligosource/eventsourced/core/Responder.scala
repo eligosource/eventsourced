@@ -18,8 +18,9 @@ package org.eligosource.eventsourced.core
 import akka.actor._
 
 /**
- * Stackable modification for actors that receive event [[org.eligosource.eventsourced.core.Message]]s
- * and generate response [[org.eligosource.eventsourced.core.Message]]s. Example:
+ * Stackable modification for ''conveniently'' responding to received event
+ * [[org.eligosource.eventsourced.core.Message]]s. The response target is the
+ * current `sender` (not the `Receiver.initiator`). Example:
  *
  * {{{
  *   val myResponder = system.actorOf(Props(new MyResponder with Responder))
@@ -29,13 +30,10 @@ import akka.actor._
  *   class MyResponder extends Actor { this: Responder =>
  *     def receive = {
  *       case "foo event" => {
- *         assert(message.sequenceNr > 0L)
- *         // ...
- *
- *         // create a responder object for the current event message
+ *         // create a responder object based on the current event message
  *         val rsp = responder
  *
- *         // send a response message by updating the current message
+ *         // send a response message derived from the current event message
  *         rsp.sendEvent("bar event")
  *       }
  *     }
@@ -47,7 +45,7 @@ import akka.actor._
  * message any time later (such as in another thread). The object created by `responder`
  * captures the current event `message` and `sender`.
  *
- * Concrete `Responder`s are usually destinations of channels with a reply destination.
+ * Concrete `Responder`s are usually destinations of channels that have a reply destination.
  * When using `Responder` for destinations of channels with no reply destination, they
  * must explicitly acknowledge a message receipt by calling `ack()` (or `nak()` for
  * responding with `Status.Failure`). This way, applications can implement application-
