@@ -50,6 +50,13 @@ trait Eventsourced extends TargetBehavior {
   private var _id: Int = _
 
   /**
+   * Overrides to `false` to avoid that an existing [[org.eligosource.eventsourced.core.Receiver]]
+   * modification additionally sends an `Ack` to the current `sender`. This ensures that the current
+   * sender will receive `Ack`s only from the journal that is used by this trait.
+   */
+  override val autoAck = false
+
+  /**
    * Processor id. Must only be accessed from within the modified actor's
    * `receive` method.
    */

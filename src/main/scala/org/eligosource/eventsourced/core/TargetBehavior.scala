@@ -31,6 +31,11 @@ import scala.collection.immutable.Stack
 trait TargetBehavior extends Actor {
   private var behaviorStack = Stack.empty[Receive].push(super.receive)
 
+  /**
+   * Controls `Ack` replies to the current `sender`.
+   */
+  protected def autoAck: Boolean
+
   abstract override def receive = {
     case msg => invoke(msg)
   }

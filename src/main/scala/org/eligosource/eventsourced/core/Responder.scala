@@ -54,7 +54,9 @@ import akka.actor._
  */
 trait Responder extends Receiver {
 
-  /** Overrides to `false` */
+  /**
+   * Overrides to `false`.
+   */
   override val autoAck = false
 
   /**

@@ -54,7 +54,7 @@ trait Emitter extends Receiver {
   def channels: Map[String, ActorRef] = extension.channels
 
   /**
-   * Overrides to `false`
+   * Overrides to `false`.
    */
   override val autoAck = false
 

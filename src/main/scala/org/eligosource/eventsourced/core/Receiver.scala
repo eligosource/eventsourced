@@ -53,10 +53,10 @@ trait Receiver extends TargetBehavior {
   private var _message: Option[Message] = None
 
   /**
-   * If `true`, auto-acknowledges the receipt of an event [[org.eligosource.eventsourced.core.Message]].
-   * Default is `true`.
+   * If `true`, auto-acknowledges the receipt of an event [[org.eligosource.eventsourced.core.Message]]
+   * by sending an `Ack` to the current `sender`. Default is `true`.
    */
-  protected [core] val autoAck = true
+  val autoAck = true
 
   /**
    * Current event message option. `None` if the last message received by this receiver
