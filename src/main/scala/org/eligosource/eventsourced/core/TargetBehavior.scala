@@ -18,9 +18,9 @@ package akka.actor
 import scala.collection.immutable.Stack
 
 /**
- * Allows actors with a stackable [[org.eligosource.eventsourced.core.Eventsourced]] or
- * [[org.eligosource.eventsourced.core.Receiver]] modification (incl. sub-traits) to
- * change their behavior with `context.become()` and `context.unbecome()` without
+ * Allows actors with a stackable [[org.eligosource.eventsourced.core.Eventsourced]]
+ * and/or [[org.eligosource.eventsourced.core.Receiver]] modification (incl. sub-traits)
+ * to change their behavior with `context.become()` and `context.unbecome()` without
  * loosing the functionality provided by these modifications.
  *
  * @see [[org.eligosource.eventsourced.core.Eventsourced]]

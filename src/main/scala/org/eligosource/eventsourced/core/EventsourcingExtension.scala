@@ -26,7 +26,7 @@ import akka.util.Duration
  * Event-sourcing extension for Akka. Used by applications to create and register
  * [[org.eligosource.eventsourced.core.Eventsourced]] processors and event message
  * [[org.eligosource.eventsourced.core.Channel]]s and to recover them from journaled
- * event messages.
+ * event [[org.eligosource.eventsourced.core.Message]]s.
  *
  * @param system actor system this extension is associated with.
  */
@@ -38,7 +38,7 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
   private [core] val producer: ActorRef = system.actorOf(Props[Producer])
 
   /**
-   * Journal for this extension. A journal should not be shared between extensions.
+   * Journal for this extension.
    */
   def journal: ActorRef =
     journalRef.get.getOrElse(throw new IllegalStateException("no journal registered"))

@@ -23,8 +23,9 @@ package object core {
   /**
    *  - Reply from [[org.eligosource.eventsourced.core.Eventsourced]] processors to indicate
    *    the successful write of an event [[org.eligosource.eventsourced.core.Message]] to a journal.
-   *  - Reply from event [[org.eligosource.eventsourced.core.Message]] receivers to indicate
-   *    the successful receipt of an event message.
+   *  - Reply from event [[org.eligosource.eventsourced.core.Message]]
+   *    [[org.eligosource.eventsourced.core.Receiver]]s to indicate the successful receipt of an event
+   *    message.
    */
   case object Ack
 
@@ -45,7 +46,7 @@ package object core {
     new Decorator(target) with Emitter with Eventsourced
 
   /**
-   * Returns a mutlicast processor.
+   * Returns a multicast processor.
    *
    * @param targets multicast targets.
    */

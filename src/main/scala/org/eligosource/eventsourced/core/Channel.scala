@@ -33,7 +33,7 @@ import akka.util._
  *
  * During recovery, a channel prevents that replayed messages are redundantly
  * delivered to destinations but only if that channel has previously written
- * an acknowledgement for that message.
+ * an acknowledgement for that message to the journal.
  *
  * @see [[org.eligosource.eventsourced.core.DefaultChannel]]
  *      [[org.eligosource.eventsourced.core.ReliableChannel]]

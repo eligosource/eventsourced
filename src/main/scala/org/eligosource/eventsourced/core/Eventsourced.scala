@@ -20,25 +20,34 @@ import akka.actor._
 /**
  * Stackable modification for making an actor persitent via event-sourcing (or command-sourcing).
  * It writes any input [[org.eligosource.eventsourced.core.Message]] to a journal. Input messages
- * of any other type are not journaled.
+ * of any other type are not journaled. Example:
  *
- * It can be used standalone but when used in combination with [[org.eligosource.eventsourced.core.Receiver]]
+ * {{{
+ *  val system: ActorSystem = ...
+ *  val journal: ActorRef = ...
+ *  val extension = EventsourcingExtension(system, journal)
+ *
+ *  class MyActor extends Actor {
+ *    def receive = {
+ *      case msg: Message => // journaled event message
+ *      case msg          => // non-journaled message
+ *    }
+ *  }
+ *
+ *  val myActor = extension.processorOf(ProcessorProps(1, new MyActor with Eventsourced))
+ *
+ *  myActor ! Message("foo event") // message will be journaled
+ *  myActor ! "whatever"           // message will not be journaled
+ * }}}
+ *
+ * If the `Eventsourced` trait is used in combination with [[org.eligosource.eventsourced.core.Receiver]]
  * or [[org.eligosource.eventsourced.core.Emitter]], `Eventsourced` must be the last modification:
  *
  * {{{
- *   // ok
- *   val good = new Actor with Receiver with Eventsourced {
- *     def receive = {
- *       case event => // ...
- *     }
- *   }
-
- *   // won't work
- *   val bad = new Actor with Eventsourced with Receiver {
- *     def receive = {
- *       case event => // ...
- *     }
- *   }
+ *  new Actor with Receiver with Eventsourced { ... }  // ok
+ *  new Actor with Emitter with Eventsourced { ... }   // ok
+ *  new Actor with Eventsourced with Receiver { ... }  // won't work
+ *  new Actor with Eventsourced with Emitter { ... }   // won't work
  * }}}
  *
  * @see [[org.eligosource.eventsourced.core.EventsourcingExtension]]

@@ -42,6 +42,8 @@ class Multicast(targets: Seq[ActorRef]) extends Actor { this: Eventsourced =>
  * and sends them to the decorated actor. The decorated actor must reply with `Emit(channelName, event)`
  * messages to instruct the decorator to emit a [[org.eligosource.eventsourced.core.Message]] containing
  * `event` to a named channel.
+ *
+ * Experimental.
  */
 class Decorator(target: ActorRef) extends Actor { this: Emitter with Eventsourced =>
   import Decorator._
@@ -77,4 +79,3 @@ private [core] class ResponseSequencer extends Actor { this: Sequencer =>
     case (emit: MessageEmitter, event)        => emit.emitEvent(event)
   }
 }
-

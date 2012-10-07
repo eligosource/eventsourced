@@ -19,7 +19,9 @@ import akka.actor.Actor
 
 /**
  * Makes event [[org.eligosource.eventsourced.core.Message]] receivers idempotent
- * based on message sequence number. Experimental.
+ * based on message sequence number.
+ *
+ * Experimental.
  */
 trait Idempotent extends Actor {
   var lastSequenceNr = 0L

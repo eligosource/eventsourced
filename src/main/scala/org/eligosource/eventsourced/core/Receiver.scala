@@ -46,15 +46,15 @@ import akka.actor._
  * and can be obtained via the `message` or `messageOption` method. The `receive`
  * method of the concrete receiver is called with the message's `event` only. The
  * receipt of an event message is automatically acknowledged by `Receiver`. The
- * receipt is not acknowledged if the concrete receiver throws an exception. Often,
- * channel destinations are modified with `Receiver`.
+ * receipt is not acknowledged if the concrete receiver throws an exception.
  */
 trait Receiver extends TargetBehavior {
   private var _message: Option[Message] = None
 
   /**
    * If `true`, auto-acknowledges the receipt of an event [[org.eligosource.eventsourced.core.Message]]
-   * by sending an `Ack` to the current `sender`. Default is `true`.
+   * by sending an `Ack` to the current `sender`. Set to `true` by this trait but overridden to `false`
+   * by sub-traits or the stackable [[org.eligosource.eventsourced.core.Eventsourced]] trait.
    */
   val autoAck = true
 
