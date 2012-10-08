@@ -19,8 +19,6 @@ import java.io.File
 import java.util.concurrent._
 
 import akka.actor._
-import akka.dispatch.Await
-import akka.pattern.ask
 import akka.util.duration._
 import akka.util.Timeout
 
@@ -30,14 +28,6 @@ import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.core._
-
-object JournalSpec {
-  class CommandTarget(queue: LinkedBlockingQueue[Message]) extends Actor {
-    def receive = {
-      case msg: Message => queue.put(msg)
-    }
-  }
-}
 
 abstract class JournalSpec extends WordSpec with MustMatchers {
   import JournalSpec._
@@ -140,6 +130,14 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       dequeue(replayQueue) { _ must be(Message("test-1a", sequenceNr = 1)) }
       dequeue(replayQueue) { _ must be(Message("test-1b", sequenceNr = 2)) }
       dequeue(replayQueue) { _ must be(Message("test-3b", sequenceNr = 6)) }
+    }
+  }
+}
+
+object JournalSpec {
+  class CommandTarget(queue: LinkedBlockingQueue[Message]) extends Actor {
+    def receive = {
+      case msg: Message => queue.put(msg)
     }
   }
 }

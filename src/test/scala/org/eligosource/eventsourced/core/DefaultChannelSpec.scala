@@ -15,88 +15,14 @@
  */
 package org.eligosource.eventsourced.core
 
-import java.io.File
-import java.util.concurrent.{TimeUnit, LinkedBlockingQueue}
+import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor._
-import akka.util.duration._
 
-import org.apache.commons.io.FileUtils
+import org.eligosource.eventsourced.core.Channel._
+import org.eligosource.eventsourced.core.DefaultChannelSpec._
 
-import org.scalatest.fixture._
-import org.scalatest.matchers.MustMatchers
-
-import org.eligosource.eventsourced.journal.LeveldbJournal
-
-class DefaultChannelSpec extends WordSpec with MustMatchers {
-  import Channel._
-
-  type FixtureParam = Fixture
-
-  class Fixture {
-    implicit val system = ActorSystem("test")
-
-    val dl = system.deadLetters
-
-    val destinationQueue = new LinkedBlockingQueue[Message]
-    val successDestination = system.actorOf(Props(new TestDestination(destinationQueue) with Responder))
-    def failureDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(destinationQueue, failAtEvent) with Responder))
-
-    val replyDestinationQueue = new LinkedBlockingQueue[Message]
-    val successReplyDestination = system.actorOf(Props(new TestDestination(replyDestinationQueue) with Responder))
-    def failureReplyDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(replyDestinationQueue, failAtEvent) with Responder))
-
-    val writeAckListenerQueue = new LinkedBlockingQueue[WriteAck]
-    val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
-
-    val journalDir = new File("target/journal")
-    val journal = LeveldbJournal(journalDir)
-    val channel = system.actorOf(Props(new DefaultChannel(1, journal)))
-
-    channel ! SetDestination(successDestination)
-
-    def message(event: Any, sequenceNr: Long = 0L, ack: Boolean = true) =
-      Message(event, sequenceNr = sequenceNr, ack = ack, processorId = 1)
-
-    def dequeue[A](queue: LinkedBlockingQueue[A], timeout: Long = 5000): A = {
-      queue.poll(timeout, TimeUnit.MILLISECONDS)
-    }
-
-    def shutdown() {
-      system.shutdown()
-      system.awaitTermination(5 seconds)
-      FileUtils.deleteDirectory(journalDir)
-    }
-
-    class TestDestination(blockingQueue: LinkedBlockingQueue[Message]) extends Actor { this: Responder =>
-      def receive = {
-        case event => { blockingQueue.put(message); responder.sendEvent("re: %s" format event) }
-      }
-    }
-
-    class FailureDestination(queue: LinkedBlockingQueue[Message], failAtEvent: Any) extends Actor { this: Responder =>
-      def receive = {
-        case event => if (event == failAtEvent) {
-          responder.sendFailure(new Exception("test"))
-        } else {
-          queue.put(message)
-          responder.send(msg => msg)
-        }
-      }
-    }
-
-    class WriteAckListener(blockingQueue: LinkedBlockingQueue[WriteAck]) extends Actor {
-      def receive = {
-        case cmd: WriteAck => blockingQueue.put(cmd)
-      }
-    }
-  }
-
-  def withFixture(test: OneArgTest) {
-    val fixture = new Fixture
-    try { test(fixture) } finally { fixture.shutdown() }
-  }
-
+class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
   "A default channel" must {
     "buffer messages before initial delivery" in { fixture =>
       import fixture._
@@ -218,6 +144,50 @@ class DefaultChannelSpec extends WordSpec with MustMatchers {
 
       dequeue(replyDestinationQueue) must be (message("re: b", 2))
       dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 2))
+    }
+  }
+}
+
+object DefaultChannelSpec {
+  class Fixture extends EventsourcingFixture[Message] {
+    val destinationQueue = queue
+    val successDestination = system.actorOf(Props(new TestDestination(destinationQueue) with Responder))
+    def failureDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(destinationQueue, failAtEvent) with Responder))
+
+    val replyDestinationQueue = new LinkedBlockingQueue[Message]
+    val successReplyDestination = system.actorOf(Props(new TestDestination(replyDestinationQueue) with Responder))
+    def failureReplyDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(replyDestinationQueue, failAtEvent) with Responder))
+
+    val writeAckListenerQueue = new LinkedBlockingQueue[WriteAck]
+    val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
+    val channel = system.actorOf(Props(new DefaultChannel(1, journal)))
+
+    channel ! SetDestination(successDestination)
+
+    def message(event: Any, sequenceNr: Long = 0L, ack: Boolean = true) =
+      Message(event, sequenceNr = sequenceNr, ack = ack, processorId = 1)
+  }
+
+  class TestDestination(queue: java.util.Queue[Message]) extends Actor { this: Responder =>
+    def receive = {
+      case event => { queue.add(message); responder.sendEvent("re: %s" format event) }
+    }
+  }
+
+  class FailureDestination(queue: java.util.Queue[Message], failAtEvent: Any) extends Actor { this: Responder =>
+    def receive = {
+      case event => if (event == failAtEvent) {
+        responder.sendFailure(new Exception("test"))
+      } else {
+        queue.add(message)
+        responder.send(msg => msg)
+      }
+    }
+  }
+
+  class WriteAckListener(queue: java.util.Queue[WriteAck]) extends Actor {
+    def receive = {
+      case cmd: WriteAck => queue.add(cmd)
     }
   }
 }

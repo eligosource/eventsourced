@@ -15,103 +15,18 @@
  */
 package org.eligosource.eventsourced.core
 
-import java.io.File
-import java.util.concurrent.{TimeUnit, LinkedBlockingQueue}
+import java.util.Queue
+import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor._
 import akka.dispatch._
 import akka.pattern.ask
 import akka.util.duration._
-import akka.util.Timeout
 
-import org.apache.commons.io.FileUtils
+import org.eligosource.eventsourced.core.Channel._
+import org.eligosource.eventsourced.core.ReliableChannelSpec._
 
-import org.scalatest.fixture._
-import org.scalatest.matchers.MustMatchers
-
-import org.eligosource.eventsourced.journal.LeveldbJournal
-
-class ReliableChannelSpec extends WordSpec with MustMatchers {
-  import Channel._
-
-  type FixtureParam = Fixture
-
-  class Fixture {
-    implicit val system = ActorSystem("test")
-    implicit val timeout = Timeout(5 seconds)
-
-    val destinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
-    val replyDestinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
-
-    val successDestination =
-      system.actorOf(Props(new TestDestination(destinationQueue, None) with Responder))
-    def failureDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new TestDestination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
-
-    val successReplyDestination =
-      system.actorOf(Props(new TestDestination(replyDestinationQueue, None) with Responder))
-    def failureReplyDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
-      system.actorOf(Props(new TestDestination(replyDestinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
-
-    val writeMsgListenerQueue = new LinkedBlockingQueue[WriteOutMsg]
-    val writeMsgListener = system.actorOf(Props(new WriteMsgListener(writeMsgListenerQueue)))
-
-    val journalDir = new File("target/journal")
-    val journal = LeveldbJournal(journalDir)
-
-    val channelConf = new RedeliveryPolicy(10 milliseconds, 10 milliseconds, 3)
-    val channel = system.actorOf(Props(new ReliableChannel(1, journal, channelConf)))
-
-    def writeOutMsg(msg: Message) {
-      Await.result(journal ? WriteOutMsg(1, msg, 1, SkipAck, system.deadLetters, false), timeout.duration)
-    }
-
-    def dequeue[A](queue: LinkedBlockingQueue[A], timeout: Long = 5000): A = {
-      queue.poll(timeout, TimeUnit.MILLISECONDS)
-    }
-
-    def shutdown() {
-      system.shutdown()
-      system.awaitTermination(5 seconds)
-      FileUtils.deleteDirectory(journalDir)
-    }
-
-    class TestDestination(
-      // for interaction with test code
-      blockingQueue: LinkedBlockingQueue[Either[Message, Message]],
-      // event where first failure should occur
-      failAtEvent: Option[Any],
-      // if failing messages should be added to queue
-      enqueueFailures: Boolean = false,
-      // number of messages that will fail
-      var failureCount: Int = 0) extends Actor { this: Responder =>
-
-      def receive = {
-        case event => {
-          if (failAtEvent.map(_ == event).getOrElse(false) && failureCount > 0) {
-            failureCount = failureCount - 1
-            responder.sendFailure(new Exception("test"))
-            if (enqueueFailures) blockingQueue.put(Left(message))
-          } else {
-            blockingQueue.put(Right(message))
-            responder.sendEvent("re: %s" format event)
-          }
-        }
-      }
-    }
-
-    class WriteMsgListener(blockingQueue: LinkedBlockingQueue[WriteOutMsg]) extends Actor {
-      def receive = {
-        case cmd: WriteOutMsg => blockingQueue.put(cmd)
-      }
-    }
-  }
-
-  def withFixture(test: OneArgTest) {
-    val fixture = new Fixture
-    try { test(fixture) } finally { fixture.shutdown() }
-  }
-
+class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
   "A reliable output channel" when {
     "just created" must {
       "redeliver stored output messaged during recovery" in { fixture =>
@@ -227,6 +142,56 @@ class ReliableChannelSpec extends WordSpec with MustMatchers {
       dequeue(writeMsgListenerQueue).ackSequenceNr must be (SkipAck)
       dequeue(writeMsgListenerQueue).ackSequenceNr must be (SkipAck)
       dequeue(writeMsgListenerQueue).ackSequenceNr must be (3)
+    }
+  }
+}
+
+object ReliableChannelSpec {
+  class Fixture extends EventsourcingFixture[Either[Message, Message]] {
+    val destinationQueue = queue
+    val replyDestinationQueue = new LinkedBlockingQueue[Either[Message, Message]]
+
+    val successDestination =
+      system.actorOf(Props(new TestDestination(destinationQueue, None) with Responder))
+    def failureDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
+      system.actorOf(Props(new TestDestination(destinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
+
+    val successReplyDestination =
+      system.actorOf(Props(new TestDestination(replyDestinationQueue, None) with Responder))
+    def failureReplyDestination(failAtEvent: Any, enqueueFailures: Boolean, failureCount: Int) =
+      system.actorOf(Props(new TestDestination(replyDestinationQueue, Some(failAtEvent), enqueueFailures, failureCount) with Responder))
+
+    val writeMsgListenerQueue = new LinkedBlockingQueue[WriteOutMsg]
+    val writeMsgListener = system.actorOf(Props(new WriteMsgListener(writeMsgListenerQueue)))
+
+    val policy = new RedeliveryPolicy(10 milliseconds, 10 milliseconds, 3)
+    val channel = system.actorOf(Props(new ReliableChannel(1, journal, policy)))
+
+    def writeOutMsg(msg: Message) {
+      Await.result(journal ? WriteOutMsg(1, msg, 1, SkipAck, system.deadLetters, false), timeout.duration)
+    }
+  }
+
+  class TestDestination(queue: Queue[Either[Message, Message]], failAtEvent: Option[Any], enqueueFailures: Boolean = false,
+    var failureCount: Int = 0) extends Actor { this: Responder =>
+
+    def receive = {
+      case event => {
+        if (failAtEvent.map(_ == event).getOrElse(false) && failureCount > 0) {
+          failureCount = failureCount - 1
+          responder.sendFailure(new Exception("test"))
+          if (enqueueFailures) queue.add(Left(message))
+        } else {
+          queue.add(Right(message))
+          responder.sendEvent("re: %s" format event)
+        }
+      }
+    }
+  }
+
+  class WriteMsgListener(queue: Queue[WriteOutMsg]) extends Actor {
+    def receive = {
+      case cmd: WriteOutMsg => queue.add(cmd)
     }
   }
 }

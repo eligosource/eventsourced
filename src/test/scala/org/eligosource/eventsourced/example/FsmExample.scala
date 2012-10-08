@@ -15,67 +15,19 @@
  */
 package org.eligosource.eventsourced.example
 
-import java.io.File
-import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-
 import akka.actor._
-import akka.util.duration._
-import akka.util.Timeout
-
-import org.apache.commons.io.FileUtils
-
-import org.scalatest.fixture._
-import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Decorator.Emit
-import org.eligosource.eventsourced.journal.LeveldbJournal
 
-class FsmExample extends WordSpec with MustMatchers {
-  type FixtureParam = Fixture
+import FsmExample._
 
-  class Fixture {
-    implicit val system = ActorSystem("test")
-    implicit val timeout = Timeout(5 seconds)
-
-    val journalDir = new File("target/journal")
-    val journal = LeveldbJournal(journalDir)
-
-    val queue = new LinkedBlockingQueue[Any]
-    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent))
-
-    val extension = EventsourcingExtension(system, journal)
-
-    def configureExtension(): ActorRef = {
-      extension.channelOf(DefaultChannelProps(1, destination).withName("dest"))
-      extension.processorOf(ProcessorProps(1, decorator(system.actorOf(Props(new Door)))))
-    }
-
-    def dequeue(timeout: Long = 5000): Any = {
-      queue.poll(timeout, TimeUnit.MILLISECONDS)
-    }
-
-    def shutdown() {
-      system.shutdown()
-      system.awaitTermination(5 seconds)
-      FileUtils.deleteDirectory(journalDir)
-    }
-  }
-
-  def withFixture(test: OneArgTest) {
-    val fixture = new Fixture
-    try {
-      test(fixture)
-    } finally {
-      fixture.shutdown()
-    }
-  }
-
+class FsmExample extends EventsourcingSpec[Fixture] {
   "A decorated FSM actor" must {
     "recover its state from stored event messages" in { fixture =>
       import fixture._
 
-      val door = configureExtension()
+      val door = configure()
       extension.recover()
 
       door ! Message("open")
@@ -86,7 +38,7 @@ class FsmExample extends WordSpec with MustMatchers {
       dequeue() must be (DoorMoved(2))
       dequeue() must be (DoorNotMoved("cannot close door in state Closed"))
 
-      val recoveredDoor = configureExtension()
+      val recoveredDoor = configure()
       extension.recover()
 
       recoveredDoor ! Message("open")
@@ -96,6 +48,25 @@ class FsmExample extends WordSpec with MustMatchers {
       dequeue() must be (DoorMoved(4))
     }
   }
+}
+
+object FsmExample {
+  class Fixture extends EventsourcingFixture[Any] {
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent))
+
+    def configure(): ActorRef = {
+      extension.channelOf(DefaultChannelProps(1, destination).withName("dest"))
+      extension.processorOf(ProcessorProps(1, decorator(system.actorOf(Props(new Door)))))
+    }
+  }
+
+  sealed trait DoorState
+
+  case object Open extends DoorState
+  case object Closed extends DoorState
+
+  case class DoorMoved(times: Int)
+  case class DoorNotMoved(reason: String)
 
   class Door extends Actor with FSM[DoorState, Int] {
     startWith(Closed, 0)
@@ -115,17 +86,9 @@ class FsmExample extends WordSpec with MustMatchers {
     }
   }
 
-  class Destination(queue: LinkedBlockingQueue[Any]) extends Actor {
+  class Destination(queue: java.util.Queue[Any]) extends Actor {
     def receive = {
-      case event => queue.put(event)
+      case event => queue.add(event)
     }
   }
 }
-
-sealed trait DoorState
-
-case object Open extends DoorState
-case object Closed extends DoorState
-
-case class DoorMoved(times: Int)
-case class DoorNotMoved(reason: String)
