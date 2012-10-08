@@ -72,7 +72,7 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
 
 object AggregatorExample {
   class Fixture extends EventsourcingFixture[Message] {
-    val destination = system.actorOf(Props(new Destination(queue) with Receiver))
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent))
 
     def configure(): ActorRef = {
       val processor = extension.processorOf(ProcessorProps(1, new Aggregator with Emitter with Eventsourced))
