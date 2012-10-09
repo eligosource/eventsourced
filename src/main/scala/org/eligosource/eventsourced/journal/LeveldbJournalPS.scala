@@ -74,6 +74,9 @@ private [eventsourced] class LeveldbJournalPS(dir: File) extends Actor {
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
+    case lt: LoopThrough => {
+      lt.target.!(lt)(sender)
+    }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
       if (sender != context.system.deadLetters) sender ! Ack

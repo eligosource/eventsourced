@@ -17,14 +17,13 @@ package org.eligosource.eventsourced.example
 
 import akka.actor._
 import akka.dispatch._
-import akka.pattern.ask
 import akka.util.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
-object OrderExample3 extends App {
+object OrderExample extends App {
   implicit val system = ActorSystem("example")
   implicit val timeout = Timeout(5 seconds)
 
@@ -60,6 +59,31 @@ object OrderExample3 extends App {
   // then shutdown
   system.shutdown()
 
+  // ------------------------------------
+  // domain object
+  // ------------------------------------
+
+  case class Order(id: Int, details: String, validated: Boolean, creditCardNumber: String)
+
+  object Order {
+    def apply(details: String): Order = apply(details, "")
+    def apply(details: String, creditCardNumber: String): Order = new Order(-1, details, false, creditCardNumber)
+  }
+
+  // ------------------------------------
+  // domain events
+  // ------------------------------------
+
+  case class OrderSubmitted(order: Order)
+  case class OrderAccepted(order: Order)
+
+  case class CreditCardValidationRequested(order: Order)
+  case class CreditCardValidated(orderId: Int)
+
+  // ------------------------------------
+  // event-sourced order processor
+  // ------------------------------------
+
   class OrderProcessor extends Actor { this: Emitter =>
     var orders = Map.empty[Int, Order] // processor state
 
@@ -80,6 +104,10 @@ object OrderExample3 extends App {
       }
     }
   }
+
+  // ------------------------------------
+  //  channel destinations
+  // ------------------------------------
 
   trait CreditCardValidator extends Actor { this: Responder =>
     def receive = {

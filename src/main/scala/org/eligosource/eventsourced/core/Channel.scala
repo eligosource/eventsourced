@@ -90,8 +90,9 @@ private [core] object Channel {
 class DefaultChannel(val id: Int, val journal: ActorRef) extends Channel {
   import Channel._
 
-  assert(id > 0)
+  require(id > 0, "channel id must be a positive integer")
 
+  private val successfulAck = Promise.successful(Ack)
   private var retain = true
   private var buffer = List.empty[Message]
 
@@ -125,7 +126,7 @@ class DefaultChannel(val id: Int, val journal: ActorRef) extends Channel {
   }
 
   private def reply(msg: Any): Future[Any] =
-    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(Promise.successful(Ack))
+    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(successfulAck)
 }
 
 /**
@@ -176,7 +177,7 @@ object RedeliveryPolicy {
 class ReliableChannel(val id: Int, journal: ActorRef, policy: RedeliveryPolicy) extends Channel {
   import Channel._
 
-  assert(id > 0)
+  require(id > 0, "channel id must be a positive integer")
 
   private var buffer: Option[ActorRef] = None
 
@@ -218,13 +219,13 @@ private [core] object ReliableChannel {
   case object FeedMe
 }
 
-private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], conf: RedeliveryPolicy) extends Actor {
+private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], policy: RedeliveryPolicy) extends Actor {
   import ReliableChannel._
 
   var rocSenderQueue = Queue.empty[Message]
   var rocSenderBusy = false //
 
-  val rocSender = context.actorOf(Props(new ReliableChannelSender(channelId, journal, destination, replyDestination, conf)))
+  val rocSender = context.actorOf(Props(new ReliableChannelSender(channelId, journal, destination, replyDestination, policy)))
 
   def receive = {
     case msg: Message => {
@@ -245,12 +246,13 @@ private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, de
   }
 }
 
-private [core] class ReliableChannelSender(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], conf: RedeliveryPolicy) extends Actor {
+private [core] class ReliableChannelSender(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], policy: RedeliveryPolicy) extends Actor {
   import Channel._
   import ReliableChannel._
 
   implicit val executionContext = context.dispatcher
 
+  val successfulAck = Promise.successful(Ack)
   var sequencer: Option[ActorRef] = None
   var queue = Queue.empty[Message]
 
@@ -283,7 +285,7 @@ private [core] class ReliableChannelSender(channelId: Int, journal: ActorRef, de
       }
 
       future onFailure {
-        case e => ctx.system.scheduler.scheduleOnce(conf.retryDelay, self, Retry(msg))
+        case e => ctx.system.scheduler.scheduleOnce(policy.retryDelay, self, Retry(msg))
       }
     } else {
       sequencer.foreach(_ ! FeedMe)
@@ -292,7 +294,7 @@ private [core] class ReliableChannelSender(channelId: Int, journal: ActorRef, de
       // undo dequeue
       queue = (msg +: queue)
       // and try again ...
-      if (retries < conf.retryMax) self ! Next(retries + 1) else sequencer.foreach(s => context.stop(s))
+      if (retries < policy.retryMax) self ! Next(retries + 1) else sequencer.foreach(s => context.stop(s))
     }
   }
 
@@ -302,5 +304,5 @@ private [core] class ReliableChannelSender(channelId: Int, journal: ActorRef, de
   } yield r2
 
   def reply(msg: Any): Future[Any] =
-    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(Promise.successful(Ack))
+    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(successfulAck)
 }

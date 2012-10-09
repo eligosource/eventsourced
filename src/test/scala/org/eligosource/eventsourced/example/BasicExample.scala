@@ -25,7 +25,7 @@ import akka.util.Timeout
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
-object ExtensionDemo extends App {
+object BasicExample extends App {
   implicit val system = ActorSystem("example")
   implicit val timeout = Timeout(5 seconds)
 

@@ -34,6 +34,7 @@ private [eventsourced] case class ReplayOutMsgs(channelId: Int, fromSequenceNr: 
 private [eventsourced] case class BatchReplayInMsgs(replays: Seq[ReplayInMsgs])
 private [eventsourced] case class BatchDeliverOutMsgs(channels: Seq[ActorRef])
 
+private [eventsourced] case class LoopThrough(msg: Any, target: ActorRef)
 private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
 
 private [eventsourced] case object Deliver

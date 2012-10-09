@@ -78,11 +78,17 @@ trait Eventsourced extends TargetBehavior {
     case msg: Message if (sender == journal) => {
       super.receive(msg.copy(processorId = id))
     }
-    case msg: Message /* received from channel or any other sender */ => {
+    case msg: Message => {
       journal forward WriteInMsg(id, msg, self)
     }
-    case msg /* any other message type bypasses journaling */ => {
+    case LoopThrough(msg, _) => {
       super.receive(msg)
+    }
+    case msg => {
+      // won't be written to journal but must be looped through
+      // journal actor in order to to preserve order of event
+      // messages and non-event messages sent to this actor
+      journal forward LoopThrough(msg, self)
     }
   }
 }

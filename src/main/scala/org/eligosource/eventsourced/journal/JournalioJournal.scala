@@ -98,6 +98,9 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
       if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
+    case lt: LoopThrough => {
+      lt.target.!(lt)(sender)
+    }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
       if (sender != context.system.deadLetters) sender ! Ack
