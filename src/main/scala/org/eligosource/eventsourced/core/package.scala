@@ -15,41 +15,39 @@
  */
 package org.eligosource.eventsourced
 
-import akka.actor.ActorRef
+import akka.actor._
 
 package object core {
   private [eventsourced] val SkipAck: Long = -1L
-
-  /**
-   *  - Reply from [[org.eligosource.eventsourced.core.Eventsourced]] processors to indicate
-   *    the successful write of an event [[org.eligosource.eventsourced.core.Message]] to a journal.
-   *  - Reply from event [[org.eligosource.eventsourced.core.Message]]
-   *    [[org.eligosource.eventsourced.core.Receiver]]s to indicate the successful receipt of an event
-   *    message.
-   */
-  case object Ack
-
-  implicit def actorRef2TargetRef(actorRef: ActorRef) = {
-    new TargetRef(actorRef)
-  }
 
   // ------------------------------------------------------------
   //  Factories for special-purpose processors
   // ------------------------------------------------------------
 
   /**
-   * Returns a decorating processor.
+   * Returns a [[org.eligosource.eventsourced.core.Multicast]] processor with a
+   * single `target`. Useful in situations are actors cannot be modified with
+   * the stackable [[org.eligosource.eventsourced.core.Eventsourced]] trait
+   * e.g. because the actor's `receive` method is declared `final`.
    *
-   * @param target decorated target.
+   * @param processorId processor id.
+   * @param target single multicast target.
+   * @param transformer function applied to received event
+   *        [[org.eligosource.eventsourced.core.Message]]s before they are forwarded
+   *        to `target`.
    */
-  def decorator(target: ActorRef): Decorator with Eventsourced =
-    new Decorator(target) with Emitter with Eventsourced
+  def decorator(processorId: Int, target: ActorRef, transformer: Message => Any = identity): Actor with Eventsourced =
+    multicast(processorId, List(target), transformer)
 
   /**
-   * Returns a multicast processor.
+   * Returns a [[org.eligosource.eventsourced.core.Multicast]] processor.
    *
+   * @param processorId processor id.
    * @param targets multicast targets.
+   * @param transformer function applied to received event
+   *        [[org.eligosource.eventsourced.core.Message]]s before they are forwarded
+   *        to `targets`.
    */
-  def multicast(targets: Seq[ActorRef]): Multicast with Eventsourced =
-    new Multicast(targets) with Eventsourced
+  def multicast(processorId: Int, targets: Seq[ActorRef], transformer: Message => Any = identity): Actor with Eventsourced =
+    new Multicast(targets, transformer) with Eventsourced { val id = processorId }
 }

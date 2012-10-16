@@ -18,47 +18,65 @@ package org.eligosource.eventsourced.core
 import akka.actor.ActorRef
 
 /**
- * A message to communicate application events. Application events are not interpreted
- * by the library and can have any type.
+ * A message for communicating application events. Application events are not interpreted
+ * by the [[https://github.com/eligosource/eventsourced eventsourced library]] and can have
+ * any type. Since the library doesn't make any assumptions about the structure and semantics
+ * of `event`, applications may also choose to send ''commands'' with [[org.eligosource.eventsourced.core.Message]]s.
+ * In other words, the library can be used for both, event-sourcing and command-sourcing.
  *
  * Messages sent to an [[org.eligosource.eventsourced.core.Eventsourced]] processor
- * are called ''input'' messages. Processors process input messages (e.g. by modifying
- * internal state) and ''emit'' zero or more ''output'' messages to one or
- * more channels (where output messages are ''derived'' from an input message). When
- * a channel successfully delivered (or stored, in case of a reliable channel) the
- * emitted output message(s), an acknowledgement (with a reference to the input message)
- * is written to the journal. During a replay (recovery), output messages that are derived
- * from already acknowledged input messages are ignored by channels, avoiding unnecessary
- * re-deliveries to channel destinations.
- *
- * Since the [[https://github.com/eligosource/eventsourced eventsourced library]] doesn't
- * make any assumptions about the structure and semantics of `event`, applications may also
- * choose to send ''commands'' with [[org.eligosource.eventsourced.core.Message]]s. In other
- * words, the library can be used for both, event-sourcing and command-sourcing.
+ * are called ''input'' messages. Processors process input messages and optionally
+ * ''emit'' (or send) ''output'' messages to one or more destinations, usually via
+ * [[org.eligosource.eventsourced.core.Channel]]s. Output messages should be derived
+ * from input messages using the `copy(...)` method. Processors may also reply to
+ * initial senders using the actor's current `sender` reference.
  *
  * @param event Application event (or command).
- * @param sender Optional, application-defined sender reference that can be used
- *        by event processors to send responses to initial event message senders.
  * @param senderMessageId Optional, sender-defined message id that allows receivers
  *        to detect duplicates (which may occur during recovery or fail-over).
- * @param sequenceNr Sequence number which is generated when messages are written
- *        to a journal. Can also be used for detecting duplicates, in special cases.
- * @param processorId id of the event processor that stored (and emitted) this message
- *        The processor id is given by `Eventsourced.id`.
- * @param acks List of channel ids that have acknowledged message delivery (or storage).
- *        This sequence is only non-empty during recovery (i.e. message replay). Usually
- *        not used by applications.
- * @param ack Whether or not a channel should write an acknowledgement to the journal.
- *        Used by event processors to emit a series of messages (derived from a single
- *        input message) where only for the last emitted message an acknowledgement
- *        should be written.
+ * @param sequenceNr Sequence number that is generated when messages are written
+ *        to the journal. Can also be used for detecting duplicates, in special cases.
+ * @param processorId Id of the event processor that stored (and emitted) this message.
+ * @param ack Whether or not an ''acknowledgement'' should be written to the journal during
+ *        (or after) delivery of this message by a [[org.eligosource.eventsourced.core.Channel]].
+ *        Used by event processors to indicate a series of output messages (that are derived
+ *        from a single input message). In this case, output messages 1 to n-1 should have set
+ *        `ack` to `false` and only output message n should have set `ack` to `true` (default).
+ *        If an acknowledgement has been written for a series, all messages of that series will
+ *        be ignored by the corresponding channel during a replay, otherwise all of them will
+ *        be delivered again. Refer to [[org.eligosource.eventsourced.core.DefaultChannel]]
+ *        and [[org.eligosource.eventsourced.core.ReliableChannel]] for details when they
+ *        write acknowledgements.
  */
 case class Message(
   event: Any,
-  sender: Option[ActorRef] = None,
   senderMessageId: Option[String] = None,
   sequenceNr: Long = 0L,
   processorId: Int = 0,
   acks: Seq[Int] = Nil,
-  ack: Boolean = true
-)
+  ack: Boolean = true,
+  posConfirmationTarget: ActorRef = null,
+  posConfirmationMessage: Any = null,
+  negConfirmationTarget: ActorRef = null,
+  negConfirmationMessage: Any = null) {
+
+  /**
+   * Should be called by [[org.eligosource.eventsourced.core.Channel]] destinations to
+   * (positively or negatively) confirm the receipt of this event message. Destinations
+   * may also delegate this call other actors or threads.
+   *
+   * @param pos `true` for a positive receipt confirmation, `false` for a negative one.
+   */
+  def confirm(pos: Boolean = true) {
+    if (pos) confirmPos() else confirmNeg()
+  }
+
+  private def confirmPos() = if (posConfirmationTarget ne null) posConfirmationTarget ! posConfirmationMessage
+  private def confirmNeg() = if (negConfirmationTarget ne null) negConfirmationTarget ! negConfirmationMessage
+
+  private [eventsourced] def clearConfirmationSettings = copy(
+    posConfirmationTarget = null,
+    posConfirmationMessage = null,
+    negConfirmationTarget = null,
+    negConfirmationMessage = null)
+}

@@ -18,9 +18,9 @@ package org.eligosource.eventsourced.core
 import akka.actor._
 
 /**
- * Stackable modification for extracting `event` from received event
- * [[org.eligosource.eventsourced.core.Message]]s and calling the modified
- * actor's `receive` method with that event. Example:
+ * Stackable modification for actors to extract the `event` from a received
+ * event [[org.eligosource.eventsourced.core.Message]] and calling the modified
+ * actor's `receive` method with that `event`. Example:
  *
  * {{{
  *   val myReceiver = system.actorOf(Props(new MyReceiver with Receiver))
@@ -33,7 +33,6 @@ import akka.actor._
  *         val msg = message          // current message
  *         val snr = sequenceNr       // sequence number of message
  *         val sid = senderMessageId  // sender message id of current message (for duplicate detection)
- *         val ini = initiator        // initial sender of current message (usually different from current 'sender')
  *
  *         assert(snr > 0L)
  *         // ...
@@ -43,20 +42,25 @@ import akka.actor._
  * }}}
  *
  * Event messages received by concrete `Receiver`s are stored in a private field
- * and can be obtained via the `message` or `messageOption` method. The `receive`
- * method of the concrete receiver is called with the message's `event` only. The
- * receipt of an event message is automatically acknowledged by `Receiver`. The
- * receipt is not acknowledged if the concrete receiver throws an exception.
+ * and can be obtained via the `message` or `messageOption` method.
+ *
+ * The `Receiver` trait can also be used in combination with other stackable traits of the
+ * library (such as [[org.eligosource.eventsourced.core.Confirm]] or
+ * [[org.eligosource.eventsourced.core.Eventsourced]]), for example:
+ *
+ * {{{
+ *   val myReceiver = system.actorOf(Props(new MyReceiver with Receiver with Confirm with Eventsourced { val id = ... } ))
+ *
+ *   class MyReceiver extends Actor { this: Receiver =>
+ *     def receive = {
+ *       // ...
+ *     }
+ *   }
+ * }}}
+ *
  */
-trait Receiver extends TargetBehavior {
+trait Receiver extends Behavior {
   private var _message: Option[Message] = None
-
-  /**
-   * If `true`, auto-acknowledges the receipt of an event [[org.eligosource.eventsourced.core.Message]]
-   * by sending an `Ack` to the current `sender`. Set to `true` by this trait but overridden to `false`
-   * by sub-traits or the stackable [[org.eligosource.eventsourced.core.Eventsourced]] trait.
-   */
-  val autoAck = true
 
   /**
    * Current event message option. `None` if the last message received by this receiver
@@ -91,40 +95,19 @@ trait Receiver extends TargetBehavior {
   def sequenceNr: Long = message.sequenceNr
 
   /**
-   * Initial event message sender (initiator) option of current event message.
+   * Positively or negatively confirms the receipt of the current event message.
+   *
+   * @param pos `true` for a positive receipt confirmation, `false` for a negative one.
    *
    * @throws IllegalStateException if the the last message received by this receiver
    * is not of type [[org.eligosource.eventsourced.core.Message]]
    */
-  def initiatorOption: Option[ActorRef] = message.sender
-
-  /**
-   * Initial message option (initiator) of current event message or deadLetters
-   * if the initiator is unknown.
-   *
-   * @throws IllegalStateException if the the last message received by this receiver
-   * is not of type [[org.eligosource.eventsourced.core.Message]]
-   */
-  def initiator: ActorRef = message.sender.getOrElse(context.system.deadLetters)
-
-  /**
-   * Acknowledges the receipt of the current event message by replying with `Ack`.
-   * The reply goes to `Actor.sender` (a channel, for example) not the `initiator`.
-   */
-  def ack() = sender ! Ack
-
-  /**
-   * Negatively acknowledges the receipt of current event message by replying with
-   * `Status.Failure`. The reply goes to `Actor.sender` (a channel, for example)
-   * not the `initiator`.
-   */
-  def nak(t: Throwable) = sender ! Status.Failure(t)
+  def confirm(pos: Boolean = true) = message.confirm(pos)
 
   abstract override def receive = {
     case msg: Message => {
       _message = Some(msg)
       super.receive(msg.event)
-      if (autoAck) ack()
     }
     case msg => {
       _message = None

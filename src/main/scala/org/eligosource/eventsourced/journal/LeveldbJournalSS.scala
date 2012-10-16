@@ -57,21 +57,20 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
   def receive = {
     case cmd: WriteInMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.copy(sender = None) // message to be written
+      val m = c.message.clearConfirmationSettings
 
       val ck = SSKey(In, m.sequenceNr, 0)
       val sc = writeInMsgSerializer.toBytes(c.copy(message = m, target = null))
       leveldb.put(ck, sc)
 
-      if (c.target != context.system.deadLetters) c.target ! c.message
-      if (sender   != context.system.deadLetters) sender ! Ack
+      c.target forward Written(c.message)
 
       counter = m.sequenceNr + 1
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteOutMsg => withBatch { batch =>
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.copy(sender = None) // message to be written
+      val m = c.message.clearConfirmationSettings
 
       writeOutMsgCache.update(c, m.sequenceNr)
 
@@ -83,42 +82,38 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
         batch.put(ak, Array.empty[Byte])
       }
 
-      if (c.target != context.system.deadLetters) c.target ! c.message
-      if (sender   != context.system.deadLetters) sender ! Ack
+      c.target forward Written(c.message)
 
       counter = m.sequenceNr + 1
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteAck => {
       leveldb.put(SSKey(In, cmd.ackSequenceNr, cmd.channelId), Array.empty[Byte])
-      if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case cmd: DeleteOutMsg => {
       writeOutMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
-      if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
-    case lt: LoopThrough => {
-      lt.target.!(lt)(sender)
+    case LoopThrough(msg, target) => {
+      target forward (Looped(msg))
     }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
-      if (sender != context.system.deadLetters) sender ! Ack
     }
     case BatchReplayInMsgs(replays) => {
       val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
         a + (r.processorId -> (r.fromSequenceNr, r.target))
       }
-      replay(In, starts.values.map(_._1).min, writeInMsgSerializer) { (cmd, acks) =>
+      val start = if (starts.isEmpty) 0L else starts.values.map(_._1).min
+      replay(In, start, writeInMsgSerializer) { (cmd, acks) =>
         starts.get(cmd.processorId) match {
           case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
-            target ! cmd.message.copy(sender = None, acks = acks)
+            target tell Written(cmd.message.copy(acks = acks))
           }
           case _ => {}
         }
       }
-      if (sender != context.system.deadLetters) sender ! Ack
     }
     case r: ReplayInMsgs => {
       // call receive directly instead sending to self
@@ -126,8 +121,7 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
       receive(BatchReplayInMsgs(List(r)))
     }
     case ReplayOutMsgs(chanId, fromNr, target) => {
-      writeOutMsgCache.messages(chanId, fromNr).foreach(msg => target ! msg.copy(sender = None))
-      if (sender != context.system.deadLetters) sender ! Ack
+      writeOutMsgCache.messages(chanId, fromNr).foreach(msg => target tell Written(msg))
     }
     case GetCounter => {
       sender ! getCounter

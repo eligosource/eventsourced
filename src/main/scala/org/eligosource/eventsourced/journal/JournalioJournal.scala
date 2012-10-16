@@ -47,8 +47,8 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
   // TODO: make configurable
   val serializer = new JavaSerializer[AnyRef]
 
-  val WriteInMsgQueue = new WriteInMsgQueue
-  val WriteOutMsgCache = new WriteOutMsgCache[Location]
+  val writeInMsgQueue = new WriteInMsgQueue
+  val writeOutMsgCache = new WriteOutMsgCache[Location]
 
   val disposer = Executors.newSingleThreadScheduledExecutor()
   val journal = new Journal
@@ -59,51 +59,46 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
   def receive = {
     case cmd: WriteInMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.copy(sender = None) // message to be written
+      val m = c.message.clearConfirmationSettings
 
       journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
 
-      if (c.target != context.system.deadLetters) c.target ! c.message
-      if (sender   != context.system.deadLetters) sender ! Ack
+      c.target forward Written(c.message)
 
       counter = m.sequenceNr + 1
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteOutMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.copy(sender = None) // message to be written
+      val m = c.message.clearConfirmationSettings
 
       val loc = journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
 
-      WriteOutMsgCache.update(c, loc)
+      writeOutMsgCache.update(c, loc)
 
       if (c.ackSequenceNr != SkipAck) {
         val ac = WriteAck(c.ackProcessorId, c.channelId, c.ackSequenceNr)
         journal.write(serializer.toBytes(ac), Journal.WriteType.SYNC)
       }
 
-      if (c.target != context.system.deadLetters) c.target ! c.message
-      if (sender   != context.system.deadLetters) sender ! Ack
+      c.target forward Written(c.message)
 
       counter = m.sequenceNr + 1
       commandListener.foreach(_ ! cmd)
     }
     case cmd: WriteAck => {
       journal.write(serializer.toBytes(cmd), Journal.WriteType.SYNC)
-      if (sender != context.system.deadLetters) sender ! Ack
       commandListener.foreach(_ ! cmd)
     }
     case cmd: DeleteOutMsg => {
-      WriteOutMsgCache.update(cmd).foreach(journal.delete)
-      if (sender != context.system.deadLetters) sender ! Ack
+      writeOutMsgCache.update(cmd).foreach(journal.delete)
       commandListener.foreach(_ ! cmd)
     }
-    case lt: LoopThrough => {
-      lt.target.!(lt)(sender)
+    case LoopThrough(msg, target) => {
+      target forward (Looped(msg))
     }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
-      if (sender != context.system.deadLetters) sender ! Ack
     }
     case BatchReplayInMsgs(replays) => {
       val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
@@ -112,12 +107,11 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
       replayInput { (cmd, acks) =>
         starts.get(cmd.processorId) match {
           case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
-            target ! cmd.message.copy(sender = None, acks = acks)
+            target tell Written(cmd.message.copy(acks = acks))
           }
           case _ => {}
         }
       }
-      if (sender != context.system.deadLetters) sender ! Ack
     }
     case r: ReplayInMsgs => {
       // call receive directly instead sending to self
@@ -125,8 +119,7 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
       receive(BatchReplayInMsgs(List(r)))
     }
     case ReplayOutMsgs(chanId, fromNr, target) => {
-      replayOutput(chanId, fromNr, msg => target ! msg.copy(sender = None))
-      if (sender != context.system.deadLetters) sender ! Ack
+      replayOutput(chanId, fromNr, msg => target tell Written(msg))
     }
     case GetCounter => {
       sender ! getCounter
@@ -140,25 +133,25 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
     journal.redo().asScala.foreach { location =>
       serializer.fromBytes(location.getData) match {
         case cmd: WriteInMsg => {
-          WriteInMsgQueue.enqueue(cmd)
+          writeInMsgQueue.enqueue(cmd)
         }
         case cmd: WriteOutMsg => {
-          WriteOutMsgCache.update(cmd, location)
+          writeOutMsgCache.update(cmd, location)
         }
         case cmd: WriteAck => {
-          WriteInMsgQueue.ack(cmd)
+          writeInMsgQueue.ack(cmd)
         }
       }
-      if (WriteInMsgQueue.size > 20000 /* TODO: make configurable */ ) {
-        val (cmd, acks) = WriteInMsgQueue.dequeue(); p(cmd, acks)
+      if (writeInMsgQueue.size > 20000 /* TODO: make configurable */ ) {
+        val (cmd, acks) = writeInMsgQueue.dequeue(); p(cmd, acks)
       }
     }
-    WriteInMsgQueue.foreach { ca => p(ca._1, ca._2) }
-    WriteInMsgQueue.clear()
+    writeInMsgQueue.foreach { ca => p(ca._1, ca._2) }
+    writeInMsgQueue.clear()
   }
 
   def replayOutput(channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
-    WriteOutMsgCache.messages(channelId, fromSequenceNr).foreach(p)
+    writeOutMsgCache.messages(channelId, fromSequenceNr).foreach(p)
   }
 
   def getCounter: Long = {

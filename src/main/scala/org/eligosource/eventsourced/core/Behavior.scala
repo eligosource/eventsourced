@@ -21,20 +21,14 @@ import scala.collection.immutable.Stack
  * Allows actors with a stackable [[org.eligosource.eventsourced.core.Eventsourced]]
  * and/or [[org.eligosource.eventsourced.core.Receiver]] modification (incl. sub-traits)
  * to change their behavior with `context.become()` and `context.unbecome()` without
- * loosing the functionality provided by these modifications.
+ * loosing the functionality implemented by these modifications.
  *
  * @see [[org.eligosource.eventsourced.core.Eventsourced]]
  *      [[org.eligosource.eventsourced.core.Receiver]]
- *      [[org.eligosource.eventsourced.core.Responder]]
  *      [[org.eligosource.eventsourced.core.Emitter]]
  */
-trait TargetBehavior extends Actor {
+trait Behavior extends Actor {
   private var behaviorStack = Stack.empty[Receive].push(super.receive)
-
-  /**
-   * Controls `Ack` replies to the current `sender`.
-   */
-  protected def autoAck: Boolean
 
   abstract override def receive = {
     case msg => invoke(msg)

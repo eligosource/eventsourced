@@ -19,6 +19,8 @@ import java.io.File
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 import akka.actor._
+import akka.dispatch.Await
+import akka.pattern.ask
 import akka.util.duration._
 import akka.util.Timeout
 
@@ -53,7 +55,7 @@ trait EventsourcingFixture[A] {
   val journal = LeveldbJournal(journalDir)
   val queue = new LinkedBlockingQueue[A]
 
-  implicit val extension = EventsourcingExtension(system, journal)
+  val extension = EventsourcingExtension(system, journal)
 
   def dequeue[A](queue: LinkedBlockingQueue[A]): A = {
     queue.poll(5000, TimeUnit.MILLISECONDS)
@@ -67,10 +69,13 @@ trait EventsourcingFixture[A] {
     p(dequeue())
   }
 
+  def ask(actor: ActorRef)(r: Any): Any = {
+    Await.result(actor.ask(r), timeout.duration)
+  }
+
   def shutdown() {
     system.shutdown()
     system.awaitTermination(5 seconds)
     FileUtils.deleteDirectory(journalDir)
   }
 }
-

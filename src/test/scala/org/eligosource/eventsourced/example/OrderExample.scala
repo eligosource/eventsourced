@@ -17,6 +17,7 @@ package org.eligosource.eventsourced.example
 
 import akka.actor._
 import akka.dispatch._
+import akka.pattern.ask
 import akka.util.duration._
 import akka.util.Timeout
 
@@ -34,22 +35,22 @@ object OrderExample extends App {
   // create an event-sourcing extension
   implicit val extension = EventsourcingExtension(system, journal)
 
-  // create destinations for output events
-  val validator = system.actorOf(Props(new CreditCardValidator with Responder))
-  val destination = system.actorOf(Props(new Destination with Receiver))
-
   // create event sourced processor
-  val processor = extension.processorOf(ProcessorProps(1, new OrderProcessor with Emitter with Eventsourced))
+  val processor = extension.processorOf(Props(new OrderProcessor with Emitter with Confirm with Eventsourced { val id = 1 }))
+
+  // create destinations for output events
+  val validator = system.actorOf(Props(new CreditCardValidator(processor) with Receiver))
+  val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
 
   // create and register channels
-  extension.channelOf(ReliableChannelProps(2, validator).withName("validator").withReplyDestination(processor))
+  extension.channelOf(ReliableChannelProps(2, validator).withName("validator"))
   extension.channelOf(DefaultChannelProps(2, destination).withName("destination"))
 
   // recover state from (previously) journaled events
   extension.recover()
 
   // submit an order
-  processor ?? Message(OrderSubmitted(Order("jelly beans", "1234"))) onSuccess {
+  processor ? Message(OrderSubmitted(Order("jelly beans", "1234"))) onSuccess {
     case order: Order => println("received order %s" format order)
   }
 
@@ -92,14 +93,14 @@ object OrderExample extends App {
         val id = orders.size
         val upd = order.copy(id = id)
         orders = orders + (id -> upd)
-        emitter("validator").emitEvent(CreditCardValidationRequested(upd))
+        emitter("validator") forwardEvent CreditCardValidationRequested(upd)
       }
       case CreditCardValidated(orderId) => {
         orders.get(orderId).foreach { order =>
           val upd = order.copy(validated = true)
           orders = orders + (orderId -> upd)
-          initiator ! upd
-          emitter("destination").emitEvent(OrderAccepted(upd))
+          sender ! upd
+          emitter("destination") sendEvent OrderAccepted(upd)
         }
       }
     }
@@ -109,16 +110,20 @@ object OrderExample extends App {
   //  channel destinations
   // ------------------------------------
 
-  trait CreditCardValidator extends Actor { this: Responder =>
+  class CreditCardValidator(orderProcessor: ActorRef) extends Actor { this: Receiver =>
     def receive = {
       case CreditCardValidationRequested(order) => {
-        val r = responder
+        val sdr = sender  // initial sender
+        val msg = message // current message
         Future {
           // do some credit card validation asynchronously
           // ...
 
-          // and send back a successful validation result
-          r.sendEvent(CreditCardValidated(order.id))
+          // and send back a successful validation result (preserving the initial sender)
+          orderProcessor tell (msg.copy(event = CreditCardValidated(order.id)), sdr)
+
+          // please note that this receiver does NOT confirm message receipt. The confirmation
+          // is done by the order processor when it receives the CreditCardValidated event.
         }
       }
     }

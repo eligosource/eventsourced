@@ -30,21 +30,21 @@ object BasicExample extends App {
   implicit val timeout = Timeout(5 seconds)
 
   // Event sourcing extension
-  implicit val extension = EventsourcingExtension(system, LeveldbJournal(new File("target/example")))
+  val extension = EventsourcingExtension(system, LeveldbJournal(new File("target/example")))
 
   // Register event-sourced processors
-  val processorA = extension.processorOf(ProcessorProps(1, new ProcessorA with Receiver with Eventsourced))
-  val processorB = extension.processorOf(ProcessorProps(2, new ProcessorB with Emitter with Eventsourced))
+  val processorA = extension.processorOf(ProcessorProps(1, pid => new ProcessorA with Receiver with Confirm with Eventsourced { val id = pid } ))
+  val processorB = extension.processorOf(ProcessorProps(2, pid => new ProcessorB with Emitter with Eventsourced { val id = pid }))
 
   // Modification 'with Receiver' makes actor an acknowledging event/command message receiver
-  val destination = system.actorOf(Props(new Destination with Receiver))
+  val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
 
   // Configure and register channels
   val channelA = extension.channelOf(DefaultChannelProps(1, processorA).withName("channelA"))
   val channelB = extension.channelOf(ReliableChannelProps(2, destination).withName("channelB"))
 
   // Register another event-sourced processors (which isn't modified with Receiver or Emitter)
-  val processorC = extension.processorOf(ProcessorProps(3, new ProcessorC(channelA, channelB) with Eventsourced))
+  val processorC = extension.processorOf(ProcessorProps(3, pid => new ProcessorC(channelA, channelB) with Eventsourced { val id = pid } ))
 
   // recover all registered processors
   extension.recover()
@@ -54,13 +54,8 @@ object BasicExample extends App {
   // send event message to p
   p ! Message("some event")
 
-  // send event message to p and receive response (Ack) once the event has been persisted
-  // (event message is persisted before the processor receives it)
-  p ? Message("some event") onSuccess { case Ack => println("event written to journal") }
-
-  // send event message to p but receive application-level response from processor (or any of its destinations)
-  // (event message is persisted before receiving the response)
-  p ?? Message("some event") onSuccess { case resp => println("received response %s" format resp) }
+  // send event message to p and receive response from processor
+  p ? Message("some event") onSuccess { case resp => println("received response %s" format resp) }
 
   // send message to p (bypasses journaling because it's not an instance of Message)
   p ! "blah"
@@ -88,7 +83,6 @@ object BasicExample extends App {
         val msg = message          // current message
         val snr = sequenceNr       // sequence number of message
         val sid = senderMessageId  // sender message id of current message (for duplicate detection)
-        val ini = initiator        // initial sender of current message (usually different from current 'sender')
         // ...
 
         // Eventsourced actors have access to processor id
@@ -98,11 +92,11 @@ object BasicExample extends App {
         println("received event = %s (processor id = %d, sequence nr = %d)" format(event, pid, snr))
 
         // Emitter actors can emit events to named channels
-        emitter("channelA").emitEvent("out-a")
-        emitter("channelB").emitEvent("out-b")
+        emitter("channelA") sendEvent "out-a"
+        emitter("channelB") sendEvent "out-b"
 
-        // optionally respond to initial sender (initiator)
-        initiator ! "done"
+        // optionally respond to initial sender
+        sender ! "done"
       }
     }
   }
@@ -119,7 +113,7 @@ object BasicExample extends App {
         channelA ! msg.copy(event = "out-a")
         channelB ! msg.copy(event = "out-b")
 
-        msg.sender.foreach(_ ! "done")
+        sender ! "done"
       }
     }
   }
@@ -131,7 +125,6 @@ object BasicExample extends App {
         val msg = message          // current message
         val snr = sequenceNr       // sequence number of message
         val sid = senderMessageId  // sender message id of current message (for duplicate detection)
-        val ini = initiator        // initial sender of current message (usually different from current 'sender')
         // ...
 
         // do something with event

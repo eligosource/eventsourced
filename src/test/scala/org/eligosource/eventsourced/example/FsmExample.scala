@@ -18,45 +18,38 @@ package org.eligosource.eventsourced.example
 import akka.actor._
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Decorator.Emit
 
 import FsmExample._
 
 class FsmExample extends EventsourcingSpec[Fixture] {
-  "A decorated FSM actor" must {
+  "An event-sourced decorated FSM" must {
     "recover its state from stored event messages" in { fixture =>
       import fixture._
 
       val door = configure()
+      val askDoor = ask(door) _
+
       extension.recover()
 
-      door ! Message("open")
-      door ! Message("close")
-      door ! Message("close")
-
-      dequeue() must be (DoorMoved(1))
-      dequeue() must be (DoorMoved(2))
-      dequeue() must be (DoorNotMoved("cannot close door in state Closed"))
+      askDoor(Message("open")) must be(DoorMoved(1))
+      askDoor(Message("close")) must be(DoorMoved(2))
+      askDoor(Message("close")) must be(DoorNotMoved("cannot close door in state Closed"))
 
       val recoveredDoor = configure()
+      val askRecoveredDoor = ask(recoveredDoor) _
+
       extension.recover()
 
-      recoveredDoor ! Message("open")
-      recoveredDoor ! Message("close")
-
-      dequeue() must be (DoorMoved(3))
-      dequeue() must be (DoorMoved(4))
+      askRecoveredDoor(Message("open")) must be(DoorMoved(3))
+      askRecoveredDoor(Message("close")) must be(DoorMoved(4))
     }
   }
 }
 
 object FsmExample {
-  class Fixture extends EventsourcingFixture[Any] {
-    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent))
-
+  class Fixture  extends EventsourcingFixture[Any] {
     def configure(): ActorRef = {
-      extension.channelOf(DefaultChannelProps(1, destination).withName("dest"))
-      extension.processorOf(ProcessorProps(1, decorator(system.actorOf(Props(new Door)))))
+      extension.processorOf(Props(decorator(1, system.actorOf(Props(new Door)), msg => msg.event)))
     }
   }
 
@@ -72,23 +65,21 @@ object FsmExample {
     startWith(Closed, 0)
 
     when(Closed) {
-      case Event("open", counter) => goto(Open) using(counter + 1) replying(Emit("dest", DoorMoved(counter + 1)))
+      case Event("open", counter) => {
+        goto(Open) using(counter + 1) replying(DoorMoved(counter + 1))
+      }
     }
 
     when(Open) {
-      case Event("close", counter) => goto(Closed) using(counter + 1) replying(Emit("dest", DoorMoved(counter + 1)))
+      case Event("close", counter) => {
+        goto(Closed) using(counter + 1) replying(DoorMoved(counter + 1))
+      }
     }
 
     whenUnhandled {
       case Event(cmd, counter) => {
-        stay replying(Emit("dest", DoorNotMoved("cannot %s door in state %s" format (cmd, stateName))))
+        stay replying(DoorNotMoved("cannot %s door in state %s" format (cmd, stateName)))
       }
-    }
-  }
-
-  class Destination(queue: java.util.Queue[Any]) extends Actor {
-    def receive = {
-      case event => queue.add(event)
     }
   }
 }

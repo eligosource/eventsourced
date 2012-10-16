@@ -15,11 +15,11 @@
  */
 package org.eligosource.eventsourced.core
 
+import java.util.Queue
 import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor._
 
-import org.eligosource.eventsourced.core.Channel._
 import org.eligosource.eventsourced.core.DefaultChannelSpec._
 
 class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
@@ -27,160 +27,112 @@ class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
     "buffer messages before initial delivery" in { fixture =>
       import fixture._
 
-      channel ! message("a")
-      channel ! message("b")
+      val c = channel(successDestination)
 
-      channel ! Deliver
+      c ! Message("a")
+      c ! Message("b")
+      c ! Deliver
 
-      dequeue(destinationQueue) must be (message("a"))
-      dequeue(destinationQueue) must be (message("b"))
+      dequeue { m => m.event must be("a") }
+      dequeue { m => m.event must be("b") }
     }
     "not buffer messages after initial delivery" in { fixture =>
       import fixture._
 
-      channel ! message("a")
+      val c = channel(successDestination)
 
-      channel ! Deliver
+      c ! message("a")
+      c ! Deliver
+      c ! message("b")
+      c ! message("c")
 
-      channel ! message("b")
-      channel ! message("c")
-
-      dequeue(destinationQueue) must be (message("a"))
-      dequeue(destinationQueue) must be (message("b"))
-      dequeue(destinationQueue) must be (message("c"))
+      dequeue { m => m.event must be("a") }
+      dequeue { m => m.event must be("b") }
+      dequeue { m => m.event must be("c") }
     }
-    "acknowledge messages by default" in { fixture =>
+    "set posConfirmationTarget and posConfirmationMessage on delivered message" in { fixture =>
+      import fixture._
+
+      val c = channel(successDestination)
+
+      c ! Message("a", processorId = 3, sequenceNr = 10)
+      c ! Deliver
+      c ! Message("b", processorId = 3, sequenceNr = 11)
+
+      dequeue { m => m.posConfirmationTarget must be(journal); m.posConfirmationMessage must be(WriteAck(3, 1, 10)) }
+      dequeue { m => m.posConfirmationTarget must be(journal); m.posConfirmationMessage must be(WriteAck(3, 1, 11)) }
+    }
+    "not set posConfirmationTarget and posConfirmationMessage on delivered message if ack is not required" in { fixture =>
+      import fixture._
+
+      val c = channel(successDestination)
+
+      c ! Message("a", processorId = 3, sequenceNr = 10, ack = false)
+      c ! Deliver
+      c ! Message("b", processorId = 3, sequenceNr = 11, ack = false)
+      c ! Message("c", processorId = 3, sequenceNr = 12)
+
+      dequeue { m => m.posConfirmationTarget must be(null) }
+      dequeue { m => m.posConfirmationTarget must be(null) }
+      dequeue { m => m.posConfirmationTarget must be(journal); m.posConfirmationMessage must be(WriteAck(3, 1, 12)) }
+    }
+    "not set negConfirmationTarget and negConfirmationMessage on delivered message" in { fixture =>
       import fixture._
 
       journal ! SetCommandListener(Some(writeAckListener))
 
-      channel ! message("a", 1)
-      channel ! Deliver
-      channel ! message("b", 2)
+      val c = channel(failureDestination("a"))
 
-      val received = Set(
-        dequeue(writeAckListenerQueue),
-        dequeue(writeAckListenerQueue)
-      )
+      c ! Deliver
+      c ! Message("a", processorId = 3, sequenceNr = 10)
+      c ! Message("b", processorId = 3, sequenceNr = 11)
 
-      val expected = Set(
-        WriteAck(1, 1, 1),
-        WriteAck(1, 1, 2)
-      )
+      // destination only enqueues received messages on success
+      dequeue { m => m.negConfirmationTarget must be(null) }
 
-      received must be (expected)
+      // doesn't happen because destination calls msg.confirm(false)
+      //dequeue(writeAckListenerQueue) must be (WriteAck(3, 1, 10))
+
+      // does happen because destination will msg.confirm(true)
+      dequeue(writeAckListenerQueue) must be (WriteAck(3, 1, 11))
     }
-    "not acknowledge messages on request" in { fixture =>
+    "forward the message sender to the destination" in { fixture =>
       import fixture._
 
-      journal ! SetCommandListener(Some(writeAckListener))
+      val c = channel(successDestination)
+      val respondTo = ask(c) _
 
-      channel ! message("a", 1, false)
-      channel ! Deliver
-      channel ! message("b", 2, false)
-      channel ! message("c", 3)
+      c ! Deliver
 
-      dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 3))
-    }
-    "acknowledge messages after delivery to a reply destination" in { fixture =>
-      import fixture._
-
-      journal ! SetCommandListener(Some(writeAckListener))
-
-      channel ! SetReplyDestination(successReplyDestination)
-      channel ! message("a", 1)
-      channel ! Deliver
-      channel ! message("b", 2)
-
-      dequeue(destinationQueue) must be (message("a", 1))
-      dequeue(destinationQueue) must be (message("b", 2))
-
-      val receivedReplies = Set(
-        dequeue(replyDestinationQueue),
-        dequeue(replyDestinationQueue)
-      )
-
-      val receivedAcks = Set(
-        dequeue(writeAckListenerQueue),
-        dequeue(writeAckListenerQueue)
-      )
-
-      val expectedReplies = Set(
-        message("re: a", 1),
-        message("re: b", 2)
-      )
-
-      val expectedAcks = Set(
-        WriteAck(1, 1, 1),
-        WriteAck(1, 1, 2)
-      )
-
-      receivedReplies must be (expectedReplies)
-      receivedAcks must be (expectedAcks)
-    }
-    "not acknowledge messages after delivery failure to a destination" in { fixture =>
-      import fixture._
-
-      journal ! SetCommandListener(Some(writeAckListener))
-
-      channel ! SetDestination(failureDestination("a"))
-      channel ! SetReplyDestination(successReplyDestination)
-      channel ! message("a", 1)
-      channel ! Deliver
-      channel ! message("b", 2)
-
-      dequeue(replyDestinationQueue) must be (message("b", 2))
-      dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 2))
-    }
-    "not acknowledge messages after delivery failure to a reply destination" in { fixture =>
-      import fixture._
-
-      journal ! SetCommandListener(Some(writeAckListener))
-
-      channel ! SetReplyDestination(failureReplyDestination("re: a"))
-      channel ! message("a", 1)
-      channel ! Deliver
-      channel ! message("b", 2)
-
-      dequeue(replyDestinationQueue) must be (message("re: b", 2))
-      dequeue(writeAckListenerQueue) must be (WriteAck(1, 1, 2))
+      respondTo(Message("a")) must be("re: a")
+      respondTo(Message("b")) must be("re: b")
     }
   }
 }
 
 object DefaultChannelSpec {
   class Fixture extends EventsourcingFixture[Message] {
-    val destinationQueue = queue
-    val successDestination = system.actorOf(Props(new TestDestination(destinationQueue) with Responder))
-    def failureDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(destinationQueue, failAtEvent) with Responder))
-
-    val replyDestinationQueue = new LinkedBlockingQueue[Message]
-    val successReplyDestination = system.actorOf(Props(new TestDestination(replyDestinationQueue) with Responder))
-    def failureReplyDestination(failAtEvent: Any) = system.actorOf(Props(new FailureDestination(replyDestinationQueue, failAtEvent) with Responder))
+    val successDestination = failureDestination(null)
+    def failureDestination(failAtEvent: Any) = system.actorOf(Props(new Destination(queue, failAtEvent) with Receiver))
 
     val writeAckListenerQueue = new LinkedBlockingQueue[WriteAck]
     val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
-    val channel = system.actorOf(Props(new DefaultChannel(1, journal)))
 
-    channel ! SetDestination(successDestination)
+    def channel(destination: ActorRef) =
+      system.actorOf(Props(new DefaultChannel(1, journal, destination)))
 
     def message(event: Any, sequenceNr: Long = 0L, ack: Boolean = true) =
       Message(event, sequenceNr = sequenceNr, ack = ack, processorId = 1)
   }
 
-  class TestDestination(queue: java.util.Queue[Message]) extends Actor { this: Responder =>
-    def receive = {
-      case event => { queue.add(message); responder.sendEvent("re: %s" format event) }
-    }
-  }
-
-  class FailureDestination(queue: java.util.Queue[Message], failAtEvent: Any) extends Actor { this: Responder =>
+  class Destination(queue: Queue[Message], failAtEvent: Any) extends Actor { this: Receiver =>
     def receive = {
       case event => if (event == failAtEvent) {
-        responder.sendFailure(new Exception("test"))
+        confirm(false)
       } else {
         queue.add(message)
-        responder.send(msg => msg)
+        confirm(true)
+        sender ! ("re: %s" format event)
       }
     }
   }

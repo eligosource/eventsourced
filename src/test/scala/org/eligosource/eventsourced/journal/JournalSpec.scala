@@ -137,7 +137,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 object JournalSpec {
   class CommandTarget(queue: LinkedBlockingQueue[Message]) extends Actor {
     def receive = {
-      case msg: Message => queue.put(msg)
+      case Written(msg) => queue.put(msg)
     }
   }
 }

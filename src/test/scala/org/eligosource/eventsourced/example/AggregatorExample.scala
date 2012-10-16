@@ -16,6 +16,7 @@
 package org.eligosource.eventsourced.example
 
 import akka.actor._
+import akka.pattern.ask
 import akka.dispatch._
 
 import org.eligosource.eventsourced.core._
@@ -38,7 +39,7 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
         aggregator ! Message(InputAvailable("category-b", "input-7")) // no response expected
 
         // await aggregation response by aggregator to initiator
-        val future = aggregator ?? Message(InputAvailable("category-a", "input-3"))
+        val future = aggregator ? Message(InputAvailable("category-a", "input-3"))
         Await.result(future, timeout.duration) must be("aggregated 3 messages of category-a")
 
         // obtain output event message delivered to destination
@@ -56,7 +57,7 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
 
         // now trigger the next aggregation (2 messages of category-b missing)
         aggregator ! Message(InputAvailable("category-b", "input-8")) // no response expected
-        val future = aggregator ?? Message(InputAvailable("category-b", "input-9"))
+        val future = aggregator ? Message(InputAvailable("category-b", "input-9"))
 
         // await next aggregation response by aggregator to initiator
         Await.result(future, timeout.duration) must be("aggregated 3 messages of category-b")
@@ -72,10 +73,10 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
 
 object AggregatorExample {
   class Fixture extends EventsourcingFixture[Message] {
-    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent))
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent with Confirm))
 
     def configure(): ActorRef = {
-      val processor = extension.processorOf(ProcessorProps(1, new Aggregator with Emitter with Eventsourced))
+      val processor = extension.processorOf(Props(new Aggregator with Emitter with Confirm with Eventsourced { val id = 1 } ))
       extension.channelOf(DefaultChannelProps(1, processor).withName("self"))
       extension.channelOf(ReliableChannelProps(2, destination).withName("dest"))
       processor
@@ -96,14 +97,14 @@ object AggregatorExample {
         // count number of InputAggregated receivced
         inputAggregatedCounter = inputAggregatedCounter + 1
         // emit InputAggregated event to destination with sender message id containing the counted aggregations
-        emitter("dest").emit(_.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)))
+        emitter("dest") send { msg => msg.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)) }
         // reply to initial sender that message has been aggregated
-        initiator ! "aggregated %d messages of %s".format(inputs.size, category)
+        sender ! "aggregated %d messages of %s".format(inputs.size, category)
       }
       case InputAvailable(category, input) => inputs = inputs.get(category) match {
         case Some(List(i2, i1)) => {
           // emit InputAggregated event to self when 3 events of same category exist
-          emitter("self").emitEvent(InputAggregated(category, List(i1, i2, input)))
+          emitter("self") forwardEvent InputAggregated(category, List(i1, i2, input))
           inputs - category
         }
         case Some(is) => inputs + (category -> (input :: is))

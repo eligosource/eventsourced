@@ -26,13 +26,13 @@ object Processors extends App {
       case "foo" => {
         println("received event foo (sequence number = %d)" format message.sequenceNr)
         // make an application-level response (need not be an event message)
-        initiator ! "processed event foo"
+        sender ! "processed event foo"
       }
     }
   }
 
   // create and register event-sourced processor
-  val processor: ActorRef = extension.processorOf(ProcessorProps(1, new Processor with Receiver with Eventsourced))
+  val processor: ActorRef = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = 1 }))
 
   // recover registered processors by replaying journaled events
   extension.recover()
@@ -40,13 +40,8 @@ object Processors extends App {
   // send event message to processor
   processor ! Message("foo")
 
-  // send event message to processor and receive system-level response
+  // send event message to processor and receive response
   processor ? Message("foo") onSuccess {
-    case Ack => println("event message journaled")
-  }
-
-  // send event message to processor and receive application-level response
-  processor ?? Message("foo") onSuccess {
     case resp => println(resp)
   }
 

@@ -29,7 +29,7 @@ trait Idempotent extends Actor {
   abstract override def receive = {
     case msg: Message => if (msg.sequenceNr > lastSequenceNr) {
       lastSequenceNr = msg.sequenceNr; super.receive(msg)
-    } else { sender ! Ack }
+    }
     case msg => {
       super.receive(msg)
     }

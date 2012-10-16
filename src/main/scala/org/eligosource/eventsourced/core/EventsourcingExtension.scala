@@ -35,8 +35,6 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
   private val channelsRef = new AtomicReference[Map[String, ActorRef]](Map.empty)
   private val processorsRef = new AtomicReference[Map[Int, ActorRef]](Map.empty)
 
-  private [core] val producer: ActorRef = system.actorOf(Props[Producer])
-
   /**
    * Journal for this extension.
    */
@@ -109,14 +107,40 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
   /**
    * Registers an [[org.eligosource.eventsourced.core.Eventsourced]] processor.
    *
-   * @param props processor configuration object
-   * @return a processor ref
+   * @param props processor configuration object.
+   * @return a processor ref.
    *
    * @see [[org.eligosource.eventsourced.core.ProcessorProps]]
    */
   def processorOf(props: ProcessorProps): ActorRef = {
     registerProcessor(props.id, props.processor)
     props.processor
+  }
+
+  /**
+   * Registers an [[org.eligosource.eventsourced.core.Eventsourced]] processor.
+   *
+   * This method obtains the id from the created processor with a blocking operation.
+   * Use the overloaded `processorOf(ProcessorProps)` method if you want to avoid
+   * blocking.
+   *
+   * @param props actor ref configuration object.
+   * @return a processor ref.
+   */
+  def processorOf(props: Props)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
+    import akka.dispatch.Await
+    import akka.pattern.ask
+    import akka.util.duration._
+    import akka.util.Timeout
+
+    implicit val duration = 5 seconds
+
+    val processor = actorRefFactory.actorOf(props)
+    val future = processor.ask(Eventsourced.GetId)(Timeout(duration)).mapTo[Int]
+    val id = Await.result(future, duration)
+
+    registerProcessor(id, processor)
+    processor
   }
 
   /**
@@ -196,10 +220,8 @@ object ProcessorProps {
    * @param actorRefFactory  [[org.eligosource.eventsourced.core.Eventsourced]] processor ref factory.
    * @return processor configuration object containing the created processor ref.
    */
-  def apply(id: Int, processorFactory: => Eventsourced)(implicit actorRefFactory: ActorRefFactory): ProcessorProps = {
-    val processor = actorRefFactory.actorOf(Props(processorFactory))
-    processor ! Eventsourced.SetId(id)
-    new ProcessorProps(id, processor)
+  def apply(id: Int, processorFactory: Int => Actor with Eventsourced)(implicit actorRefFactory: ActorRefFactory): ProcessorProps = {
+    new ProcessorProps(id, actorRefFactory.actorOf(Props(processorFactory(id))))
   }
 }
 
@@ -213,8 +235,6 @@ trait ChannelProps {
   def name: Option[String]
   /** Channel destination */
   def destination: ActorRef
-  /** Optional reply destination */
-  def replyDestination: Option[ActorRef]
 
   /**
    * Creates a channel with the settings defined by this configuration object.
@@ -232,14 +252,7 @@ trait ChannelProps {
 case class DefaultChannelProps(
     id: Int,
     destination: ActorRef,
-    replyDestination: Option[ActorRef] = None,
     name: Option[String] = None) extends ChannelProps {
-
-  /**
-   * Returns a new `DefaultChannelProps` with the specified reply destination.
-   */
-  def withReplyDestination(replyDestination: ActorRef) =
-    copy(replyDestination = Some(replyDestination))
 
   /**
    * Returns a new `DefaultChannelProps` with the specified name.
@@ -252,10 +265,7 @@ case class DefaultChannelProps(
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
-    val channel = actorRefFactory.actorOf(Props(new DefaultChannel(id, journal)))
-    channel ! Channel.SetDestination(destination)
-    replyDestination.foreach(rd => channel ! Channel.SetReplyDestination(rd))
-    channel
+    actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)))
   }
 }
 
@@ -265,15 +275,8 @@ case class DefaultChannelProps(
 case class ReliableChannelProps(
     id: Int,
     destination: ActorRef,
-    replyDestination: Option[ActorRef] = None,
     policy: RedeliveryPolicy = RedeliveryPolicy(),
     name: Option[String] = None) extends ChannelProps {
-
-  /**
-   * Returns a new `ReliableChannelProps` with the specified reply destination.
-   */
-  def withReplyDestination(replyDestination: ActorRef) =
-    copy(replyDestination = Some(replyDestination))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified name.
@@ -304,9 +307,6 @@ case class ReliableChannelProps(
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
-    val channel = actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, policy)))
-    channel ! Channel.SetDestination(destination)
-    replyDestination.foreach(rd => channel ! Channel.SetReplyDestination(rd))
-    channel
+    actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)))
   }
 }

@@ -24,75 +24,68 @@ import akka.util.duration._
 import akka.util._
 
 /**
- * A channel is used by [[org.eligosource.eventsourced.core.Eventsourced]]
- * processors to send event [[org.eligosource.eventsourced.core.Message]]s
- * to destinations. A destination can be any actor that acknowledges the
- * receipt of an event message by replying with an `Ack` (or a response
- * [[org.eligosource.eventsourced.core.Message]] when there's a `replyDestination`
- * set for the channel).
+ * A channel is used by [[org.eligosource.eventsourced.core.Eventsourced]] processors to send
+ * event [[org.eligosource.eventsourced.core.Message]]s to destinations. A destination can be
+ * any actor that either
  *
- * During recovery, a channel prevents that replayed messages are redundantly
- * delivered to destinations but only if that channel has previously written
- * an acknowledgement for that message to the journal.
+ *  - positively confirms message receipt with `Message.confirm()` or `Message.confirm(true)`.
+ *  - or negatively confirms message receipt with `Message.confirm(false)` which causes
+ *    - a reliable channel to redeliver that message after a configurable delay
+ *    - a default channel to redeliver that message during recovery of the processor
+ *      that added this message to the channel.
+ *  - or doesn't confirm message receipt at all which causes
+ *    - a reliable channel to redeliver that message after a configurable timeout and delay
+ *    - a default channel to redeliver that message during recovery of the processor
+ *      that added this message to the channel.
+ *
+ * For positively confirmed message receipts, a channel prevents that these messages are
+ * redundantly delivered to destinations during a message replay (recovery). Actors can be
+ * added automated message receipt confirmation by modifying them with the stackable
+ * [[org.eligosource.eventsourced.core.Confirm]] trait.
  *
  * @see [[org.eligosource.eventsourced.core.DefaultChannel]]
  *      [[org.eligosource.eventsourced.core.ReliableChannel]]
- *      [[org.eligosource.eventsourced.core.Receiver]]
- *      [[org.eligosource.eventsourced.core.Responder]]
+ *      [[org.eligosource.eventsourced.core.Message]]
+ *      [[org.eligosource.eventsourced.core.Confirm]]
  *      [[org.eligosource.eventsourced.core.EventsourcingExtension]]
  */
 trait Channel extends Actor {
   implicit val executionContext = context.dispatcher
 
   /**
-   * Channel id.
+   * Channel id. Must be a positive integer.
    */
   def id: Int
 
   /**
-   * Channel destination. Set when a channel is created via
-   * `EventsourcingExtension.channelOf`.
+   * Channel destination.
    */
-  var destination: Option[ActorRef] = None
-
-  /**
-   * Channel reply destination. Optionally set when a channel is created via
-   * `EventsourcingExtension.channelOf`. If set, responses from destinations
-   * are routed to the reply destination. The order of messages sent to the
-   * reply destination does not necessarily correlate with the order of
-   * messages sent to the destination.
-   */
-  var replyDestination: Option[ActorRef] = None
+  def destination: ActorRef
 }
 
 private [core] object Channel {
-  val JournalTimeout = Timeout(10 seconds)
-  val DestinationTimeout = Timeout(5 seconds)
-  val ReplyDestinationTimeout = Timeout(5 seconds)
-
-  case class SetDestination(destination: ActorRef)
-  case class SetReplyDestination(replayDestination: ActorRef)
+  val DeliveryTimeout = 5 seconds
 }
 
 /**
  * A transient channel that sends event [[org.eligosource.eventsourced.core.Message]]s
- * to destinations. If the `destination` responds, an acknowledgement is written by the
- * channel to the journal. If a `replyDestination` is set, the  acknowledgement will be
- * written when the reply destination responds. If the `destination` or the `replyDestination`
- * do not respond (i.e. when a timeout occurs) or respond with a `Status.Failure` then
- * no acknowledgement is written.
+ * to `destination`. If `destination` positively confirms the receipt of an event message
+ * with `Message.confirm()` an ''acknowledgement'' is written to the journal. In all
+ * other cases no action is taken. Acknowledgements are used during replay to decide
+ * if a channel should ignore a message or not.
  *
- * @param id channel id.
- * @param journal journal of the context that created this channel.
+ * A `DefaultChannel` preserves the `sender` reference (i.e. forwards it to `destination`).
+ *
+ * @param id channel id. Must be a positive integer.
+ * @param journal journal of the [[org.eligosource.eventsourced.core.EventsourcingExtension]]
+ *        at which this channel is registered.
+ * @param destination delivery destination of event messages added to this channel.
  *
  * @see [[org.eligosource.eventsourced.core.Channel]]
  */
-class DefaultChannel(val id: Int, val journal: ActorRef) extends Channel {
-  import Channel._
-
+class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorRef) extends Channel {
   require(id > 0, "channel id must be a positive integer")
 
-  private val successfulAck = Promise.successful(Ack)
   private var retain = true
   private var buffer = List.empty[Message]
 
@@ -106,27 +99,13 @@ class DefaultChannel(val id: Int, val journal: ActorRef) extends Channel {
       buffer.reverse.foreach(send)
       buffer = Nil
     }
-    case SetDestination(d) => {
-      destination = Some(d)
-    }
-    case SetReplyDestination(rd) => {
-      replyDestination = Some(rd)
-    }
   }
 
-  private def send(msg: Message): Unit = destination foreach { d =>
-    val r = for {
-      r1 <- d.ask(msg)(DestinationTimeout)
-      r2 <- reply(r1)
-    } yield r2
-
-    r onSuccess {
-      case _ if (msg.ack) => journal.!(WriteAck(msg.processorId, id, msg.sequenceNr))(null)
-    }
+  def send(msg: Message) {
+    val pct = if (msg.ack) journal else null
+    val pcm = if (msg.ack) WriteAck(msg.processorId, id, msg.sequenceNr) else null
+    destination forward msg.copy(posConfirmationTarget = pct, posConfirmationMessage = pcm)
   }
-
-  private def reply(msg: Any): Future[Any] =
-    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(successfulAck)
 }
 
 /**
@@ -158,25 +137,28 @@ object RedeliveryPolicy {
 
 /**
  * A persistent channel that sends event [[org.eligosource.eventsourced.core.Message]]s to
- * destinations. Every event message sent to this channel is stored in the journal together
- * with an acknowledgement. If the `destination` responds, the stored message will be deleted
- * from the journal (but not the acknowledgement). If a `replyDestination` is set, the stored
- * message will be deleted when the reply destination responds. If the `destination` or
- * `replyDestination` does not respond (i.e. when a timeout occurs) or respond with a
- * `Status.Failure`, a re-delivery is attempted. If the maximum number of re-delivery attempts
- * have been made, the channel restarts itself after a certain ''recovery delay'' (and starts
- * again with re-deliveries).
+ * `destination`. Every event message sent to this channel is stored in the journal together
+ * with an ''acknowledgement'' (which is used during replay to decide if a channel should
+ * ignore a message or not). If `destination` positively confirms the receipt of an event
+ * message with `Message.confirm()` the stored message is deleted from the journal. If
+ * `destination` negatively confirms the receipt of an event message with `Message.confirm(false)`
+ * or no confirmation was made (i.e. a timeout occurred), a re-delivery is attempted. If the
+ * maximum number of re-delivery attempts have been made, the channel restarts itself after
+ * a certain ''recovery delay'' (and starts again with re-deliveries).
  *
- * @param id channel id.
- * @param journal journal of the context that created this channel.
- * @param policy redelivery policy for the channel.
+ * A `ReliableChannel` preserves the `sender` reference (i.e. forwards it to `destination`) only
+ * after initial delivery (which occurs, for example, during `EventsourcingExtension.recover()`
+ * or `EventsourcingExtension.deliver()`).
+ *
+ * @param id channel id. Must be a positive integer.
+ * @param journal journal of the [[org.eligosource.eventsourced.core.EventsourcingExtension]]
+ *        at which this channel is registered.
+ * @param destination delivery destination of event messages added to this channel.
  *
  * @see [[org.eligosource.eventsourced.core.Channel]]
  *      [[org.eligosource.eventsourced.core.RedeliveryPolicy]]
  */
-class ReliableChannel(val id: Int, journal: ActorRef, policy: RedeliveryPolicy) extends Channel {
-  import Channel._
-
+class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy) extends Channel {
   require(id > 0, "channel id must be a positive integer")
 
   private var buffer: Option[ActorRef] = None
@@ -184,125 +166,128 @@ class ReliableChannel(val id: Int, journal: ActorRef, policy: RedeliveryPolicy) 
   def receive = {
     case msg: Message if (!msg.acks.contains(id)) => {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
-      journal.!(WriteOutMsg(id, msg, msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters)))(null)
+      journal forward WriteOutMsg(id, msg, msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
     }
-    case Deliver => destination foreach { d =>
-      buffer = Some(createBuffer(d))
+    case Deliver => {
+      if (!buffer.isDefined) buffer = Some(createBuffer(destination))
       deliverPendingMessages(buffer.get)
     }
     case Terminated(s) => buffer foreach { b =>
       buffer = None
       context.system.scheduler.scheduleOnce(policy.recoveryDelay, self, Deliver)
     }
-    case SetDestination(d) => {
-      destination = Some(d)
-    }
-    case SetReplyDestination(rd) => {
-      replyDestination = Some(rd)
-    }
   }
 
-  private def deliverPendingMessages(destination: ActorRef) {
-    journal.!(ReplayOutMsgs(id, 0L, destination))(null)
+  private def deliverPendingMessages(dst: ActorRef) {
+    journal ! ReplayOutMsgs(id, 0L, dst)
   }
 
-  private def createBuffer(destination: ActorRef) = {
-    context.watch(context.actorOf(Props(new ReliableChannelBuffer(id, journal, destination, replyDestination, policy))))
+  private def createBuffer(dst: ActorRef) = {
+    context.watch(context.actorOf(Props(new ReliableChannelBuffer(id, journal, dst, policy))))
   }
 }
 
 private [core] object ReliableChannel {
   case class Next(retries: Int)
-  case class Retry(msg: Message)
+  case class Retry(msg: Message, sdr: ActorRef)
 
   case object Trigger
   case object FeedMe
+
+  case class Confirmed(snr: Long, pos: Boolean = true)
+  case class ConfirmationTimeout(snr: Long)
 }
 
-private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], policy: RedeliveryPolicy) extends Actor {
+private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy) extends Actor {
   import ReliableChannel._
 
-  var rocSenderQueue = Queue.empty[Message]
-  var rocSenderBusy = false //
+  var delivererQueue = Queue.empty[(Message, ActorRef)]
+  var delivererBusy = false
 
-  val rocSender = context.actorOf(Props(new ReliableChannelSender(channelId, journal, destination, replyDestination, policy)))
+  val deliverer = context.actorOf(Props(new ReliableChannelDeliverer(channelId, journal, destination, policy)))
 
   def receive = {
-    case msg: Message => {
-      rocSenderQueue = rocSenderQueue.enqueue(msg)
-      if (!rocSenderBusy) {
-        rocSenderBusy = true
-        rocSender ! Trigger
+    case Written(msg) => {
+      delivererQueue = delivererQueue.enqueue(msg, sender)
+      if (!delivererBusy) {
+        delivererBusy = true
+        deliverer ! Trigger
       }
     }
     case FeedMe => {
-      if (rocSenderQueue.size == 0) {
-        rocSenderBusy = false
+      if (delivererQueue.size == 0) {
+        delivererBusy = false
       } else {
-        rocSender ! rocSenderQueue
-        rocSenderQueue = Queue.empty
+        deliverer ! delivererQueue
+        delivererQueue = Queue.empty
       }
     }
   }
 }
 
-private [core] class ReliableChannelSender(channelId: Int, journal: ActorRef, destination: ActorRef, replyDestination: Option[ActorRef], policy: RedeliveryPolicy) extends Actor {
-  import Channel._
+private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy) extends Actor {
   import ReliableChannel._
 
   implicit val executionContext = context.dispatcher
+  val scheduler = context.system.scheduler
 
-  val successfulAck = Promise.successful(Ack)
-  var sequencer: Option[ActorRef] = None
-  var queue = Queue.empty[Message]
+  var buffer: Option[ActorRef] = None
+  var queue = Queue.empty[(Message, ActorRef)]
 
   var retries = 0
+  var currentDelivery: Option[(Message, ActorRef, Cancellable)] = None
 
   def receive = {
     case Trigger => {
       sender ! FeedMe
     }
-    case q: Queue[Message] => {
-      sequencer = Some(sender)
+    case q: Queue[(Message, ActorRef)] => {
+      buffer = Some(sender)
       queue = q
       self ! Next(retries)
     }
     case Next(r) => if (queue.size > 0) {
-      val (msg, q) = queue.dequeue
+      val ((msg, sdr), q) = queue.dequeue
+      val m = msg.copy(
+        posConfirmationTarget = self,
+        negConfirmationTarget = self,
+        posConfirmationMessage = Confirmed(msg.sequenceNr, true),
+        negConfirmationMessage = Confirmed(msg.sequenceNr, false))
 
+      destination tell (m, sdr)
+
+      val task = scheduler.scheduleOnce(Channel.DeliveryTimeout, self, ConfirmationTimeout(m.sequenceNr))
+
+      currentDelivery = Some(msg, sdr, task)
       retries = r
       queue = q
-
-      val future = send(msg)
-      val ctx = context
-
-
-      future onSuccess {
-        case _ => {
-          journal.!(DeleteOutMsg(channelId, msg.sequenceNr))(null)
-          self ! Next(0)
-        }
-      }
-
-      future onFailure {
-        case e => ctx.system.scheduler.scheduleOnce(policy.retryDelay, self, Retry(msg))
-      }
     } else {
-      sequencer.foreach(_ ! FeedMe)
+      buffer.foreach(_ ! FeedMe)
     }
-    case Retry(msg) => {
+    case Retry(msg, sdr) => {
       // undo dequeue
-      queue = (msg +: queue)
+      queue = ((msg, sdr) +: queue)
       // and try again ...
-      if (retries < policy.retryMax) self ! Next(retries + 1) else sequencer.foreach(s => context.stop(s))
+      if (retries < policy.retryMax) self ! Next(retries + 1) else buffer.foreach(s => context.stop(s))
+    }
+
+    case Confirmed(snr, true) => currentDelivery match {
+      case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
+        currentDelivery = None; task.cancel(); journal ! DeleteOutMsg(channelId, snr); self ! Next(0)
+      }
+      case None => ()
+    }
+    case Confirmed(snr, false) => currentDelivery match {
+      case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
+        currentDelivery = None; task.cancel(); scheduler.scheduleOnce(policy.retryDelay, self, Retry(cm, cs))
+      }
+      case None => ()
+    }
+    case ConfirmationTimeout(snr) => currentDelivery match {
+      case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
+        currentDelivery = None; scheduler.scheduleOnce(policy.retryDelay, self, Retry(cm, cs))
+      }
+      case None => ()
     }
   }
-
-  def send(msg: Message): Future[Any] = for {
-    r1 <- destination.ask(msg)(DestinationTimeout)
-    r2 <- reply(r1)
-  } yield r2
-
-  def reply(msg: Any): Future[Any] =
-    replyDestination.map(_.ask(msg)(ReplyDestinationTimeout)).getOrElse(successfulAck)
 }

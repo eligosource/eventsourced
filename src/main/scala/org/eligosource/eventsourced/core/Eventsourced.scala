@@ -18,7 +18,7 @@ package org.eligosource.eventsourced.core
 import akka.actor._
 
 /**
- * Stackable modification for making an actor persitent via event-sourcing (or command-sourcing).
+ * Stackable modification for making an actor persistent via event-sourcing (or command-sourcing).
  * It writes any input [[org.eligosource.eventsourced.core.Message]] to a journal. Input messages
  * of any other type are not journaled. Example:
  *
@@ -34,7 +34,11 @@ import akka.actor._
  *    }
  *  }
  *
- *  val myActor = extension.processorOf(ProcessorProps(1, new MyActor with Eventsourced))
+ *  // create and register and event-sourced actor (processor)
+ *  val myActor = extension.processorOf(Props(new MyActor with Eventsourced { val id = 1 } ))
+ *
+ *  // replay journaled messages from previous application runs
+ *  extension.recover()
  *
  *  myActor ! Message("foo event") // message will be journaled
  *  myActor ! "whatever"           // message will not be journaled
@@ -50,38 +54,32 @@ import akka.actor._
  *  new Actor with Eventsourced with Emitter { ... }   // won't work
  * }}}
  *
+ * The `Eventsourced` trait can additionally be combined with the stackable
+ * [[org.eligosource.eventsourced.core.Confirm]] trait.
+ *
  * @see [[org.eligosource.eventsourced.core.EventsourcingExtension]]
  */
-trait Eventsourced extends TargetBehavior {
+trait Eventsourced extends Behavior {
   import Eventsourced._
 
   private val journal = EventsourcingExtension(context.system).journal
-  private var _id: Int = _
 
   /**
-   * Overrides to `false` to avoid that an existing [[org.eligosource.eventsourced.core.Receiver]]
-   * modification additionally sends an `Ack` to the current `sender`. This ensures that the current
-   * sender will receive `Ack`s only from the journal that is used by this trait.
+   * Processor id. Must be a positive integer.
    */
-  override val autoAck = false
-
-  /**
-   * Processor id. Must only be accessed from within the modified actor's
-   * `receive` method.
-   */
-  def id: Int = _id
+  def id: Int
 
   abstract override def receive = {
-    case SetId(id) => {
-      _id = id
+    case GetId => {
+      sender ! id
     }
-    case msg: Message if (sender == journal) => {
+    case Written(msg) => {
       super.receive(msg.copy(processorId = id))
     }
     case msg: Message => {
       journal forward WriteInMsg(id, msg, self)
     }
-    case LoopThrough(msg, _) => {
+    case Looped(msg) => {
       super.receive(msg)
     }
     case msg => {
@@ -94,5 +92,5 @@ trait Eventsourced extends TargetBehavior {
 }
 
 private [core] object Eventsourced {
-  case class SetId(id: Int)
+  case object GetId
 }

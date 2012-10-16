@@ -18,8 +18,6 @@ package org.eligosource.eventsourced.guide
 import java.io.File
 
 import akka.actor._
-import akka.util.duration._
-import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
@@ -46,7 +44,7 @@ object FirstSteps extends App {
   }
 
   // create and register event-sourced processor
-  val processor: ActorRef = extension.processorOf(ProcessorProps(1, new Processor with Eventsourced))
+  val processor: ActorRef = extension.processorOf(Props(new Processor with Eventsourced { val id = 1 } ))
 
   // recover registered processors by replaying journaled events
   extension.recover()
@@ -63,3 +61,4 @@ object FirstSteps extends App {
   // then shutdown
   system.shutdown()
 }
+
