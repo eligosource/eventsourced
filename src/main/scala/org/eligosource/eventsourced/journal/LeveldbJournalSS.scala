@@ -32,14 +32,14 @@ import org.eligosource.eventsourced.util._
  *
  * Pros:
  *
- *  - efficient replay of input messages for composites i.e. single scan
- *    (with optional lower bound) for n processors.
+ *  - efficient replay of input messages for all processors (batch replay
+ *    with optional lower bound).
  *  - efficient replay of output messages
  *  - efficient deletion of old entries
  *
  * Cons:
  *
- *  - replay of input messages for individual processors requires full scan
+ *  - replay of input messages for a single processor requires full scan
  *    (with optional lower bound)
  */
 private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {

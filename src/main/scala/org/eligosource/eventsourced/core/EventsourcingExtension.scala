@@ -32,7 +32,7 @@ import akka.util.Duration
  */
 class EventsourcingExtension(system: ActorSystem) extends Extension {
   private val journalRef = new AtomicReference[Option[ActorRef]](None)
-  private val channelsRef = new AtomicReference[Map[String, ActorRef]](Map.empty)
+  private val channelsRef = new AtomicReference[ChannelMappings](ChannelMappings())
   private val processorsRef = new AtomicReference[Map[Int, ActorRef]](Map.empty)
 
   /**
@@ -43,10 +43,17 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
 
   /**
    * Map of registered [[org.eligosource.eventsourced.core.Channel]]s. Mapping key is
+   * the channel id.
+   */
+  def channels: Map[Int, ActorRef] =
+    channelsRef.get.idToChannel
+
+  /**
+   * Map of registered named [[org.eligosource.eventsourced.core.Channel]]s. Mapping key is
    * the channel name.
    */
-  def channels: Map[String, ActorRef] =
-    channelsRef.get
+  def namedChannels: Map[String, ActorRef] =
+    channelsRef.get.nameToChannel
 
   /**
    * Map of registered [[org.eligosource.eventsourced.core.Eventsourced]] processors.
@@ -75,10 +82,10 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
   }
 
   /**
-   * Enables the channel registered under `channelName` and starts delivery of pending messages.
+   * Enables the channel registered under `channelId` and starts delivery of pending messages.
    */
-  def deliver(channelName: String) {
-    journal ! BatchDeliverOutMsgs(channels.get(channelName).toList)
+  def deliver(channelId: Int) {
+    journal ! BatchDeliverOutMsgs(channels.get(channelId).toList)
   }
 
   /**
@@ -145,7 +152,8 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
 
   /**
    * Creates and registers a [[org.eligosource.eventsourced.core.Channel]]. The channel is
-   * registered under the name given by `props.name`.
+   * registered under the id specified by `props.id`. If `props.name` is defined it is also
+   * registered under that name.
    *
    * @param props channel configuration object.
    * @param actorRefFactory [[org.eligosource.eventsourced.core.Channel]] ref factory.
@@ -156,15 +164,31 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    */
   def channelOf(props: ChannelProps)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
     val channel = props.createChannel(journal)
-    registerChannel(props.name.getOrElse(props.id.toString), channel)
+    registerChannel(props.id, props.name, channel)
     channel
   }
 
+  /**
+   * Stops and deregisters the processor identified by `processorId`.
+   *
+   * @param processorId processor id.
+   */
+  def stopProcessor(processorId: Int)(implicit actorRefFactory: ActorRefFactory) =
+    processors.get(processorId) foreach { p => deregisterProcessor(processorId); actorRefFactory.stop(p) }
+
+  /**
+   * Stops and deregisters the channel identified by `channelId`.
+   *
+   * @param channelId channel id.
+   */
+  def stopChannel(channelId: Int)(implicit actorRefFactory: ActorRefFactory) =
+    channels.get(channelId) foreach { c => deregisterChannel(channelId); actorRefFactory.stop(c) }
+
   @tailrec
-  private def registerChannel(channelName: String, channel: ActorRef): Unit = {
+  private def registerChannel(channelId: Int, channelName: Option[String], channel: ActorRef): Unit = {
     val current = channelsRef.get()
-    val updated = current + (channelName -> channel)
-    if (!channelsRef.compareAndSet(current, updated)) registerChannel(channelName, channel)
+    val updated = if (channelName.isDefined) current.add(channelId, channelName.get, channel) else current.add(channelId, channel)
+    if (!channelsRef.compareAndSet(current, updated)) registerChannel(channelId, channelName, channel)
   }
 
   @tailrec
@@ -174,8 +198,45 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
     if (!processorsRef.compareAndSet(current, updated)) registerProcessor(processorId, processor)
   }
 
+  @tailrec
+  private def deregisterChannel(channelId: Int): Unit = {
+    val current = channelsRef.get()
+    val updated = current.remove(channelId)
+    if (!channelsRef.compareAndSet(current, updated)) deregisterChannel(channelId)
+  }
+
+  @tailrec
+  private def deregisterProcessor(processorId: Int): Unit = {
+    val current = processorsRef.get()
+    val updated = current - processorId
+    if (!processorsRef.compareAndSet(current, updated)) deregisterProcessor(processorId)
+  }
+
   private [core] def registerJournal(journal: ActorRef) {
     journalRef.set(Some(journal))
+  }
+
+  private case class ChannelMappings(
+    idToChannel: Map[Int, ActorRef] = Map.empty,
+    idToName: Map[Int, String] = Map.empty,
+    nameToChannel: Map[String, ActorRef] = Map.empty) {
+
+    def add(id: Int, channel: ActorRef): ChannelMappings = copy(
+      idToChannel + (id -> channel),
+      idToName,
+      nameToChannel)
+
+    def add(id: Int, name: String, channel: ActorRef): ChannelMappings = copy(
+      idToChannel + (id -> channel),
+      idToName + (id -> name),
+      nameToChannel + (name -> channel)
+    )
+
+    def remove(id: Int) = copy(
+      idToChannel - id,
+      idToName - id,
+      if (idToName.contains(id)) nameToChannel - idToName(id) else nameToChannel
+    )
   }
 }
 

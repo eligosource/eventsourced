@@ -109,45 +109,47 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
     "forward deadLetters to the destination after reaching maxRetry" in { fixture =>
       import fixture._
 
-
       val d = failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 4)
       val c = channel(d)
+
+      val dlq = new LinkedBlockingQueue[Either[Message, Message]]
 
       // sender is not persisted and channel is re-started after reaching maxRertry
       // response will go to deadLetters which is then published on event stream
       system.eventStream.subscribe(system.actorOf(Props(new Actor {
-        def receive = { case dl => d ! dl }
+        def receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
       })), classOf[DeadLetter])
 
       c ! Deliver
       c ! Message("a")
 
-      dequeue match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Right(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Right(msg) => msg.event must be("re: a") } // added via event stream subscriber
+      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
+      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
+      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
+      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
+      dequeue      match { case Right(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
+      dequeue(dlq) match { case Right(msg) => msg.event must be("re: a") } // added via event stream subscriber
     }
     "forward deadLetters to the destination before it is initialized" in { fixture =>
       import fixture._
 
-
       val d = successDestination
       val c = channel(d)
+
+      val dlq = new LinkedBlockingQueue[Either[Message, Message]]
 
       // sender is not persisted and channel doesn't deliver before initialization
       // response will go to deadLetters which is then published on event stream
       system.eventStream.subscribe(system.actorOf(Props(new Actor {
-        def receive = { case dl => d ! dl }
+        def receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
       })), classOf[DeadLetter])
 
       c ! Message("a")
       c ! Deliver
 
-      dequeue
-      dequeue match { case Right(msg) => msg.event must be("a") }
-      dequeue match { case Right(msg) => msg.event must be("re: a") }
+      dequeue(dlq)
+      dequeue      match { case Right(msg) => msg.event must be("a") }
+      dequeue(dlq) match { case Right(msg) => msg.event must be("re: a") }
     }
     "recover from destination failures and preserve message order" in { fixture =>
       import fixture._
@@ -211,9 +213,9 @@ object ReliableChannelSpec {
 
   class Destination(queue: Queue[Either[Message, Message]], failAtEvent: Any, var failureCount: Int, enqueueFailures: Boolean) extends Actor { this: Receiver =>
     def receive = {
-      case DeadLetter(response, _, _) => {
+      /*case DeadLetter(response, _, _) => {
         queue.add(Right(Message(response)))
-      }
+      }*/
       case event => {
         if (failAtEvent == event && failureCount > 0) {
           failureCount = failureCount - 1

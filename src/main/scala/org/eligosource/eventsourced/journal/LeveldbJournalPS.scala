@@ -31,8 +31,8 @@ import org.eligosource.eventsourced.util._
  *
  * Pros:
  *
- *  - efficient replay of input messages for composites
- *  - efficient replay of input messages for individual processors
+ *  - efficient replay of input messages for all processors (batch replay)
+ *  - efficient replay of input messages for a single processor
  *  - efficient replay of output messages
  *
  * Cons:

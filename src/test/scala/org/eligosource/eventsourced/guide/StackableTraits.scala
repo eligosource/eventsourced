@@ -22,27 +22,27 @@ import akka.actor._
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
-object FirstSteps extends App {
+object StackableTraits extends App {
   implicit val system = ActorSystem("example")
 
   // create a journal
-  val journal: ActorRef = LeveldbJournal(new File("target/example-1"))
+  val journal: ActorRef = LeveldbJournal(new File("target/example-2"))
 
   // create an event-sourcing extension
   val extension = EventsourcingExtension(system, journal)
 
   // event-sourced processor
-  class Processor(destination: ActorRef) extends Actor {
+  class Processor extends Actor { this: Emitter =>
     var counter = 0
 
     def receive = {
-      case msg: Message => {
+      case event => {
         // update internal state
         counter = counter + 1
-        // print received event and number of processed event messages so far
-        println("[processor] event = %s (%d)" format (msg.event, counter))
-        // send modified event message to destination
-        destination ! msg.copy(event = "processed %d event messages so far" format counter)
+        // print received event and number of processed events so far
+        println("[processor] event = %s (%d)" format (event, counter))
+        // send new event to destination channel
+        emitter("destination") sendEvent ("processed %d events so far" format counter)
       }
     }
   }
@@ -50,23 +50,21 @@ object FirstSteps extends App {
   // channel destination
   class Destination extends Actor {
     def receive = {
-      case msg: Message => {
+      case event => {
         // print event received from processor via channel
-        println("[destination] event = '%s'" format msg.event)
-        // confirm receipt of event message from channel
-        msg.confirm()
+        println("[destination] event = '%s'" format event)
       }
     }
   }
 
-  // create channel destination
-  val destination: ActorRef = system.actorOf(Props[Destination])
-
-  // create and register a channel
-  val channel: ActorRef = extension.channelOf(DefaultChannelProps(1, destination))
-
   // create and register event-sourced processor
-  val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
+  val processor: ActorRef = extension.processorOf(Props(new Processor with Emitter with Eventsourced { val id = 1 } ))
+
+  // create channel destination
+  val destination: ActorRef = system.actorOf(Props(new Destination with Receiver with Confirm))
+
+  // create and register a named channel
+  extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
 
   // recover registered processors by replaying journaled events
   extension.recover()

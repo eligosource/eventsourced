@@ -18,15 +18,19 @@ package org.eligosource.eventsourced.guide
 import java.io.File
 
 import akka.actor._
+import akka.pattern.ask
+import akka.util.duration._
+import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
-object FirstSteps extends App {
+object SenderReferences extends App {
   implicit val system = ActorSystem("example")
+  implicit val timeout = Timeout(5 seconds)
 
   // create a journal
-  val journal: ActorRef = LeveldbJournal(new File("target/example-1"))
+  val journal: ActorRef = LeveldbJournal(new File("target/example-3"))
 
   // create an event-sourcing extension
   val extension = EventsourcingExtension(system, journal)
@@ -41,8 +45,8 @@ object FirstSteps extends App {
         counter = counter + 1
         // print received event and number of processed event messages so far
         println("[processor] event = %s (%d)" format (msg.event, counter))
-        // send modified event message to destination
-        destination ! msg.copy(event = "processed %d event messages so far" format counter)
+        // forward modified event message to destination (together with sender reference)
+        destination forward msg.copy(event = "processed %d event messages so far" format counter)
       }
     }
   }
@@ -55,6 +59,8 @@ object FirstSteps extends App {
         println("[destination] event = '%s'" format msg.event)
         // confirm receipt of event message from channel
         msg.confirm()
+        // reply to sender
+        sender ! ("done processing event = %s (%d)" format msg.event)
       }
     }
   }
@@ -72,7 +78,10 @@ object FirstSteps extends App {
   extension.recover()
 
   // send event message to processor (will be journaled)
-  processor ! Message("foo")
+  // and asynchronously receive response (will not be journaled)
+  processor ? Message("foo") onSuccess {
+    case response => println(response)
+  }
 
   // wait for all messages to arrive (graceful shutdown coming soon)
   Thread.sleep(1000)

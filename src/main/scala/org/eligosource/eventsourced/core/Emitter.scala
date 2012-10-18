@@ -71,8 +71,15 @@ trait Emitter extends Receiver {
 
   /**
    * Returns a map of registered [[org.eligosource.eventsourced.core.Channel]]s.
+   * Mapping key is the channel id.
    */
-  def channels: Map[String, ActorRef] = extension.channels
+  def channels: Map[Int, ActorRef] = extension.channels
+
+  /**
+   * Returns a map of registered named [[org.eligosource.eventsourced.core.Channel]]s.
+   * Mapping key is the channel name.
+   */
+  def namedChannels: Map[String, ActorRef] = extension.namedChannels
 
   /**
    * Returns a message emitter factory that captures the current event `message` and the
@@ -80,7 +87,18 @@ trait Emitter extends Receiver {
    * from within any thread.
    */
   def emitter = {
-    new MessageEmitterFactory(channels, message)(context.system)
+    new MessageEmitterFactory(channels, namedChannels, message)(context.system)
+  }
+
+  /**
+   * Returns a message emitter that captures the current event `message` and a channel
+   * that has been registered under `channelId`. If no channel exists for `channelId`
+   * it will be `context.system.deadLetters`. Applications can run the returned emitter
+   * from within any thread for sending output messages (which will be derived from the
+   * captured event `message`).
+   */
+  def emitter(channelId: Int) = {
+    new MessageEmitter(channels.getOrElse(channelId, context.system.deadLetters), message)
   }
 
   /**
@@ -91,7 +109,7 @@ trait Emitter extends Receiver {
    * captured event `message`).
    */
   def emitter(channelName: String) = {
-    new MessageEmitter(channels.getOrElse(channelName, context.system.deadLetters), message)
+    new MessageEmitter(namedChannels.getOrElse(channelName, context.system.deadLetters), message)
   }
 
   abstract override def receive = {
@@ -106,19 +124,31 @@ trait Emitter extends Receiver {
  * for a certain [[org.eligosource.eventsourced.core.Channel]].
  *
  * @param channels channel map.
+ * @param namedChannels named channel map.
  * @param message event message.
  *
  * @see [[org.eligosource.eventsourced.core.Emitter]]
  */
-class MessageEmitterFactory(val channels: Map[String, ActorRef], val message: Message)(implicit system: ActorSystem) {
+class MessageEmitterFactory(val channels: Map[Int, ActorRef], namedChannels: Map[String, ActorRef], val message: Message)(implicit system: ActorSystem) {
   /**
    * Returns a message emitter containing `message` and a channel mapped
-   * with `channelName` in `channels`. If the mapping doesn't exist the
+   * with `channelId` in `channels`. If the mapping doesn't exist the
    * channel will be `system.deadLetters`.
    *
-   * @param channelName mapping key in `channels`
+   * @param channelId mapping key in `channels`
    */
-  def forChannel(channelName: String) = new MessageEmitter(channels.getOrElse(channelName, system.deadLetters), message)
+  def forChannel(channelId: Int): MessageEmitter =
+    new MessageEmitter(channels.getOrElse(channelId, system.deadLetters), message)
+
+  /**
+   * Returns a message emitter containing `message` and a channel mapped
+   * with `channelName` in `namedChannels`. If the mapping doesn't exist the
+   * channel will be `system.deadLetters`.
+   *
+   * @param channelName mapping key in `namedChannels`
+   */
+  def forChannel(channelName: String): MessageEmitter =
+    new MessageEmitter(namedChannels.getOrElse(channelName, system.deadLetters), message)
 }
 
 /**
