@@ -23,10 +23,10 @@ import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.LeveldbJournal
 
 object StackableTraits extends App {
-  implicit val system = ActorSystem("example")
+  implicit val system = ActorSystem("guide")
 
   // create a journal
-  val journal: ActorRef = LeveldbJournal(new File("target/example-2"))
+  val journal: ActorRef = LeveldbJournal(new File("target/guide-2"))
 
   // create an event-sourcing extension
   val extension = EventsourcingExtension(system, journal)

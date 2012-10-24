@@ -40,13 +40,11 @@ import akka.actor.ActorRef
  * @param ack Whether or not an ''acknowledgement'' should be written to the journal during
  *        (or after) delivery of this message by a [[org.eligosource.eventsourced.core.Channel]].
  *        Used by event processors to indicate a series of output messages (that are derived
- *        from a single input message). In this case, output messages 1 to n-1 should have set
- *        `ack` to `false` and only output message n should have set `ack` to `true` (default).
+ *        from a single input message). In this case, output messages 1 to n-1 should have `ack`
+ *        set to `false` and only output message n should have `ack` set to `true` (default).
  *        If an acknowledgement has been written for a series, all messages of that series will
  *        be ignored by the corresponding channel during a replay, otherwise all of them will
- *        be delivered again. Refer to [[org.eligosource.eventsourced.core.DefaultChannel]]
- *        and [[org.eligosource.eventsourced.core.ReliableChannel]] for details when they
- *        write acknowledgements.
+ *        be delivered again.
  */
 case class Message(
   event: Any,

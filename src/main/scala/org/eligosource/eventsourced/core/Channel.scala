@@ -24,24 +24,12 @@ import akka.util.duration._
 import akka.util._
 
 /**
- * A channel is used by [[org.eligosource.eventsourced.core.Eventsourced]] processors to send
- * event [[org.eligosource.eventsourced.core.Message]]s to destinations. A destination can be
- * any actor that either
+ * A channel keeps track of successfully delivered event [[org.eligosource.eventsourced.core.Message]]s.
+ * Channels are used by [[org.eligosource.eventsourced.core.Eventsourced]] actors to prevent redundant
+ * message delivery to destinations during event message replay.
  *
- *  - positively confirms message receipt with `Message.confirm()` or `Message.confirm(true)`.
- *  - or negatively confirms message receipt with `Message.confirm(false)` which causes
- *    - a reliable channel to redeliver that message after a configurable delay
- *    - a default channel to redeliver that message during recovery of the processor
- *      that added this message to the channel.
- *  - or doesn't confirm message receipt at all which causes
- *    - a reliable channel to redeliver that message after a configurable timeout and delay
- *    - a default channel to redeliver that message during recovery of the processor
- *      that added this message to the channel.
- *
- * For positively confirmed message receipts, a channel prevents that these messages are
- * redundantly delivered to destinations during a message replay (recovery). Actors can be
- * added automated message receipt confirmation by modifying them with the stackable
- * [[org.eligosource.eventsourced.core.Confirm]] trait.
+ * Channels need not be used by `Eventsourced` actors if the event message destination was received via
+ * a sender reference. Sender references are always the `deadLetters` reference during a replay.
  *
  * @see [[org.eligosource.eventsourced.core.DefaultChannel]]
  *      [[org.eligosource.eventsourced.core.ReliableChannel]]
@@ -138,11 +126,11 @@ object RedeliveryPolicy {
 /**
  * A persistent channel that sends event [[org.eligosource.eventsourced.core.Message]]s to
  * `destination`. Every event message sent to this channel is stored in the journal together
- * with an ''acknowledgement'' (which is used during replay to decide if a channel should
+ * with an ''acknowledgement'' (which is used during replay to decide if the channel should
  * ignore a message or not). If `destination` positively confirms the receipt of an event
  * message with `Message.confirm()` the stored message is deleted from the journal. If
  * `destination` negatively confirms the receipt of an event message with `Message.confirm(false)`
- * or no confirmation was made (i.e. a timeout occurred), a re-delivery is attempted. If the
+ * or no confirmation was made (i.e. a timeout occurred), a re-delivery attempt is made. If the
  * maximum number of re-delivery attempts have been made, the channel restarts itself after
  * a certain ''recovery delay'' (and starts again with re-deliveries).
  *

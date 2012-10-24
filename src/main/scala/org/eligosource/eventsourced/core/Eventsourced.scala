@@ -86,7 +86,7 @@ trait Eventsourced extends Behavior {
       // won't be written to journal but must be looped through
       // journal actor in order to to preserve order of event
       // messages and non-event messages sent to this actor
-      journal forward LoopThrough(msg, self)
+      journal forward Loop(msg, self)
     }
   }
 }

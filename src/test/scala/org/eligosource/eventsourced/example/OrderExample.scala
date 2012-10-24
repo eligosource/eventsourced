@@ -28,48 +28,31 @@ object OrderExample extends App {
   implicit val system = ActorSystem("example")
   implicit val timeout = Timeout(5 seconds)
 
-  // create a journal
-  val journalDir = new java.io.File("target/example")
+  val journalDir = new java.io.File("target/example-1")
   val journal = LeveldbJournal(journalDir)
 
-  // create an event-sourcing extension
-  implicit val extension = EventsourcingExtension(system, journal)
+  val extension = EventsourcingExtension(system, journal)
 
-  // create event sourced processor
   val processor = extension.processorOf(Props(new OrderProcessor with Emitter with Confirm with Eventsourced { val id = 1 }))
-
-  // create destinations for output events
   val validator = system.actorOf(Props(new CreditCardValidator(processor) with Receiver))
   val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
 
-  // create and register channels
-  extension.channelOf(ReliableChannelProps(2, validator).withName("validator"))
-  extension.channelOf(DefaultChannelProps(2, destination).withName("destination"))
-
-  // recover state from (previously) journaled events
+  extension.channelOf(ReliableChannelProps(1, validator).withName("validation requests"))
+  extension.channelOf(DefaultChannelProps(2, destination).withName("accepted orders"))
   extension.recover()
 
-  // submit an order
-  processor ? Message(OrderSubmitted(Order("jelly beans", "1234"))) onSuccess {
-    case order: Order => println("received order %s" format order)
+  processor ? Message(OrderSubmitted(Order(details = "jelly beans", creditCardNumber = "1234-5678-1234-5678"))) onSuccess {
+    case order: Order => println("received response %s" format order)
   }
 
-  // wait for output events to arrive (graceful shutdown coming soon)
-  Thread.sleep(1000)
-
-  // then shutdown
+  Thread.sleep(1000) // wait for output events to arrive (graceful shutdown coming soon)
   system.shutdown()
 
   // ------------------------------------
   // domain object
   // ------------------------------------
 
-  case class Order(id: Int, details: String, validated: Boolean, creditCardNumber: String)
-
-  object Order {
-    def apply(details: String): Order = apply(details, "")
-    def apply(details: String, creditCardNumber: String): Order = new Order(-1, details, false, creditCardNumber)
-  }
+  case class Order(id: Int = -1, details: String, validated: Boolean = false, creditCardNumber: String)
 
   // ------------------------------------
   // domain events
@@ -93,14 +76,14 @@ object OrderExample extends App {
         val id = orders.size
         val upd = order.copy(id = id)
         orders = orders + (id -> upd)
-        emitter("validator") forwardEvent CreditCardValidationRequested(upd)
+        emitter("validation requests") forwardEvent CreditCardValidationRequested(upd)
       }
       case CreditCardValidated(orderId) => {
         orders.get(orderId).foreach { order =>
           val upd = order.copy(validated = true)
           orders = orders + (orderId -> upd)
           sender ! upd
-          emitter("destination") sendEvent OrderAccepted(upd)
+          emitter("accepted orders") sendEvent OrderAccepted(upd)
         }
       }
     }

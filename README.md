@@ -1,8 +1,5 @@
 [![Build Status](https://secure.travis-ci.org/eligosource/eventsourced.png)](http://travis-ci.org/eligosource/eventsourced)
 
-- This user guide is work in progress …
-- Old user guide is [here](https://github.com/eligosource/eventsourced/blob/master/README.md)
-
 Eventsourced
 ============
 
@@ -311,14 +308,16 @@ pattern-matches against events directly and leaves event message receipt confirm
 Sender references
 -----------------
 
+The <i>Eventsourced</i> library preserves sender actor references (accessible via the `sender` member field in `Actor`) for all
+
+- message exchanges with actors that are modified with `Eventsourced`, `Receiver`, `Emitter` and/or `Conform` and
+- message exchanges with destinations via channels (with some limitations for reliable channels, as described below)
+
+i.e. there's no difference in sender reference usage between event-sourced actor applications and plain actor applications. If you know how sender references work in Akka [actors](http://doc.akka.io/docs/akka/snapshot/scala/actors.html), the following will sound familiar to you.
+
 ![Processor reply](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/senderrefs-1.png)
 
-The <i>Eventsourced</i> library preserves sender actor references (which are accessible via `Actor.sender`) for 
-
-- all message exchanges with actors that are modified with `Eventsourced`, `Receiver`, `Emitter` and/or `Conform` and
-- all message exchanges with destinations via channels (with some limitations for reliable channels, as described below)
-
-i.e. there's no difference between event-sourced actor applications and plain actor applications in how they use sender references. For example, taking the code from section [First steps](#first-steps) as a starting point, `Processor` can be extended to reply to message senders as follows.
+For example, taking the code from section [First steps](#first-steps) as a starting point, `Processor` can be extended to reply to message senders as follows.
 
     class Processor(destination: ActorRef) extends Actor {
       // …
@@ -339,7 +338,7 @@ Applications can now <i>ask</i> the `processor` and will get a response asynchro
       case response => println(response)
     }
 
-No surprise here. The sender reference in this example represents the future that is returned from the `?` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because the library doesn't store the initial sender reference in the journal. That's a sensible default because most sender references won't exist any more after application restart (and hence during a replay). This is especially true for (short-lived) futures.
+No surprise here. The sender reference in this example represents the future that is returned from the `?` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because the library doesn't store sender references in the journal. That's a sensible default because most sender references won't exist any more after application restart (and hence during a replay). This is especially true for (short-lived) futures.
 
 ![Destination reply](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/senderrefs-2.png)
 
@@ -374,15 +373,10 @@ When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/#org.
 
 Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.SenderReferences'`.
 
-Behavior changes
-----------------
-
-Plain actors can change their behavior via `context.become()` and `context.unbecome()`. Actors that are modified with `Receiver`, `Emitter` and/or `Eventsourced` still can change their behavior with these methods but they will keep the additional functionality that has been added with these stackable traits. For example, an actor that is modified with `Eventsourced` and that changes its behavior with `context.become()` will continue to journal event messages.
-
 Channels
 --------
 
-Channels are used by applications to prevent redundant message delivery to destinations during event message replay. See also section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example.
+A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example. Channels need not be used by event-sourced processors if the event message destination was received via a [sender reference](#sender-references). Sender references are always the `deadLetters` reference during a replay. 
 
 Currently, the library provides two different channel implementations: [`DefaultChannel`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.ReliableChannel) which are explained in the following two subsections.
 
@@ -445,43 +439,154 @@ When using a [message emitter](#emitter), this is done automatically.
 Recovery
 --------
 
-… 
+TODO (see also methods `deliver`, `replay` and `recover` of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.EventsourcingExtension))
+
+Behavior changes
+----------------
+
+Plain actors can change their behavior via `context.become()` and `context.unbecome()`. Actors that are modified with `Receiver`, `Emitter` and/or `Eventsourced` still can change their behavior with these methods but they will keep the additional functionality that has been added with these stackable traits. For example, an actor that is modified with `Eventsourced` and that changes its behavior with `context.become()` will continue to journal event messages.
 
 Idempotency
 -----------
 
-… 
+TODO
 
 Further examples
 ----------------
 
 ### Order management
-… 
+
+The order management example in this section is taken from [Martin Fowler](http://www.martinfowler.com/)'s great [LMAX article](http://martinfowler.com/articles/lmax.html):
+
+> Imagine you are making an order for jelly beans by credit card. A simple retailing system would take your order information, use a credit card validation service to check your credit card number, and then confirm your order - all within a single operation. The thread processing your order would block while waiting for the credit card to be checked, but that block wouldn't be very long for the user, and the server can always run another thread on the processor while it's waiting.
+>
+> In the LMAX architecture, you would split this operation into two. The first operation would capture the order information and finish by outputting an event (credit card validation requested) to the credit card company. The Business Logic Processor would then carry on processing events for other customers until it received a credit-card-validated event in its input event stream. On processing that event it would carry out the confirmation tasks for that order.
+
+This can be implemented with the <i>Eventsourced</i> library as shown in the following diagram (legend is in [Appendix A](#appendix-a-legend)).
+
+![Order management](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/ordermgnt-1.png)
+
+- We implement the mentioned <i>Business Logic Processor</i> processor as event-sourced actor (`OrderProcessor`). It processes `OrderSubmitted` events by assigning submitted orders an id and storing them in a map (= state of `OrderProcessor`). For every submitted order it emits a `CreditCardValidationRequested` event.
+- `CreditCardValidationRequested` events are processed by a `CreditCardValidator` actor. It contacts an external credit card validation service and sends `CreditCardValidated` events back to the `OrderProcessor` for every order with a valid credit card number. In the example implementation below, we won't actually use an external service to keep the implementation simple, but for real-world implementations, [akka-camel](http://doc.akka.io/docs/akka/snapshot/scala/camel.html) would be a perfect fit here.
+- On receiving a `CreditCardValidated` event, the event-sourced `OrderProcessor` updates the status of corresponding order to `validated = true` and sends an `OrderAccepted` event, containing the updated order, to `Destination`. It also replies the updated order to the initial sender.
+
+The `Order` domain object, the domain events and the `OrderProcessor` are defined as follows:
+
+    // domain object
+    case class Order(id: Int = -1, details: String, validated: Boolean = false, creditCardNumber: String)
+  
+    // domain events
+    case class OrderSubmitted(order: Order)
+    case class OrderAccepted(order: Order)
+    case class CreditCardValidationRequested(order: Order)
+    case class CreditCardValidated(orderId: Int)
+  
+    // event-sourced order processor
+    class OrderProcessor extends Actor { this: Emitter =>
+      var orders = Map.empty[Int, Order] // processor state
+  
+      def receive = {
+        case OrderSubmitted(order) => {
+          val id = orders.size
+          val upd = order.copy(id = id)
+          orders = orders + (id -> upd)
+          emitter("validation requests") forwardEvent CreditCardValidationRequested(upd)
+        }
+        case CreditCardValidated(orderId) => {
+          orders.get(orderId).foreach { order =>
+            val upd = order.copy(validated = true)
+            orders = orders + (orderId -> upd)
+            sender ! upd
+            emitter("accepted orders") sendEvent OrderAccepted(upd)
+          }
+        }
+      }
+    }
+
+The `OrderProcessor` uses a message `emitter` to send `CreditCardValidationRequested` events to `CreditCardValidator` via the named `"validation requests"` channel. The `forwardEvent` method not only sends these event but also forwards the initial [sender reference](#sender-references). Upon receiving a `CreditCardValidationRequested` event, the `CreditCardValidator` runs a credit card validation in the background and sends a `CreditCardValidated` event back to the `OrderProcessor`
+
+    class CreditCardValidator(orderProcessor: ActorRef) extends Actor { this: Receiver =>
+      def receive = {
+        case CreditCardValidationRequested(order) => {
+          val sdr = sender  // initial sender
+          val msg = message // current event message
+          Future {
+            // do some credit card validation
+            // ...
+  
+            // and send back a successful validation result (preserving the initial sender)
+            orderProcessor tell (msg.copy(event = CreditCardValidated(order.id)), sdr)
+          }
+        }
+      }
+    }
+
+
+The `CreditCardValidator` again forwards the initial sender reference which finally enables the `OrderProcessor` to reply to the initial sender when it receives the `CreditCardValidated` event. The `OrderProcessor` also sends an `OrderAccepted` event to `Destination` via the named `"accepted orders"` channel. 
+
+    class Destination extends Actor {
+      def receive = {
+        case event => println("received event %s" format event)
+      }
+    }
+
+Next step is to wire the collaborators and to recover them:
+
+    val extension: EventsourcingExtension = … 
+
+    val processor = extension.processorOf(Props(new OrderProcessor with Emitter with Confirm with Eventsourced { val id = 1 }))
+    val validator = system.actorOf(Props(new CreditCardValidator(processor) with Receiver))
+    val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
+
+    extension.channelOf(ReliableChannelProps(1, validator).withName("validation requests"))
+    extension.channelOf(DefaultChannelProps(2, destination).withName("accepted orders"))
+   
+    extension.recover()
+
+The named `"validation requests"` channel is a reliable channel that re-delivers `CreditCardValidationRequested` events in case of `CreditCardValidator` failures (for example, when the external credit card validation service is temporarily unavailable). Furthermore, it should be noted that the `CreditCardValidator` does not confirm event message deliveries (it neither calls `confirm()` explicitly nor is it modified with the `Confirm` trait during instantiation). Delivery confirmation will take place when the `OrderProcessor` successfully processed the `CreditCardValidated` event. 
+
+The `Order processor` is now ready to receive `OrderSubmitted` events.
+
+    processor ? Message(OrderSubmitted(Order(details = "jelly beans", creditCardNumber = "1234-5678-1234-5678"))) onSuccess {
+      case order: Order => println("received response %s" format order)
+    }
+
+Running this example with an empty journal will write
+
+    received response Order(0,jelly beans,true,1234-5678-1234-5678)
+    received event OrderAccepted(Order(0,jelly beans,true,1234-5678-1234-5678))
+
+to `stdout`. You may observe a different line ordering when running the example. The submitted order was assigned an `id` of `0` which corresponds to the initial size of the `OrderProcessor`'s `orders` map. A second application run will first recover the previous application state, so that another order submission will generate an order `id` of `1`.
+
+    received response Order(1,jelly beans,true,1234-5678-1234-5678)
+    received event OrderAccepted(Order(1,jelly beans,true,1234-5678-1234-5678))
+
+The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.example.OrderExample'`. 
 
 ### State machines
 
-… 
+TODO (see also [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala))
 
 Miscellaneous
 -------------
 
 ### Event series
 
-… 
+TODO (see also `ack` field of [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message))
 
 ### Multicast processor
 
-… 
+TODO (see also [`Multicast`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Multicast))
 
 ### Retroactive changes
 
-… 
+TODO
 
 Resources
 ---------
 
 - [Eventsourced API](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.package)
-- [Eventsourced reference application](https://github.com/eligosource/eventsourced-example) (work in progress …)
+- [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
 
 Support
 -------

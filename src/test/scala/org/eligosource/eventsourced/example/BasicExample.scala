@@ -30,7 +30,7 @@ object BasicExample extends App {
   implicit val timeout = Timeout(5 seconds)
 
   // Event sourcing extension
-  val extension = EventsourcingExtension(system, LeveldbJournal(new File("target/example")))
+  val extension = EventsourcingExtension(system, LeveldbJournal(new File("target/example-2")))
 
   // Register event-sourced processors
   val processorA = extension.processorOf(ProcessorProps(1, pid => new ProcessorA with Receiver with Confirm with Eventsourced { val id = pid } ))

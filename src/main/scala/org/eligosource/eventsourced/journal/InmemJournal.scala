@@ -50,7 +50,7 @@ private [eventsourced] class InmemJournal extends Actor {
       storeDel(cmd)
       commandListener.foreach(_ ! cmd)
     }
-    case LoopThrough(msg, target) => {
+    case Loop(msg, target) => {
       target forward (Looped(msg))
     }
     case BatchDeliverOutMsgs(channels) => {

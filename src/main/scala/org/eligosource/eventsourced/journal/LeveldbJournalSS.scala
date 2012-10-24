@@ -95,7 +95,7 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
       writeOutMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
       commandListener.foreach(_ ! cmd)
     }
-    case LoopThrough(msg, target) => {
+    case Loop(msg, target) => {
       target forward (Looped(msg))
     }
     case BatchDeliverOutMsgs(channels) => {

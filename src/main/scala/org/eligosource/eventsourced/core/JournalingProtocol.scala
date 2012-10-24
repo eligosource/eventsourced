@@ -25,6 +25,8 @@ private [eventsourced] case class WriteOutMsg(channelId: Int, message: Message, 
   def withSequenceNr(snr: Long) = copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
 }
 
+private [eventsourced] case class Written(msg: Message)
+
 private [eventsourced] case class DeleteOutMsg(channelId: Int, msgSequenceNr: Long)
 private [eventsourced] case class WriteAck(processorId: Int, channelId: Int, ackSequenceNr: Long)
 
@@ -34,11 +36,10 @@ private [eventsourced] case class ReplayOutMsgs(channelId: Int, fromSequenceNr: 
 private [eventsourced] case class BatchReplayInMsgs(replays: Seq[ReplayInMsgs])
 private [eventsourced] case class BatchDeliverOutMsgs(channels: Seq[ActorRef])
 
-private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
-private [eventsourced] case class LoopThrough(msg: Any, target: ActorRef)
-
-private [eventsourced] case class Written(msg: Message)
+private [eventsourced] case class Loop(msg: Any, target: ActorRef)
 private [eventsourced] case class Looped(msg: Any)
+
+private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
 
 private [eventsourced] case object Deliver
 private [eventsourced] case object GetCounter
