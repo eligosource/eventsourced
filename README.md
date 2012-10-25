@@ -36,7 +36,7 @@ See [Installation](https://github.com/eligosource/eventsourced/wiki/Installation
 First steps
 -----------
 
-This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the use of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.FirstSteps'` (click [here](https://github.com/eligosource/eventsourced/wiki/Installation) for details about the `run-nobootcp` task). The legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
+This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the use of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.FirstSteps'` (click [here](https://github.com/eligosource/eventsourced/wiki/Installation) for details about the `run-nobootcp` task). The legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
 
 ### Step 1: `EventsourcingExtension` initialization
 
@@ -93,7 +93,7 @@ An actor that is modified with `Eventsourced` journals event `Message`s before i
 
 The event-sourced `processor` can be used like any other actor. Messages of type [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message) are written to `journal`, messages of any other type are directly received by `processor` without being journaled.
 
-![Event-sourced actor](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/firststeps-1.png)
+![Event-sourced actor](https://raw.github.com/eligosource/eventsourced/master/doc/images/firststeps-1.png)
 
     // send event message to processor (will be journaled)
     processor ! Message("foo")
@@ -111,7 +111,7 @@ on `stdout` where the first `println` is triggered by a replayed event message.
 
 ### Step 5: Channel usage
 
-![Channel](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/firststeps-2.png)
+![Channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/firststeps-2.png)
 
 In this step, the event-sourced `processor` is extended to send out new event messages to a `destination`. It creates a another event message (by making a copy of the received event message) with an updated `event` field and sends the updated message to `destination`.
 
@@ -171,7 +171,7 @@ Stackable traits
 
 ### `Eventsourced`
 
-![Eventsourced](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/stackabletraits-1.png)
+![Eventsourced](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-1.png)
 
 The [`Eventsourced`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Eventsourced) trait has already been discussed in section [First steps](#first-steps). It can be combined with the stackable `Receiver`, `Emitter` and/or `Confirm` traits where the `Eventsourced` trait must always the last modification i.e. 
 
@@ -179,7 +179,7 @@ The [`Eventsourced`](http://eligosource.github.com/eventsourced/#org.eligosource
 
 ### `Receiver`
 
-![Receiver](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/stackabletraits-2.png)
+![Receiver](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-2.png)
 
 An actor that receives event [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message)s often wants to pattern-match against the contained `event` directly instead of the whole event message. This can be achieved by modifying it with the [`Receiver`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Receiver) trait during instantiation.
 
@@ -214,7 +214,7 @@ Refer to the [API docs](http://eligosource.github.com/eventsourced/#org.eligosou
 
 ### `Emitter`
 
-![Emitter](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/stackabletraits-3.png)
+![Emitter](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-3.png)
 
 Where a `Receiver` modification allows actors to pattern-match against incoming events directly instead of whole event `Message`s, an [`Emitter`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Emitter) introduces a corresponding simplification on the sending (outgoing) side. It allows actors to send (<i>emit</i>) events to channels without having to deal with whole event `Message`s. An emitter can also lookup channels by name.
 
@@ -242,7 +242,7 @@ Refer to the [API docs](http://eligosource.github.com/eventsourced/#org.eligosou
 
 ### `Confirm`
 
-![Confirm](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/stackabletraits-4.png)
+![Confirm](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-4.png)
 
 The receipt of event messages from channels must be confirmed by calling `confirm()` or `confirm(true)` on the received event `Message`. Applications can also <i>negatively</i> confirm an event message receipt by calling `confirm(false)`. This, for example, causes a reliable channel to redeliver the event message.
 
@@ -260,14 +260,14 @@ Refer to the [API docs](http://eligosource.github.com/eventsourced/#org.eligosou
 
 ### Modified example
 
-![Example](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/stackabletraits-5.png)
+![Example](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-5.png)
 
 This section modifies (and simplifies) the example from section [First steps](#first-steps) by making use of the stackable traits `Receiver`, `Emitter` and `Confirm`. In particular
 
 - `Processor` will be modified with `Emitter` (in addition to `Eventsourced`)
 - `Destination` will be modified with `Receiver` and `Confirm`
 
-Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.StackableTraits'`.
+Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.StackableTraits'`.
 
 The new definition of `Processor`
 
@@ -315,7 +315,7 @@ The <i>Eventsourced</i> library preserves sender actor references (accessible vi
 
 i.e. there's no difference in sender reference usage between event-sourced actor applications and plain actor applications. If you know how sender references work in Akka [actors](http://doc.akka.io/docs/akka/snapshot/scala/actors.html), the following will sound familiar to you.
 
-![Processor reply](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/senderrefs-1.png)
+![Processor reply](https://raw.github.com/eligosource/eventsourced/master/doc/images/senderrefs-1.png)
 
 For example, taking the code from section [First steps](#first-steps) as a starting point, `Processor` can be extended to reply to message senders as follows.
 
@@ -340,7 +340,7 @@ Applications can now <i>ask</i> the `processor` and will get a response asynchro
 
 No surprise here. The sender reference in this example represents the future that is returned from the `?` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because the library doesn't store sender references in the journal. That's a sensible default because most sender references won't exist any more after application restart (and hence during a replay). This is especially true for (short-lived) futures.
 
-![Destination reply](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/senderrefs-2.png)
+![Destination reply](https://raw.github.com/eligosource/eventsourced/master/doc/images/senderrefs-2.png)
 
 Instead of replying to the sender, the processor can also forward the sender reference to a destination and let the destination reply to the sender. This even works if the destination is wrapped by a channel because a channel simply forwards sender references when delivering event messages to destinations.
 
@@ -371,7 +371,7 @@ Again, no surprise here. The situation is a bit more tricky when using reliable 
 
 When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.MessageEmitter) for sending event messages (see also section [Emitter](#emitter)) applications can choose between methods `sendEvent` and `forwardEvent` where `sendEvent` takes an implicit sender reference as parameter and `forwardEvent` forwards the current sender reference. They work in the same way as the `!` and `forward` methods on `ActorRef`, respectively.
 
-Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.SenderReferences'`.
+Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.SenderReferences'`.
 
 Channels
 --------
@@ -382,7 +382,7 @@ Currently, the library provides two different channel implementations: [`Default
 
 ### `DefaultChannel`
 
-![Default channel](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/channels-1.png)
+![Default channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-1.png)
 
 A default channel is a transient channel that delivers event messages to a destination actor. When the destination confirms the delivery of an event message by calling either `confirm()` or `confirm(true)` on the received `Message` object, a confirmation (an <i>acknowledgement</i>) is asynchronously written to the journal. During a replay, event messages for which a confirmation exists won't be delivered again to the destination. 
 
@@ -408,7 +408,7 @@ The map of registered named channels can be obtained via `extension.namedChannel
 
 ### `ReliableChannel`
 
-![Reliable channel](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/channels-2.png)
+![Reliable channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-2.png)
 
 A reliable channel is a persistent channel that writes event messages to a journal before delivering them to a destination actor. In contrast to a default channel, a reliable channel preserves the order of messages as generated by an event-sourced processor and attempts to re-deliver event messages on destination failures. Therefore, a reliable channel enables applications to recover from temporary destination failures without having to run an event message replay. 
 
@@ -464,7 +464,7 @@ The order management example in this section is taken from [Martin Fowler](http:
 
 This can be implemented with the <i>Eventsourced</i> library as shown in the following diagram (legend is in [Appendix A](#appendix-a-legend)).
 
-![Order management](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/ordermgnt-1.png)
+![Order management](https://raw.github.com/eligosource/eventsourced/master/doc/images/ordermgnt-1.png)
 
 - We implement the mentioned <i>Business Logic Processor</i> processor as event-sourced actor (`OrderProcessor`). It processes `OrderSubmitted` events by assigning submitted orders an id and storing them in a map (= state of `OrderProcessor`). For every submitted order it emits a `CreditCardValidationRequested` event.
 - `CreditCardValidationRequested` events are processed by a `CreditCardValidator` actor. It contacts an external credit card validation service and sends `CreditCardValidated` events back to the `OrderProcessor` for every order with a valid credit card number. In the example implementation below, we won't actually use an external service to keep the implementation simple, but for real-world implementations, [akka-camel](http://doc.akka.io/docs/akka/snapshot/scala/camel.html) would be a perfect fit here.
@@ -561,11 +561,11 @@ to `stdout`. You may observe a different line ordering when running the example.
     received response Order(1,jelly beans,true,1234-5678-1234-5678)
     received event OrderAccepted(Order(1,jelly beans,true,1234-5678-1234-5678))
 
-The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.example.OrderExample'`. 
+The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.example.OrderExample'`. 
 
 ### State machines
 
-TODO (see also [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/wip-es-trait/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala))
+TODO (see also [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala))
 
 Miscellaneous
 -------------
@@ -597,4 +597,4 @@ Support
 Appendix A: Legend
 ------------------
 
-![Legend](https://raw.github.com/eligosource/eventsourced/wip-es-trait/doc/images/legend.png)
+![Legend](https://raw.github.com/eligosource/eventsourced/master/doc/images/legend.png)
