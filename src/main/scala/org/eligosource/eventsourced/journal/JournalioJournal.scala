@@ -56,7 +56,7 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
   var commandListener: Option[ActorRef] = None
   var counter = 0L
 
-  def receive = {
+  def receive: Receive = {
     case cmd: WriteInMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
       val m = c.message.clearConfirmationSettings

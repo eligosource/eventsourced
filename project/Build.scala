@@ -14,7 +14,12 @@ object Settings {
   import Resolvers._
 
   val defaultSettings = buildSettings ++ Seq(
-    resolvers ++= Seq(typesafeRepo, journalioRepo),
+    resolvers ++= Seq(
+      typesafeRepo, 
+      journalioRepo, 
+      "Akka Repo" at "http://akka.io/repository", 
+      "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases",
+      "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"),
     scalacOptions ++= Seq("-unchecked"),
     parallelExecution in Test := false
   )
@@ -32,8 +37,8 @@ object Dependencies {
 }
 
 object Version {
-  val Scala = "2.9.2"
-  val Akka  = "2.0.3"
+  val Scala = "2.10.0-RC1"
+  val Akka  = "2.1.0-RC1"
 }
 
 object Dependency {
@@ -43,18 +48,18 @@ object Dependency {
   //  Compile
   // -----------------------------------------------
 
-  val akkaActor   = "com.typesafe.akka"         %  "akka-actor"    % Akka      % "compile"
-  val akkaRemote  = "com.typesafe.akka"         %  "akka-remote"   % Akka      % "compile"
+  val akkaActor   = "com.typesafe.akka"         %  "akka-actor_2.10.0-RC1"    % Akka      % "compile"
+  val akkaRemote  = "com.typesafe.akka"         %  "akka-remote_2.10.0-RC1"   % Akka      % "compile"
   val commonsIo   = "commons-io"                %  "commons-io"    % "2.3"     % "compile"
   val journalIo   = "journalio"                 %  "journalio"     % "1.2"     % "compile"
   val levelDbJni  = "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.2"     % "compile"
-  val scalaStm    = "org.scala-tools"           %% "scala-stm"     % "0.5"     % "compile"
+  val scalaStm    = "org.scala-tools"           % "scala-stm_2.10.0-RC1"     % "0.6"     % "compile"
 
   // -----------------------------------------------
   //  Test
   // -----------------------------------------------
 
-  val scalaTest = "org.scalatest" %% "scalatest" % "1.8" % "test"
+  val scalaTest = "org.scalatest" % "scalatest_2.10.0-RC1" % "1.8" % "test"
 }
 
 object EventsourcedBuild extends Build {

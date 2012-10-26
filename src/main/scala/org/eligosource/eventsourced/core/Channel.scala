@@ -18,10 +18,10 @@ package org.eligosource.eventsourced.core
 import scala.collection.immutable.Queue
 
 import akka.actor._
-import akka.dispatch._
+import concurrent._
 import akka.pattern.ask
-import akka.util.duration._
 import akka.util._
+import concurrent.duration._
 
 /**
  * A channel keeps track of successfully delivered event [[org.eligosource.eventsourced.core.Message]]s.
@@ -77,7 +77,7 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
   private var retain = true
   private var buffer = List.empty[Message]
 
-  def receive = {
+  def receive: Receive = {
     case msg: Message if (!msg.acks.contains(id)) => {
       if (retain) buffer = msg :: buffer
       else send(msg)
@@ -105,8 +105,8 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
  * @param retryMax Maximum number of re-delivery attempts.
  */
 case class RedeliveryPolicy(
-  recoveryDelay: Duration,
-  retryDelay: Duration,
+  recoveryDelay: FiniteDuration,
+  retryDelay: FiniteDuration,
   retryMax: Int)
 
 object RedeliveryPolicy {
@@ -151,7 +151,7 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
 
   private var buffer: Option[ActorRef] = None
 
-  def receive = {
+  def receive: Receive = {
     case msg: Message if (!msg.acks.contains(id)) => {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
       journal forward WriteOutMsg(id, msg, msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
@@ -194,7 +194,7 @@ private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, de
 
   val deliverer = context.actorOf(Props(new ReliableChannelDeliverer(channelId, journal, destination, policy)))
 
-  def receive = {
+  def receive: Receive = {
     case Written(msg) => {
       delivererQueue = delivererQueue.enqueue(msg, sender)
       if (!delivererBusy) {
@@ -225,7 +225,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
   var retries = 0
   var currentDelivery: Option[(Message, ActorRef, Cancellable)] = None
 
-  def receive = {
+  def receive: Receive = {
     case Trigger => {
       sender ! FeedMe
     }

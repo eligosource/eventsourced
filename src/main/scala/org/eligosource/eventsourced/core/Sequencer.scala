@@ -30,7 +30,7 @@ trait Sequencer extends Actor {
   private val delayed = Map.empty[Long, Any]
   private var delivered = 0L
 
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case (seqnr: Long, msg) => {
       resequence(seqnr, msg)
     }

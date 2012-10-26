@@ -100,7 +100,7 @@ class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(successDestination)
-      val respondTo = ask(c) _
+      val respondTo = ask0(c) _
 
       c ! Deliver
 
@@ -126,7 +126,7 @@ object DefaultChannelSpec {
   }
 
   class Destination(queue: Queue[Message], failAtEvent: Any) extends Actor { this: Receiver =>
-    def receive = {
+    def receive: Receive = {
       case event => if (event == failAtEvent) {
         confirm(false)
       } else {
@@ -138,7 +138,7 @@ object DefaultChannelSpec {
   }
 
   class WriteAckListener(queue: java.util.Queue[WriteAck]) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case cmd: WriteAck => queue.add(cmd)
     }
   }

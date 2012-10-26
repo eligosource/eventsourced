@@ -189,7 +189,7 @@ object GraphRecoverySpec {
     var numProcessed = 0
     var lastSenderMessageId = 0L
 
-    def receive = {
+    def receive: Receive = {
       case InputCreated(s)  => {
         emitter("processor2") sendEvent InputModified("%s-%d" format (s, numProcessed))
         numProcessed = numProcessed + 1
@@ -210,7 +210,7 @@ object GraphRecoverySpec {
   class Processor2 extends Actor { this: Emitter =>
     var numProcessed = 0
 
-    def receive = {
+    def receive: Receive = {
       case InputModified(s) => {
         val evt = InputModified("%s-%d" format (s, numProcessed))
         val sid = Some(sequenceNr.toString) // for detecting duplicates
@@ -222,13 +222,13 @@ object GraphRecoverySpec {
   }
 
   class Echo(target: ActorRef) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case msg: Message => target ! msg
     }
   }
 
   class Destination(queue: java.util.Queue[Message]) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case msg: Message => queue.add(msg)
     }
   }

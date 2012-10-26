@@ -28,7 +28,7 @@ import akka.actor._
  *   myReceiver ! Message("foo event")
  *
  *   class MyReceiver extends Actor { this: Receiver =>
- *     def receive = {
+ *     def receive: Receive = {
  *       case "foo event" => {
  *         val msg = message          // current message
  *         val snr = sequenceNr       // sequence number of message
@@ -52,7 +52,7 @@ import akka.actor._
  *   val myReceiver = system.actorOf(Props(new MyReceiver with Receiver with Confirm with Eventsourced { val id = ... } ))
  *
  *   class MyReceiver extends Actor { this: Receiver =>
- *     def receive = {
+ *     def receive: Receive = {
  *       // ...
  *     }
  *   }
@@ -104,7 +104,7 @@ trait Receiver extends Behavior {
    */
   def confirm(pos: Boolean = true) = message.confirm(pos)
 
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case msg: Message => {
       _message = Some(msg)
       super.receive(msg.event)

@@ -18,8 +18,8 @@ package org.eligosource.eventsourced.guide
 import java.io.File
 
 import akka.actor._
-import akka.pattern.ask
-import akka.util.duration._
+import akka.pattern._
+import concurrent.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
@@ -28,6 +28,7 @@ import org.eligosource.eventsourced.journal.LeveldbJournal
 object SenderReferences extends App {
   implicit val system = ActorSystem("guide")
   implicit val timeout = Timeout(5 seconds)
+  implicit val executionContext = concurrent.ExecutionContext.global
 
   // create a journal
   val journal: ActorRef = LeveldbJournal(new File("target/guide-3"))
@@ -39,7 +40,7 @@ object SenderReferences extends App {
   class Processor(destination: ActorRef) extends Actor {
     var counter = 0
 
-    def receive = {
+    def receive: Receive = {
       case msg: Message => {
         // update internal state
         counter = counter + 1
@@ -53,7 +54,7 @@ object SenderReferences extends App {
 
   // channel destination
   class Destination extends Actor {
-    def receive = {
+    def receive: Receive = {
       case msg: Message => {
         // print event received from processor via channel
         println("[destination] event = '%s'" format msg.event)

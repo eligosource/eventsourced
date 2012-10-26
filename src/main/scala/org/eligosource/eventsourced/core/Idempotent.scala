@@ -26,7 +26,7 @@ import akka.actor.Actor
 trait Idempotent extends Actor {
   var lastSequenceNr = 0L
 
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case msg: Message => if (msg.sequenceNr > lastSequenceNr) {
       lastSequenceNr = msg.sequenceNr; super.receive(msg)
     }

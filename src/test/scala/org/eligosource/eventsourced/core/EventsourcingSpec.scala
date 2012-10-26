@@ -18,10 +18,11 @@ package org.eligosource.eventsourced.core
 import java.io.File
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
+import concurrent.Await
+import concurrent.duration._
+
 import akka.actor._
-import akka.dispatch.Await
-import akka.pattern.ask
-import akka.util.duration._
+import akka.pattern._
 import akka.util.Timeout
 
 import org.apache.commons.io.FileUtils
@@ -50,6 +51,7 @@ abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassManifest] e
 trait EventsourcingFixture[A] {
   implicit val system = ActorSystem("test")
   implicit val timeout = Timeout(5 seconds)
+  implicit val executionContext = concurrent.ExecutionContext.global
 
   val journalDir = new File("target/journal")
   val journal = LeveldbJournal(journalDir)
@@ -69,7 +71,7 @@ trait EventsourcingFixture[A] {
     p(dequeue())
   }
 
-  def ask(actor: ActorRef)(r: Any): Any = {
+  def ask0(actor: ActorRef)(r: Any): Any = {
     Await.result(actor.ask(r), timeout.duration)
   }
 

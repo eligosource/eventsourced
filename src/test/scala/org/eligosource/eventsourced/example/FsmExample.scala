@@ -27,7 +27,7 @@ class FsmExample extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val door = configure()
-      val askDoor = ask(door) _
+      val askDoor = ask0(door) _
 
       extension.recover()
 
@@ -36,7 +36,7 @@ class FsmExample extends EventsourcingSpec[Fixture] {
       askDoor(Message("close")) must be(DoorNotMoved("cannot close door in state Closed"))
 
       val recoveredDoor = configure()
-      val askRecoveredDoor = ask(recoveredDoor) _
+      val askRecoveredDoor = ask0(recoveredDoor) _
 
       extension.recover()
 
