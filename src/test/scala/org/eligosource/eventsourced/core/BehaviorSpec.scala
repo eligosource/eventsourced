@@ -54,7 +54,7 @@ object BehaviorSpec {
       case "bar" => { destination ! ("bar (%d)" format sequenceNr); context.unbecome() }
     }
 
-    def receive = {
+    def receive: Receive = {
       case "foo" => { destination ! ("foo (%d)" format sequenceNr); context.become(changed) }
       case "baz" => { destination ! ("baz (%d)" format sequenceNr) }
     }
@@ -66,7 +66,7 @@ object BehaviorSpec {
   }
 
   class Destination(queue: java.util.Queue[Any]) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case msg  => queue.add(msg)
     }
   }

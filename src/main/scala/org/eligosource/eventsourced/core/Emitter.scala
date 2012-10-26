@@ -29,7 +29,7 @@ import akka.actor._
  *   myEmitter ! Message("foo event")
  *
  *   class MyEmitter extends Actor { this: Emitter =>
- *     def receive = {
+ *     def receive: Receive = {
  *       case "foo event" => {
  *         // emit event messages to named channels (where emitted
  *         // event messages are derived from the current message)
@@ -57,7 +57,7 @@ import akka.actor._
  *   val myEmitter = system.actorOf(Props(new MyEmitter with Emitter with Confirm with Eventsourced { val id = ... } ))
  *
  *   class MyEmitter extends Actor { this: Emitter =>
- *     def receive = {
+ *     def receive: Receive = {
  *       // ...
  *     }
  *   }
@@ -112,7 +112,7 @@ trait Emitter extends Receiver {
     new MessageEmitter(namedChannels.getOrElse(channelName, context.system.deadLetters), message)
   }
 
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case msg => {
       super.receive(msg)
     }

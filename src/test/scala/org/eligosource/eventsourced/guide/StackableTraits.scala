@@ -35,7 +35,7 @@ object StackableTraits extends App {
   class Processor extends Actor { this: Emitter =>
     var counter = 0
 
-    def receive = {
+    def receive: Receive = {
       case event => {
         // update internal state
         counter = counter + 1
@@ -49,7 +49,7 @@ object StackableTraits extends App {
 
   // channel destination
   class Destination extends Actor {
-    def receive = {
+    def receive: Receive = {
       case event => {
         // print event received from processor via channel
         println("[destination] event = '%s'" format event)

@@ -29,7 +29,7 @@ private [eventsourced] class InmemJournal extends Actor {
   var redoMap = SortedMap.empty[Key, Any]
   var counter = 0L
 
-  def receive = {
+  def receive: Receive = {
     case cmd: WriteInMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
       storeInMsg(c)

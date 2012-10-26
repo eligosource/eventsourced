@@ -30,7 +30,7 @@ import akka.actor._
  *   val myActor = system.actorOf(Props(new MyActor with Confirm))
  *
  *   class MyActor extends Actor {
- *     def receive = {
+ *     def receive: Receive = {
  *       case msg: Message => // ...
  *     }
  *   }
@@ -45,14 +45,14 @@ import akka.actor._
  *   val myActor = system.actorOf(Props(new MyActor with Receiver with Confirm with Eventsourced { val id = ... } ))
  *
  *   class MyActor extends Actor {
- *     def receive = {
+ *     def receive: Receive = {
  *       case event => // ...
  *     }
  *   }
  * }}}
  */
 trait Confirm extends Actor {
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case msg: Message => {
       try {
         super.receive(msg)

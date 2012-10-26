@@ -16,8 +16,8 @@
 package org.eligosource.eventsourced.example
 
 import akka.actor._
-import akka.pattern.ask
-import akka.dispatch._
+import akka.pattern._
+import concurrent._
 
 import org.eligosource.eventsourced.core._
 
@@ -92,7 +92,7 @@ object AggregatorExample {
     var inputAggregatedCounter = 0
     var inputs = Map.empty[String, List[String]] // category -> inputs
 
-    def receive = {
+    def receive: Receive = {
       case InputAggregated(category, inputs) => {
         // count number of InputAggregated receivced
         inputAggregatedCounter = inputAggregatedCounter + 1
@@ -114,7 +114,7 @@ object AggregatorExample {
   }
 
   class Destination(queue: java.util.Queue[Message]) extends Actor { this: Receiver =>
-    def receive = {
+    def receive: Receive = {
       case event => queue.add(message)
     }
   }

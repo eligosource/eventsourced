@@ -30,7 +30,7 @@ import scala.collection.immutable.Stack
 trait Behavior extends Actor {
   private var behaviorStack = Stack.empty[Receive].push(super.receive)
 
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case msg => invoke(msg)
   }
 
@@ -39,17 +39,17 @@ trait Behavior extends Actor {
     if (head.isDefinedAt(msg)) head.apply(msg) else unhandled(msg)
   }
 
-  private [akka] override def pushBehavior(behavior: Receive) {
+  private [akka] /*override*/ def pushBehavior(behavior: Receive) {
     behaviorStack = behaviorStack.push(behavior)
   }
 
-  private [akka] override def popBehavior() {
+  private [akka] /*override*/ def popBehavior() {
     val original = behaviorStack
     val popped = original.pop
     behaviorStack = if (popped.isEmpty) original else popped
   }
 
-  private [akka] override def clearBehaviorStack() {
+  private [akka] /*override*/ def clearBehaviorStack() {
     behaviorStack = Stack.empty[Receive].push(behaviorStack.last)
   }
 }

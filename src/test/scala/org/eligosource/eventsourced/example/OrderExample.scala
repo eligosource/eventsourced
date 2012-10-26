@@ -16,9 +16,9 @@
 package org.eligosource.eventsourced.example
 
 import akka.actor._
-import akka.dispatch._
-import akka.pattern.ask
-import akka.util.duration._
+import concurrent._
+import akka.pattern._
+import concurrent.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
@@ -27,6 +27,7 @@ import org.eligosource.eventsourced.journal.LeveldbJournal
 object OrderExample extends App {
   implicit val system = ActorSystem("example")
   implicit val timeout = Timeout(5 seconds)
+  implicit val executionContext = concurrent.ExecutionContext.global
 
   val journalDir = new java.io.File("target/example-1")
   val journal = LeveldbJournal(journalDir)
@@ -71,7 +72,7 @@ object OrderExample extends App {
   class OrderProcessor extends Actor { this: Emitter =>
     var orders = Map.empty[Int, Order] // processor state
 
-    def receive = {
+    def receive: Receive = {
       case OrderSubmitted(order) => {
         val id = orders.size
         val upd = order.copy(id = id)
@@ -94,7 +95,8 @@ object OrderExample extends App {
   // ------------------------------------
 
   class CreditCardValidator(orderProcessor: ActorRef) extends Actor { this: Receiver =>
-    def receive = {
+    implicit val executionContext = concurrent.ExecutionContext.global
+    def receive: Receive = {
       case CreditCardValidationRequested(order) => {
         val sdr = sender  // initial sender
         val msg = message // current message
@@ -113,7 +115,7 @@ object OrderExample extends App {
   }
 
   class Destination extends Actor {
-    def receive = {
+    def receive: Receive = {
       case event => println("received event %s" format event)
     }
   }

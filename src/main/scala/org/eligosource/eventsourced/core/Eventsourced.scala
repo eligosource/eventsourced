@@ -28,7 +28,7 @@ import akka.actor._
  *  val extension = EventsourcingExtension(system, journal)
  *
  *  class MyActor extends Actor {
- *    def receive = {
+ *    def receive: Receive = {
  *      case msg: Message => // journaled event message
  *      case msg          => // non-journaled message
  *    }
@@ -69,7 +69,7 @@ trait Eventsourced extends Behavior {
    */
   def id: Int
 
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case GetId => {
       sender ! id
     }

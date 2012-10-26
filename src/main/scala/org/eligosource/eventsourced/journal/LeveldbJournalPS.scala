@@ -49,7 +49,7 @@ private [eventsourced] class LeveldbJournalPS(dir: File) extends Actor {
   var commandListener: Option[ActorRef] = None
   var counter = 0L
 
-  def receive = {
+  def receive: Receive = {
     case cmd: WriteInMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
       storeInMsg(c)

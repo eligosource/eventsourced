@@ -19,7 +19,7 @@ import java.util.Queue
 import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor._
-import akka.util.duration._
+import concurrent.duration._
 
 import org.eligosource.eventsourced.core.ReliableChannelSpec._
 
@@ -85,7 +85,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(successDestination)
-      val respondTo = ask(c) _
+      val respondTo = ask0(c) _
 
       c ! Deliver
 
@@ -96,7 +96,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 2))
-      val respondTo = ask(c) _
+      val respondTo = ask0(c) _
 
       c ! Deliver
 
@@ -117,7 +117,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       // sender is not persisted and channel is re-started after reaching maxRertry
       // response will go to deadLetters which is then published on event stream
       system.eventStream.subscribe(system.actorOf(Props(new Actor {
-        def receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
+        def receive: Receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
       })), classOf[DeadLetter])
 
       c ! Deliver
@@ -141,7 +141,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       // sender is not persisted and channel doesn't deliver before initialization
       // response will go to deadLetters which is then published on event stream
       system.eventStream.subscribe(system.actorOf(Props(new Actor {
-        def receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
+        def receive: Receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
       })), classOf[DeadLetter])
 
       c ! Message("a")
@@ -207,12 +207,12 @@ object ReliableChannelSpec {
     /** Synchronous write of out message to journal. */
     def writeOutMsg(msg: Message) {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
-      ask(journal)(WriteOutMsg(1, msg, msg.processorId, ackSequenceNr, responder, false))
+      ask0(journal)(WriteOutMsg(1, msg, msg.processorId, ackSequenceNr, responder, false))
     }
   }
 
   class Destination(queue: Queue[Either[Message, Message]], failAtEvent: Any, var failureCount: Int, enqueueFailures: Boolean) extends Actor { this: Receiver =>
-    def receive = {
+    def receive: Receive = {
       /*case DeadLetter(response, _, _) => {
         queue.add(Right(Message(response)))
       }*/
@@ -231,13 +231,13 @@ object ReliableChannelSpec {
   }
 
   class WriteOutMsgListener(queue: Queue[WriteOutMsg]) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case cmd: WriteOutMsg => queue.add(cmd)
     }
   }
 
   class WriteOutMsgResponder extends Actor {
-    def receive = {
+    def receive: Receive = {
       case _ => sender ! ()
     }
   }

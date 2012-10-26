@@ -17,7 +17,7 @@ package org.eligosource.eventsourced.core
 
 import akka.actor._
 import akka.pattern.ask
-import akka.util.duration._
+import concurrent.duration._
 
 /**
  * An [[org.eligosource.eventsourced.core.Eventsourced]] processor that forwards
@@ -35,7 +35,7 @@ import akka.util.duration._
  *        to `targets`.
  */
 class Multicast(targets: Seq[ActorRef], transformer: Message => Any) extends Actor { this: Eventsourced =>
-  def receive = {
+  def receive: Receive = {
     case msg: Message => targets.foreach(_ forward transformer(msg))
     case msg          => targets.foreach(_ forward msg)
   }

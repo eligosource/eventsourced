@@ -19,7 +19,7 @@ import java.io.File
 import java.util.concurrent._
 
 import akka.actor._
-import akka.util.duration._
+import concurrent.duration._
 import akka.util.Timeout
 
 import org.apache.commons.io.FileUtils
@@ -136,7 +136,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 
 object JournalSpec {
   class CommandTarget(queue: LinkedBlockingQueue[Message]) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case Written(msg) => queue.put(msg)
     }
   }

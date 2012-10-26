@@ -18,7 +18,7 @@ package org.eligosource.eventsourced.example
 import java.util.concurrent.TimeUnit
 
 import akka.actor._
-import akka.pattern.ask
+import akka.pattern._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
@@ -70,6 +70,7 @@ object StressExample {
   }
 
   def stress(processor: ActorRef, throttle: Long)(implicit timeout: Timeout, system: ActorSystem) {
+    implicit val executionContext = concurrent.ExecutionContext.global
     val start = System.currentTimeMillis()
     1 to cycles foreach { i =>
       if (i % 100 == 0) Thread.sleep(throttle)
@@ -90,13 +91,13 @@ object StressExample {
   }
 
   class Processor(channel: ActorRef) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case msg: Message => channel forward msg
     }
   }
 
   class Destination(queue: java.util.Queue[Any]) extends Actor { this: Receiver =>
-    def receive = {
+    def receive: Receive = {
       case ctr: Int => {
         sender ! ctr
         if (ctr == cycles) queue.add(ctr)

@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 
 import akka.actor._
-import akka.util.Duration
+import concurrent.duration.{FiniteDuration, Duration}
 
 /**
  * Event-sourcing extension for Akka. Used by applications to create and register
@@ -135,9 +135,9 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    * @return a processor ref.
    */
   def processorOf(props: Props)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
-    import akka.dispatch.Await
+    import concurrent.Await
     import akka.pattern.ask
-    import akka.util.duration._
+    import concurrent.duration._
     import akka.util.Timeout
 
     implicit val duration = 5 seconds
@@ -348,13 +348,13 @@ case class ReliableChannelProps(
   /**
    * Returns a new `ReliableChannelProps` with the specified recovery delay.
    */
-  def withRecoveryDelay(recoveryDelay: Duration) =
+  def withRecoveryDelay(recoveryDelay: FiniteDuration) =
     copy(policy = policy.copy(recoveryDelay = recoveryDelay))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified retry delay.
    */
-  def withRetryDelay(retryDelay: Duration) =
+  def withRetryDelay(retryDelay: FiniteDuration) =
     copy(policy = policy.copy(retryDelay = retryDelay))
 
   /**

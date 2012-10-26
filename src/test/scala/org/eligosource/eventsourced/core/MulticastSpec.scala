@@ -54,8 +54,8 @@ class MulticastSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val d = decorator()
-      ask(d)(Message("test")) must be("re: test")
-      ask(d)("blah")          must be("re: blah")
+      ask0(d)(Message("test")) must be("re: test")
+      ask0(d)("blah")          must be("re: blah")
     }
   }
 }
@@ -80,14 +80,14 @@ object MulticastSpec {
   }
 
   class Target(channel: ActorRef) extends Actor { this: Receiver =>
-    def receive = {
+    def receive: Receive = {
       case "blah" => channel forward Message("blah", ack = false)
       case event  => channel forward message
     }
   }
 
   class Destination(queue: java.util.Queue[Any]) extends Actor { this: Receiver =>
-    def receive = {
+    def receive: Receive = {
       case event  => {
         queue.add(event)
         sender ! ("re: %s" format event)

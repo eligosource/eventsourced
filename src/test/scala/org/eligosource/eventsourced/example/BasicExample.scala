@@ -18,8 +18,8 @@ package org.eligosource.eventsourced.example
 import java.io.File
 
 import akka.actor._
-import akka.pattern.ask
-import akka.util.duration._
+import akka.pattern._
+import concurrent.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
@@ -28,6 +28,7 @@ import org.eligosource.eventsourced.journal.LeveldbJournal
 object BasicExample extends App {
   implicit val system = ActorSystem("example")
   implicit val timeout = Timeout(5 seconds)
+  implicit val executionContext = concurrent.ExecutionContext.global
 
   // Event sourcing extension
   val extension = EventsourcingExtension(system, LeveldbJournal(new File("target/example-2")))
@@ -65,7 +66,7 @@ object BasicExample extends App {
   // -----------------------------------------------------------
 
   class ProcessorA extends Actor {
-    def receive = {
+    def receive: Receive = {
       case event => {
         // do something with event
         println("received event = %s" format event)
@@ -74,7 +75,7 @@ object BasicExample extends App {
   }
 
   class ProcessorB extends Actor { this: Emitter with Eventsourced =>
-    def receive = {
+    def receive: Receive = {
       case "blah" => {
         println("received non-journaled message")
       }
@@ -103,7 +104,7 @@ object BasicExample extends App {
 
   // does the same as ProcessorB but doesn't use any attributes of traits Emitter and Eventsourced
   class ProcessorC(channelA: ActorRef, channelB: ActorRef) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case "blah" => {
         println("received non-journaled message")
       }
@@ -119,7 +120,7 @@ object BasicExample extends App {
   }
 
   class Destination extends Actor { this: Receiver =>
-    def receive = {
+    def receive: Receive = {
       case event => {
         // Receiver actors have access to:
         val msg = message          // current message
