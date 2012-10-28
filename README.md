@@ -444,7 +444,14 @@ TODO (see also methods `deliver`, `replay` and `recover` of [`EventsourcingExten
 Behavior changes
 ----------------
 
-Plain actors can change their behavior via `context.become()` and `context.unbecome()`. Actors that are modified with `Receiver`, `Emitter` and/or `Eventsourced` still can change their behavior with these methods but they will keep the additional functionality that has been added with these stackable traits. For example, an actor that is modified with `Eventsourced` and that changes its behavior with `context.become()` will continue to journal event messages.
+Actors modified with a stackable `Receiver`, `Emitter` and/or `Eventsourced` modification have two options to change their behavior: either with `context.become()` (and `context.unbecome()`) or with `become()` (and `unbecome()`).  
+
+1. An actor that changes its behavior with `context.become()` will loose the functionality introduced by a stackable `Receiver`, `Emitter` and/or `Eventsourced` modification.
+2. An actor that changes its behavior with `become()` will keep the functionality introduced by a stackable `Receiver`, `Emitter` and/or `Eventsourced` modification. 
+
+For example, an actor that is modified with `Eventsourced` and that changes its behavior with `become()` will continue to journal event messages. An actor that changes its behavior with `context.become()` will stop journaling event messages (although a `context.unbecome()` can revert that).  
+
+The methods `become()` and `unbecome()` are defined on the [`Behavior`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Behavior) trait from which `Receiver`, `Emitter` and `Eventsourced` inherit.
 
 Idempotency
 -----------

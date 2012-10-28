@@ -13,43 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package akka.actor
+package org.eligosource.eventsourced.core
 
-import scala.collection.immutable.Stack
+import akka.actor._
 
 /**
- * Allows actors with a stackable [[org.eligosource.eventsourced.core.Eventsourced]]
- * and/or [[org.eligosource.eventsourced.core.Receiver]] modification (incl. sub-traits)
- * to change their behavior with `context.become()` and `context.unbecome()` without
- * loosing the functionality implemented by these modifications.
+ * Allows actors with a stackable [[org.eligosource.eventsourced.core.Receiver]],
+ * [[org.eligosource.eventsourced.core.Emitter]] and/or
+ * [[org.eligosource.eventsourced.core.Eventsourced]] modification to change their behavior
+ * with `become()` and `unbecome()` without loosing the functionality implemented by these
+ * traits.
  *
- * @see [[org.eligosource.eventsourced.core.Eventsourced]]
- *      [[org.eligosource.eventsourced.core.Receiver]]
- *      [[org.eligosource.eventsourced.core.Emitter]]
+ * On the other hand, actors that use `context.become()` to change their behavior will loose
+ * their `Receiver`, `Emitter` and/or `Eventsourced` functionality.
  */
 trait Behavior extends Actor {
-  private var behaviorStack = Stack.empty[Receive].push(super.receive)
+  private val emptyBehaviorStack: List[Receive] = Nil
+  private var behaviorStack: List[Receive] = super.receive :: emptyBehaviorStack
 
-  abstract override def receive = {
+  abstract override def receive: Receive = {
     case msg => invoke(msg)
   }
 
-  private def invoke(msg: Any) = {
-    val head = behaviorStack.head
-    if (head.isDefinedAt(msg)) head.apply(msg) else unhandled(msg)
+  final def invoke(msg: Any) {
+    val behavior = behaviorStack.head
+    if (behavior.isDefinedAt(msg)) behavior(msg) else unhandled(msg)
   }
 
-  private [akka] override def pushBehavior(behavior: Receive) {
-    behaviorStack = behaviorStack.push(behavior)
+  /**
+   * Puts `behavior` on the hotswap stack. This will only affect the behavior of the actor
+   * that has been modified with this stackable trait.
+   *
+   * @param behavior new behavior
+   * @param discardOld if `true`, an `unbecome()` will be issued prior to pushing `behavior`.
+   */
+  def become(behavior: Actor.Receive, discardOld: Boolean = true) {
+    behaviorStack = behavior :: (if (discardOld && behaviorStack.nonEmpty) behaviorStack.tail else behaviorStack)
   }
 
-  private [akka] override def popBehavior() {
-    val original = behaviorStack
-    val popped = original.pop
-    behaviorStack = if (popped.isEmpty) original else popped
-  }
-
-  private [akka] override def clearBehaviorStack() {
-    behaviorStack = Stack.empty[Receive].push(behaviorStack.last)
+  /**
+   * Reverts the behavior to the previous one on the hotswap stack. This will only affect the
+   * behavior of the actor that has been modified with this stackable trait.
+   */
+  def unbecome() {
+    behaviorStack = if (behaviorStack.isEmpty || behaviorStack.tail.isEmpty) super.receive :: emptyBehaviorStack else behaviorStack.tail
   }
 }
