@@ -23,8 +23,6 @@ object Settings {
 object Resolvers {
   val typesafeRepo  = "Typesafe Repo"  at "http://repo.typesafe.com/typesafe/releases/"
   val journalioRepo = "Journalio Repo" at "https://raw.github.com/sbtourist/Journal.IO/master/m2/repo"
-
-  val targetRepo    = Resolver.file("Target Repo", new File("target/repo"))
 }
 
 object Dependencies {
@@ -57,21 +55,31 @@ object Dependency {
   val scalaTest = "org.scalatest" %% "scalatest" % "1.8" % "test"
 }
 
+object Publish {
+  val nexus = "http://repo.eligotech.com/nexus/content/repositories/"
+  val publishSettings = Seq(
+    credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
+    publishMavenStyle := true,
+    publishTo <<= (version) { (v: String) =>
+        if (v.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus + "eligosource-snapshots")
+        else                             Some("releases"  at nexus + "eligosource-releases")
+    }
+  )
+}
+
 object EventsourcedBuild extends Build {
   import java.io.File._
-  import Resolvers._
+  import Publish._
   import Settings._
 
   lazy val eventsourced = Project(
     id = "eventsourced",
     base = file("."),
-    settings = defaultSettings ++ Seq(
+    settings = defaultSettings ++ publishSettings ++ Seq(
       libraryDependencies ++= Dependencies.core,
       mainRunNobootcpSetting,
       testRunNobootcpSetting,
-      testNobootcpSetting,
-      publishTo := Some(targetRepo),
-      publishMavenStyle := true
+      testNobootcpSetting
     )
   )
 
