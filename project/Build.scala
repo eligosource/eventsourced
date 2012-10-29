@@ -23,12 +23,14 @@ object Settings {
 object Resolvers {
   val typesafeRepo  = "Typesafe Repo"  at "http://repo.typesafe.com/typesafe/releases/"
   val journalioRepo = "Journalio Repo" at "https://raw.github.com/sbtourist/Journal.IO/master/m2/repo"
+
+  val targetRepo    = Resolver.file("Target Repo", new File("target/repo"))
 }
 
 object Dependencies {
   import Dependency._
 
-  val core = Seq(akkaActor, akkaRemote, commonsIo, journalIo, levelDbJni, scalaStm, scalaTest)
+  val core = Seq(akkaActor, commonsIo, journalIo, levelDbJni, scalaTest)
 }
 
 object Version {
@@ -43,12 +45,10 @@ object Dependency {
   //  Compile
   // -----------------------------------------------
 
-  val akkaActor   = "com.typesafe.akka"         %  "akka-actor"    % Akka      % "compile"
-  val akkaRemote  = "com.typesafe.akka"         %  "akka-remote"   % Akka      % "compile"
-  val commonsIo   = "commons-io"                %  "commons-io"    % "2.3"     % "compile"
-  val journalIo   = "journalio"                 %  "journalio"     % "1.2"     % "compile"
-  val levelDbJni  = "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.2"     % "compile"
-  val scalaStm    = "org.scala-tools"           %% "scala-stm"     % "0.5"     % "compile"
+  val akkaActor   = "com.typesafe.akka"         %  "akka-actor"     % Akka      % "compile"
+  val commonsIo   = "commons-io"                %  "commons-io"     % "2.3"     % "compile"
+  val journalIo   = "journalio"                 %  "journalio"      % "1.2"     % "compile"
+  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all" % "1.2"     % "compile"
 
   // -----------------------------------------------
   //  Test
@@ -69,7 +69,9 @@ object EventsourcedBuild extends Build {
       libraryDependencies ++= Dependencies.core,
       mainRunNobootcpSetting,
       testRunNobootcpSetting,
-      testNobootcpSetting
+      testNobootcpSetting,
+      publishTo := Some(targetRepo),
+      publishMavenStyle := true
     )
   )
 
@@ -84,7 +86,7 @@ object EventsourcedBuild extends Build {
       val runCp = cp.map(_.data).mkString(pathSeparator)
       val runOpts = Seq("-classpath", runCp) ++ at
       val result = Fork.java.fork(None, runOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
-      if (result != 0) error("Run failed")
+      if (result != 0) sys.error("Run failed")
     }
   }
 
@@ -94,6 +96,6 @@ object EventsourcedBuild extends Build {
     val testPath = "target/scala-%s/test-classes" format sv
     val testOpts = Seq("-classpath", testCp, testExec, "-R", testPath, "-o")
     val result = Fork.java.fork(None, testOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
-    if (result != 0) error("Tests failed")
+    if (result != 0) sys.error("Tests failed")
   }
 }
