@@ -63,7 +63,10 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
     processorsRef.get
 
   /**
-   * Replays input messages to selected processors.
+   * Replays input messages to selected processors. This method does not wait for
+   * replayed input messages being processed. However, any new message sent to any
+   * of the selected processors, after this method returned, is guaranteed to be
+   * processed after the replayed event messages.
    *
    * @param f function called for each processor id. If the function returns `None`
    *        no message replay will be done for that processor. If it returns `Some(snr)`
@@ -93,6 +96,10 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    * calling `replay(_ => Some(0))` and then `deliver()`. Replay is done with no
    * lower bound (i.e. with all messages in the journal) for all processors of
    * this context.
+   *
+   * This method does not wait for replayed input messages being processed. However,
+   * any new message sent to any of the processors, after this method returned, is
+   * guaranteed to be processed after the replayed event messages.
    */
   def recover() {
     recover(_ => Some(0))
@@ -101,6 +108,10 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
   /**
    * Recovers selected processors and all channels registered at this extension by first
    * calling `replay(f)` and then `deliver()`.
+   *
+   * This method does not wait for replayed input messages being processed. However,
+   * any new message sent to any of the selected processors, after this method returned,
+   * is guaranteed to be processed after the replayed event messages.
    *
    * @param f function called for each processor id. If the function returns `None`
    *        no message replay will be done for that processor. If it returns `Some(snr)`
