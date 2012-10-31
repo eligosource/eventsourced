@@ -481,6 +481,8 @@ The [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/#org.e
 
 A call to `replay` can be omitted if a processor did not journal any event message in previous application runs. Channels can be activated individually with the `deliver(channelId: Int)` method. Whatever `EventsourcingExtension` methods applications use to recover state of event-sourced applications, they must ensure that processor ids and channel ids are consistently used across application runs.
 
+### Awaiting completion
+
 The `replay` and `recover` methods do *not* wait for replayed event messages being processed by the corresponding processors. However, any new message sent to any registered processor, after `replay` or `recover` returned, is guaranteed to be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessorCompletion()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Eventsourced). 
 
     val extension: EventsourcingExtension = … 
@@ -489,6 +491,10 @@ The `replay` and `recover` methods do *not* wait for replayed event messages bei
     extension.awaitProcessorCompletion()
 
 For example, this is useful in situations where event-sourced processors maintain state via STM references and the application wants to ensure that the (externally visible) state is fully recovered before accepting new read requests from client applications. By default, the `awaitProcessorCompletion()` method waits for all registered processors to complete but applications can also specify a subset of registered processors.
+
+### State dependencies
+
+The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Eventsourced) processors may depend on the state of other `Eventsourced` processors. For example processor A sends a message to processor B and processor B replies with a message that includes (part of) processor B's state. Depending on the state value included in the reply, processor A may take different actions. To ensure a proper recovery of such a setup, any state-conveying or state-dependent messages exchanged between processors A and B must be of type [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message) (see also [DependentStateRecoverySpec.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/core/DependentStateRecoverySpec.scala)). Exchanging state via non-journaled messages (i.e. messages of type other than `Message`) can break consistent recovery. This is also the case if an `Eventsourced` processor maintains state via an externally visible STM reference and another `Eventsourced` processor directly reads from that reference.
 
 Behavior changes
 ----------------
@@ -670,10 +676,6 @@ Miscellaneous
 ### Multicast processor
 
 TODO (see also [`Multicast`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Multicast))
-
-### State dependencies
-
-The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Eventsourced) processors may depend on the state of other `Eventsourced` processors. For example processor A sends a message to processor B and processor B replies with a message that includes (part of) processor B's state. Depending on the state value included in the reply, processor A may take different actions. To ensure a proper [recovery](#recovery) of such a setup, any state-conveying or state-dependent message exchanged between processors A and B must be of type [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message). Exchanging state via non-journaled messages (i.e. messages of type other than `Message`) can break consistent recovery. This is also the case if an `Eventsourced` processor maintains state via an externally visible STM reference and another `Eventsourced` processor directly reads from that reference.
 
 ### Retroactive changes
 
