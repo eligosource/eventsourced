@@ -20,7 +20,11 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 
 import akka.actor._
+import akka.dispatch._
+import akka.pattern.ask
+import akka.util.duration._
 import akka.util.Duration
+import akka.util.Timeout
 
 /**
  * Event-sourcing extension for Akka. Used by applications to create and register
@@ -146,11 +150,6 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    * @return a processor ref.
    */
   def processorOf(props: Props)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
-    import akka.dispatch.Await
-    import akka.pattern.ask
-    import akka.util.duration._
-    import akka.util.Timeout
-
     implicit val duration = 5 seconds
 
     val processor = actorRefFactory.actorOf(props)
@@ -177,6 +176,24 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
     val channel = props.createChannel(journal)
     registerChannel(props.id, props.name, channel)
     channel
+  }
+
+  /**
+   * Waits for selected processors to complete processing of all pending messages
+   * in their mailboxes.
+   *
+   * @param processorIds ids of registered processors to wait for. Default value
+   *        is the set of all registered processor ids.
+   */
+  def awaitProcessorCompletion(processorIds: Set[Int] = processors.keySet)(implicit timeout: Timeout) {
+    import Eventsourced._
+
+    implicit val executor = system
+
+    val selected = processors.filter { case (k, _) => processorIds.contains(k) }.values
+    val future = Future.sequence(selected.map(p => p.ask(AwaitCompletion)))
+
+    Await.result(future, timeout.duration)
   }
 
   /**

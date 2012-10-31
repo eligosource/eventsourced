@@ -79,6 +79,9 @@ trait Eventsourced extends Behavior {
     case msg: Message => {
       journal forward WriteInMsg(id, msg, self)
     }
+    case Looped(AwaitCompletion) => {
+      sender ! Completed
+    }
     case Looped(msg) => {
       super.receive(msg)
     }
@@ -93,4 +96,7 @@ trait Eventsourced extends Behavior {
 
 private [core] object Eventsourced {
   case object GetId
+
+  case object AwaitCompletion
+  case object Completed
 }
