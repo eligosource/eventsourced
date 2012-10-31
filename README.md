@@ -481,7 +481,14 @@ The [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/#org.e
 
 A call to `replay` can be omitted if a processor did not journal any event message in previous application runs. Channels can be activated individually with the `deliver(channelId: Int)` method. Whatever `EventsourcingExtension` methods applications use to recover state of event-sourced applications, they must ensure that processor ids and channel ids are consistently used across application runs.
 
-Furthermore, the `replay` and `recover` methods do *not* wait for replayed event messages being processed by the corresponding processors. However, any new message sent to any registered processor, after `replay` or `recover` returned, is guaranteed to be processed after the replayed event messages.
+The `replay` and `recover` methods do *not* wait for replayed event messages being processed by the corresponding processors. However, any new message sent to any registered processor, after `replay` or `recover` returned, is guaranteed to be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessorCompletion()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Eventsourced). 
+
+    val extension: EventsourcingExtension = … 
+
+    extension.recover()
+    extension.awaitProcessorCompletion()
+
+For example, this is useful in situations where event-sourced processors maintain state via STM references and the application wants to ensure that the (externally visible) state is fully recovered before accepting new read requests from client applications. By default, the `awaitProcessorCompletion()` method waits for all registered processors to complete but applications can also specify a subset of registered processors.
 
 Behavior changes
 ----------------
@@ -531,15 +538,15 @@ This ensures that an acknowledgement is only written to the journal after the la
 Idempotency
 -----------
 
-Under certain failure conditions, [channels](#channels) may deliver event messages to destinations more than once. A typical example is that a destination positively confirms a message receipt but the application crashes shortly before that confirmation could have been written to the journal. In this case, the destination will receive the event message again during recovery. 
+Under certain failure conditions, [channels](#channels) may deliver event messages to destinations more than once. A typical example is that a destination positively confirms a message receipt but the application crashes shortly before that confirmation is written to the journal. In this case, the destination will receive the event message again during recovery. 
 
 For these (but also other) reasons, channel destinations must be idempotent event message consumers which is an application-level concern. For example, an event message consumer that stores received purchase order objects in a map (where the map key is the order id) is likely to be an idempotent consumer because receiving a purchase order only once or several times will lead to the same result: the purchase order is contained in the map only once. An event message consumer that counts the number of received purchase orders is not an idempotent consumer: a re-delivery will lead to a wrong counter value from a business logic perspective. In this case the event message consumer must implement some extra means to detect event message *duplicates*. 
 
-For detecting duplicates, applications can use the `senderMessageId` and `sequenceNr` fields of event [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message)s. A sequence number (`sequenceNr`) is assigned to an event message when it is written to a journal i.e. before it is received by an `Eventsourced` processor or after it has been added to a reliable channel. The `senderMessageId` is an optional `String` and is used only on application-level (i.e. it is neither changed nor interpreted by the library). Therefore, event messages that are re-delivered by a channel are guaranteed to have the same `senderMessageId`. Consumers that keep track of `senderMessageId` values can therefore detect duplicates. What follows are some general guidelines for implementing idempotent event message processing based on these two fields. 
+For detecting duplicates, applications can use the `senderMessageId` and `sequenceNr` fields of event [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message)s. A sequence number (`sequenceNr`) is assigned to an event message when it is written to a journal i.e. before it is received by an `Eventsourced` processor or after it has been added to a reliable channel. The `senderMessageId` is an optional `String` that is used on application-level only (i.e. it is neither changed nor interpreted by the library). Therefore, event messages that are re-delivered by a channel are guaranteed to have the same `senderMessageId`. Consumers that keep track of `senderMessageId` values can therefore detect duplicates. What follows are some general guidelines for implementing idempotent event message processing based on these two `Message` fields. 
 
-- `Eventsourced` processors can encode the message sequence number (`sequenceNr`) in the `senderMessageId` field to allow downstream event message consumers to detect duplicates. Encoding the sequence number has the advantage that downstream consumers only need to remember the last consumed `senderMessageId`: if the `senderMessageId` of a newly received event message encodes a sequence number that is less than or equal to the one from the last consumed `senderMessageId` then the newly received event message is a duplicate and can/should be ignored by the consumer.
-- `Eventsourced` processors that emit an [event message series](#event-series) should encode both, the sequence number and an output message index, in the `senderMessageId` field. Consumers should then compare encoded sequence number and the index for detecting duplicates. 
-- Consumers that are `Eventsourced` processors can store the last consumed `senderMessageId` as part of their (internal) state which can be recovered during an event message replay. Other consumers must store the `senderMessageId` somewhere else.
+- `Eventsourced` processors can encode the message sequence number (`sequenceNr`) in the `senderMessageId` field to allow downstream event message consumers to detect duplicates. Encoding the sequence number has the advantage that downstream consumers only need to remember the last consumed `senderMessageId`: if the `senderMessageId` of a newly received event message encodes a sequence number that is less than or equal to the one encoded in the last consumed `senderMessageId` then the newly received event message is a duplicate and can/should be ignored by the consumer.
+- `Eventsourced` processors that emit an [event message series](#event-series) should encode both, the sequence number and an output message index, in the `senderMessageId` field. Consumers should then compare encoded sequence number - index pairs for detecting duplicates. 
+- Consumers that are `Eventsourced` processors can store the last consumed `senderMessageId` as part of their state which will be recovered during an event message replay. Other consumers must store the `senderMessageId` somewhere else.
 
 Further examples
 ----------------
@@ -664,13 +671,13 @@ Miscellaneous
 
 TODO (see also [`Multicast`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Multicast))
 
+### State dependencies
+
+The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Eventsourced) processors may depend on the state of other `Eventsourced` processors. For example processor A sends a message to processor B and processor B replies with a message that includes (part of) processor B's state. Depending on the state value included in the reply, processor A may take different actions. To ensure a proper [recovery](#recovery) of such a setup, any state-conveying or state-dependent message exchanged between processors A and B must be of type [`Message`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Message). Exchanging state via non-journaled messages (i.e. messages of type other than `Message`) can break consistent recovery. This is also the case if an `Eventsourced` processor maintains state via an externally visible STM reference and another `Eventsourced` processor directly reads from that reference.
+
 ### Retroactive changes
 
 TODO
-
-### State dependencies
-
-TODO (describe recovery details for processors that depend on another processor's state)
 
 ### Snapshots
 
