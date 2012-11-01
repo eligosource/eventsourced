@@ -28,6 +28,16 @@ For persisting event messages, *Eventsourced* currently provides the following j
 
 Further journal implementations are planned, including replicated and horizontally scalable journals (based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/) or [Redis](http://redis.io/), for example). Also planned for the near future is a journal plugin API and an event archive.  
 
+### Resources
+
+- [Eventsourced API](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.package)
+- [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
+
+### Support
+
+- Community: [Eventsourced forum](http://groups.google.com/group/eventsourced)
+- Commercial: [Eligotech B.V.](http://www.eligotech.com/)
+
 Installation
 ------------
 
@@ -758,7 +768,33 @@ Miscellaneous
 
 ### Multicast processor
 
-TODO (see also [`Multicast`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Multicast))
+![Multicast](https://raw.github.com/eligosource/eventsourced/master/doc/images/multicast-1.png)
+
+The [`Multicast`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Multicast) processor is a predefined `Eventsourced` processor that forwards received event messages to multiple targets. Using a `Multicast` processor with n targets is an optimization of having n `Eventsourced` processors that receive the same event `Message`s. Using a multicast processor, a received event message is journaled only once whereas with n `Eventsourced` processors that message would be journaled n times (once for each processor). Using a `Multicast` processor for a large number of targets can therefore significantly save disk space and increase throughput. 
+
+Applications can create a `Multicast` processor with the `multicast` factory method which is defined in package [`core`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.package).
+
+    // … 
+    import org.eligosource.eventsourced.core._
+
+    val extension: EventsourcingExtension = … 
+
+    val processorId: Int = … 
+    val target1: ActorRef = … 
+    val target2: ActorRef = … 
+
+    val multicast = extension.processorOf(Props(multicast(1, List(target1, target2))))
+
+This is equivalent to 
+
+    val multicast = extension.processorOf(Props(new Multicast(List(target1, target2), identity) with Eventsourced { val id = processorId } ))
+
+Applications that want to modify received event `Message`s, before they are forwarded to targets, can specify a `transformer` function.
+
+    val transformer: Message => Any = msg => msg.event
+    val multicast = extension.processorOf(Props(multicast(1, List(target1, target2), transformer)))
+
+In the above example, the `transformer` function extracts the `event` from a received event `Message`. If the `transformer` function is not specified, it defaults to the `identity` function. Another `Multicast` factory method is the `decorator` method for creating a multicast processor with a single target (see also section [State machines](#state-machines)).
 
 ### Retroactive changes
 
@@ -767,18 +803,6 @@ TODO
 ### Snapshots
 
 TODO
-
-Resources
----------
-
-- [Eventsourced API](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.package)
-- [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
-
-Support
--------
-
-- Community: [Eventsourced forum](http://groups.google.com/group/eventsourced)
-- Commercial: [Eligotech B.V.](http://www.eligotech.com/)
 
 Appendix A: Legend
 ------------------
