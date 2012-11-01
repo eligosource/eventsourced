@@ -668,7 +668,90 @@ The example code is contained in [OrderExample.scala](https://github.com/eligoso
 
 ### State machines
 
-TODO (see also [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala))
+This example implements an event-sourced state machine using Akka's [FSM](http://doc.akka.io/docs/akka/2.0.3/scala/fsm.html). An actor that extends the `FSM` trait, however, cannot be modified directly with the stackable `Eventsourced` trait because the `FSM` trait implements `receive` as `final` method. We will therefore use an event-sourced *decorator* that delegates to the FSM actor. We implement the decorator with the predefined [`Multicast`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.Multicast) processor and make the 'FSM' actor its single target (see also section [Multicast processor](#multicast-processor)).
+
+![State machines](https://raw.github.com/eligosource/eventsourced/master/doc/images/statemachines-1.png)
+
+For communicating with the `FSM`, the example application sends event messages to the `Multicast` processor which extract events from received event messages and forwards them (together with the [sender reference](#sender-references)) to the `FSM` actor. The `FSM` actor produces events by replying to the sender. The `FSM` actor in this example is a `Door` which can be in one of two states: `Open` and `Closed`. 
+
+    sealed trait DoorState
+  
+    case object Open extends DoorState
+    case object Closed extends DoorState
+  
+    case class DoorMoved(times: Int)
+    case class DoorNotMoved(reason: String)
+  
+    class Door extends Actor with FSM[DoorState, Int] {
+      startWith(Closed, 0)
+  
+      when(Closed) {
+        case Event("open", counter) => {
+          goto(Open) using(counter + 1) replying(DoorMoved(counter + 1))
+        }
+      }
+  
+      when(Open) {
+        case Event("close", counter) => {
+          goto(Closed) using(counter + 1) replying(DoorMoved(counter + 1))
+        }
+      }
+  
+      whenUnhandled {
+        case Event(cmd, counter) => {
+          stay replying(DoorNotMoved("cannot %s door in state %s" format (cmd, stateName)))
+        }
+      }
+    }
+
+On state changes, a door replies with `DoorMoved` events containing the number of moves so far. On invalid attempts to move a door e.g. trying to open an opened door, it replies with `DoorNotMoved` events. The reply destination is another actor that simply prints received events to `stdout`. 
+
+    class Destination extends Actor {
+      def receive = { case event => println("received event %s" format event) }
+    }
+
+The `destination` actor is passed as implicit sender reference when sending event messages to a `door`.
+
+    // … 
+    import org.eligosource.eventsourced.core._
+
+    val extension: EventsourcingExtension = …
+    val transformer: Message => Any = msg => msg.event
+    val door = extension.processorOf(Props(decorator(1, system.actorOf(Props(new Door)), transformer)))
+
+    extension.recover()
+
+    implicit val destination = system.actorOf(Props(new Destination))
+
+The `Multicast` processor is created with the `decorator` factory method which is defined in package [`core`](http://eligosource.github.com/eventsourced/#org.eligosource.eventsourced.core.package). This method takes a processor id, the decoration target and a `transformer` function as arguments. The `door` is initially in `Closed` state. Sending the following two event messages to `door`
+
+    door ! Message("open")
+    door ! Message("close")
+    
+will write 
+
+    received event DoorMoved(1)
+    received event DoorMoved(2)
+
+to `stdout`. When trying to attempt an invalid state change with
+
+    door ! Message("close")
+
+the `destination` will receive a `DoorNotMoved` event.
+
+    received event DoorNotMoved(cannot close door in state Closed)
+
+Restarting the example application will recover the door's state so that sending of
+
+    door ! Message("open")
+    door ! Message("close")
+
+will produce
+
+    received event DoorMoved(3)
+    received event DoorMoved(4)
+
+The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala).
 
 Miscellaneous
 -------------

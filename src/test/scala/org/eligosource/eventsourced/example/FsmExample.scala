@@ -27,27 +27,36 @@ class FsmExample extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val door = configure()
-      val askDoor = ask(door) _
+
+      implicit val sender = destination
 
       extension.recover()
 
-      askDoor(Message("open")) must be(DoorMoved(1))
-      askDoor(Message("close")) must be(DoorMoved(2))
-      askDoor(Message("close")) must be(DoorNotMoved("cannot close door in state Closed"))
+      door ! Message("open")
+      door ! Message("close")
+      door ! Message("close")
+
+      dequeue must be(DoorMoved(1))
+      dequeue must be(DoorMoved(2))
+      dequeue must be(DoorNotMoved("cannot close door in state Closed"))
 
       val recoveredDoor = configure()
-      val askRecoveredDoor = ask(recoveredDoor) _
 
       extension.recover()
 
-      askRecoveredDoor(Message("open")) must be(DoorMoved(3))
-      askRecoveredDoor(Message("close")) must be(DoorMoved(4))
+      recoveredDoor ! Message("open")
+      recoveredDoor ! Message("close")
+
+      dequeue must be(DoorMoved(3))
+      dequeue must be(DoorMoved(4))
     }
   }
 }
 
 object FsmExample {
   class Fixture  extends EventsourcingFixture[Any] {
+    val destination = system.actorOf(Props(new Destination(queue)))
+
     def configure(): ActorRef = {
       extension.processorOf(Props(decorator(1, system.actorOf(Props(new Door)), msg => msg.event)))
     }
@@ -80,6 +89,12 @@ object FsmExample {
       case Event(cmd, counter) => {
         stay replying(DoorNotMoved("cannot %s door in state %s" format (cmd, stateName)))
       }
+    }
+  }
+
+  class Destination(queue: java.util.Queue[Any]) extends Actor {
+    def receive = {
+      case event => queue.add(event)
     }
   }
 }
