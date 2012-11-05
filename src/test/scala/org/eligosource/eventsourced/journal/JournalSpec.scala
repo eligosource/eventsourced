@@ -18,8 +18,9 @@ package org.eligosource.eventsourced.journal
 import java.io.File
 import java.util.concurrent._
 
+import scala.concurrent.duration._
+
 import akka.actor._
-import akka.util.duration._
 import akka.util.Timeout
 
 import org.apache.commons.io.FileUtils

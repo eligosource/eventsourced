@@ -16,8 +16,6 @@
 package org.eligosource.eventsourced.core
 
 import akka.actor._
-import akka.pattern.ask
-import akka.util.duration._
 
 /**
  * An [[org.eligosource.eventsourced.core.Eventsourced]] processor that forwards

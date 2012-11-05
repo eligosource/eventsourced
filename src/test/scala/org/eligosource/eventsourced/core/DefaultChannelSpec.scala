@@ -100,7 +100,7 @@ class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(successDestination)
-      val respondTo = ask(c) _
+      val respondTo = request(c) _
 
       c ! Deliver
 

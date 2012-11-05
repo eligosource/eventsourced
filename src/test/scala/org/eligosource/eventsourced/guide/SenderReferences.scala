@@ -17,9 +17,10 @@ package org.eligosource.eventsourced.guide
 
 import java.io.File
 
+import scala.concurrent.duration._
+
 import akka.actor._
 import akka.pattern.ask
-import akka.util.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
@@ -28,6 +29,8 @@ import org.eligosource.eventsourced.journal.LeveldbJournal
 object SenderReferences extends App {
   implicit val system = ActorSystem("guide")
   implicit val timeout = Timeout(5 seconds)
+
+  import system.dispatcher
 
   // create a journal
   val journal: ActorRef = LeveldbJournal(new File("target/guide-3"))

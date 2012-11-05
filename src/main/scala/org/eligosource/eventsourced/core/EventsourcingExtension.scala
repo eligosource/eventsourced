@@ -18,12 +18,11 @@ package org.eligosource.eventsourced.core
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.annotation.tailrec
+import scala.concurrent._
+import scala.concurrent.duration._
 
 import akka.actor._
-import akka.dispatch._
 import akka.pattern.ask
-import akka.util.duration._
-import akka.util.Duration
 import akka.util.Timeout
 
 /**
@@ -149,10 +148,12 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    * @param props actor ref configuration object.
    * @return a processor ref.
    */
-  def processorOf(props: Props)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
+  def processorOf(props: Props, name: Option[String] = None)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
     implicit val duration = 5 seconds
 
-    val processor = actorRefFactory.actorOf(props)
+    val processor = if (name.isDefined)
+      actorRefFactory.actorOf(props, name.get) else
+      actorRefFactory.actorOf(props)
     val future = processor.ask(Eventsourced.GetId)(Timeout(duration)).mapTo[Int]
     val id = Await.result(future, duration)
 
@@ -187,8 +188,7 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    */
   def awaitProcessorCompletion(processorIds: Set[Int] = processors.keySet)(implicit timeout: Timeout) {
     import Eventsourced._
-
-    implicit val executor = system
+    import system.dispatcher
 
     val selected = processors.filter { case (k, _) => processorIds.contains(k) }.values
     val future = Future.sequence(selected.map(p => p.ask(AwaitCompletion)))
@@ -360,13 +360,13 @@ case class ReliableChannelProps(
   /**
    * Returns a new `ReliableChannelProps` with the specified recovery delay.
    */
-  def withRecoveryDelay(recoveryDelay: Duration) =
+  def withRecoveryDelay(recoveryDelay: FiniteDuration) =
     copy(policy = policy.copy(recoveryDelay = recoveryDelay))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified retry delay.
    */
-  def withRetryDelay(retryDelay: Duration) =
+  def withRetryDelay(retryDelay: FiniteDuration) =
     copy(policy = policy.copy(retryDelay = retryDelay))
 
   /**

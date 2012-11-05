@@ -15,11 +15,12 @@
  */
 package org.eligosource.eventsourced.core
 
+import scala.concurrent.duration._
+
 import java.util.Queue
 import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor._
-import akka.util.duration._
 
 import org.eligosource.eventsourced.core.ReliableChannelSpec._
 
@@ -85,7 +86,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(successDestination)
-      val respondTo = ask(c) _
+      val respondTo = request(c) _
 
       c ! Deliver
 
@@ -96,7 +97,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 2))
-      val respondTo = ask(c) _
+      val respondTo = request(c) _
 
       c ! Deliver
 
@@ -207,7 +208,7 @@ object ReliableChannelSpec {
     /** Synchronous write of out message to journal. */
     def writeOutMsg(msg: Message) {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
-      ask(journal)(WriteOutMsg(1, msg, msg.processorId, ackSequenceNr, responder, false))
+      request(journal)(WriteOutMsg(1, msg, msg.processorId, ackSequenceNr, responder, false))
     }
   }
 

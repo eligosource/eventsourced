@@ -15,9 +15,10 @@
  */
 package org.eligosource.eventsourced.example
 
+import scala.concurrent._
+
 import akka.actor._
 import akka.pattern.ask
-import akka.dispatch._
 
 import org.eligosource.eventsourced.core._
 

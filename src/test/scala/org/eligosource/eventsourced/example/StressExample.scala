@@ -70,6 +70,8 @@ object StressExample {
   }
 
   def stress(processor: ActorRef, throttle: Long)(implicit timeout: Timeout, system: ActorSystem) {
+    import system.dispatcher
+
     val start = System.currentTimeMillis()
     1 to cycles foreach { i =>
       if (i % 100 == 0) Thread.sleep(throttle)

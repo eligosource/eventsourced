@@ -15,13 +15,10 @@
  */
 package org.eligosource.eventsourced.core
 
+import scala.concurrent.duration._
 import scala.collection.immutable.Queue
 
 import akka.actor._
-import akka.dispatch._
-import akka.pattern.ask
-import akka.util.duration._
-import akka.util._
 
 /**
  * A channel keeps track of successfully delivered event [[org.eligosource.eventsourced.core.Message]]s.
@@ -114,8 +111,8 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
  * @param retryMax Maximum number of re-delivery attempts.
  */
 case class RedeliveryPolicy(
-  recoveryDelay: Duration,
-  retryDelay: Duration,
+  recoveryDelay: FiniteDuration,
+  retryDelay: FiniteDuration,
   retryMax: Int)
 
 object RedeliveryPolicy {

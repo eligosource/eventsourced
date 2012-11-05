@@ -17,9 +17,10 @@ package org.eligosource.eventsourced.example
 
 import java.io.File
 
+import scala.concurrent.duration._
+
 import akka.actor._
 import akka.pattern.ask
-import akka.util.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
@@ -28,6 +29,8 @@ import org.eligosource.eventsourced.journal.LeveldbJournal
 object BasicExample extends App {
   implicit val system = ActorSystem("example")
   implicit val timeout = Timeout(5 seconds)
+
+  import system.dispatcher
 
   // Event sourcing extension
   val extension = EventsourcingExtension(system, LeveldbJournal(new File("target/example-2")))
