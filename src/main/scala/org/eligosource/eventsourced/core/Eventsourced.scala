@@ -62,7 +62,8 @@ import akka.actor._
 trait Eventsourced extends Behavior {
   import Eventsourced._
 
-  private val journal = EventsourcingExtension(context.system).journal
+  private val extension = EventsourcingExtension(context.system)
+  private val journal = extension.journal
 
   /**
    * Processor id. Must be a positive integer.
@@ -91,6 +92,15 @@ trait Eventsourced extends Behavior {
       // messages and non-event messages sent to this actor
       journal forward Loop(msg, self)
     }
+  }
+
+  /**
+   * Calls `super.postStop` and then de-registers this processor from
+   * [[org.eligosource.eventsourced.core.EventsourcingExtension]].
+   */
+  abstract override def postStop() {
+    super.postStop()
+    extension.deregisterProcessor(id)
   }
 }
 

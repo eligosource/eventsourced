@@ -38,6 +38,7 @@ import akka.util._
  *      [[org.eligosource.eventsourced.core.EventsourcingExtension]]
  */
 trait Channel extends Actor {
+  private val extension = EventsourcingExtension(context.system)
   implicit val executionContext = context.dispatcher
 
   /**
@@ -49,6 +50,14 @@ trait Channel extends Actor {
    * Channel destination.
    */
   def destination: ActorRef
+
+  /**
+   * De-registers this channel from
+   * [[org.eligosource.eventsourced.core.EventsourcingExtension]].
+   */
+  override def postStop() {
+    extension.deregisterChannel(id)
+  }
 }
 
 private [core] object Channel {
