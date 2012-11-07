@@ -39,7 +39,7 @@ object Dependencies {
 
 object Version {
   val Scala = "2.10.0-RC2"
-  val Akka  = "2.1.0-RC1"
+  val Akka  = "2.2-SNAPSHOT"
 }
 
 object Dependency {
