@@ -22,43 +22,42 @@ import org.eligosource.eventsourced.core._
 import FsmExample._
 
 class FsmExample extends EventsourcingSpec[Fixture] {
-  "An event-sourced decorated FSM" must {
+  "An event-sourced FSM" must {
     "recover its state from stored event messages" in { fixture =>
       import fixture._
 
       val door = configure()
-
-      implicit val sender = destination
-
       extension.recover()
 
       door ! Message("open")
       door ! Message("close")
       door ! Message("close")
 
-      dequeue must be(DoorMoved(1))
-      dequeue must be(DoorMoved(2))
-      dequeue must be(DoorNotMoved("cannot close door in state Closed"))
+      dequeue must be(DoorMoved(Open, 1))
+      dequeue must be(DoorMoved(Closed, 2))
+      dequeue must be(DoorNotMoved(Closed, "cannot close door"))
 
       val recoveredDoor = configure()
-
       extension.recover()
 
       recoveredDoor ! Message("open")
       recoveredDoor ! Message("close")
+      recoveredDoor ! Message("blah")
 
-      dequeue must be(DoorMoved(3))
-      dequeue must be(DoorMoved(4))
+      dequeue must be(DoorMoved(Open, 3))
+      dequeue must be(DoorMoved(Closed, 4))
+      dequeue must be(NotSupported("blah"))
     }
   }
 }
 
 object FsmExample {
   class Fixture  extends EventsourcingFixture[Any] {
-    val destination = system.actorOf(Props(new Destination(queue)))
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Confirm))
 
     def configure(): ActorRef = {
-      extension.processorOf(Props(decorator(1, system.actorOf(Props(new Door)), msg => msg.event)))
+      extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
+      extension.processorOf(Props(new Door with Emitter with Eventsourced { val id = 1 } ))
     }
   }
 
@@ -67,29 +66,39 @@ object FsmExample {
   case object Open extends DoorState
   case object Closed extends DoorState
 
-  case class DoorMoved(times: Int)
-  case class DoorNotMoved(reason: String)
+  case class DoorMoved(to: DoorState, times: Int)
+  case class DoorNotMoved(state: DoorState, cmd: String)
+  case class NotSupported(cmd: Any)
 
-  class Door extends Actor with FSM[DoorState, Int] {
+  class Door extends Actor with FSM[DoorState, Int] { this: Emitter =>
     startWith(Closed, 0)
 
     when(Closed) {
       case Event("open", counter) => {
-        goto(Open) using(counter + 1) replying(DoorMoved(counter + 1))
+        emit(DoorMoved(Open, counter + 1))
+        goto(Open) using(counter + 1)
       }
     }
 
     when(Open) {
       case Event("close", counter) => {
-        goto(Closed) using(counter + 1) replying(DoorMoved(counter + 1))
+        emit(DoorMoved(Closed, counter + 1))
+        goto(Closed) using(counter + 1)
       }
     }
 
     whenUnhandled {
+      case Event(cmd @ ("open" | "close"), counter) => {
+        emit(DoorNotMoved(stateName, "cannot %s door" format cmd))
+        stay
+      }
       case Event(cmd, counter) => {
-        stay replying(DoorNotMoved("cannot %s door in state %s" format (cmd, stateName)))
+        emit(NotSupported(cmd))
+        stay
       }
     }
+
+    def emit(event: Any) = emitter("destination") forwardEvent event
   }
 
   class Destination(queue: java.util.Queue[Any]) extends Actor {
