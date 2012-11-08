@@ -416,7 +416,7 @@ The `channelId` must be a positive integer. The map of registered channels can b
 
     val channel: ActorRef = extension.channelOf(DefaultChannelProps(channelId, destination).withName(channelName))
 
-The map of registered named channels can be obtained via `extension.namedChannels` which returns a map of type Map[String, ActorRef] where the mapping key is the channel name. To stop and de-register a channel, applications should use the 'extension.stopChannel(Int)` method and pass the channel id as argument.
+The map of registered named channels can be obtained via `extension.namedChannels` which returns a map of type Map[String, ActorRef] where the mapping key is the channel name.
 
 ### `ReliableChannel`
 
@@ -773,6 +773,70 @@ will produce
 
 The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala).
 
+### Clustering
+
+This section makes the `Door` state machine from the [previous example](#state-machines) highly-available in an Akka [cluster](http://doc.akka.io/docs/akka/2.1.0-RC1/cluster/index.html). The `Door` state machine is a cluster-wide singleton which is managed by `NodeActor`s. There's one `NodeActor` per cluster node listening to cluster events. If a `NodeActor` becomes the master (= leader) it creates and recovers a `Door` instance. The other `NodeActor`s obtain a remote reference to `Door` instance on master. 
+
+![Clustering](https://raw.github.com/eligosource/eventsourced/wip-akka-2.1/doc/images/clustering-1.png)
+
+Clients interact with the `Door` singleton via `NodeActor`s by sending them door commands (`"open"` or `"close"`). `NodeActor`s accept commands on any cluster node, not only on master. A `NodeActor` forwards these commands to the `Door` as command [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s. Event `Message`s emitted by the `Door` are sent to a remote `Destination` actor via the named `"destination"` channel. The `Destination` creates a response from the received events and sends that response back to the initial sender. The application that runs the `Destination` actor is not part of the cluster but a standalone remote application. It also hosts the journal that is used by the cluster nodes (which is a SPOF in this example but later versions will use a distributed journal). 
+
+When the master crashes, another node in the cluster becomes the master and recovers the `Door` state machine.
+
+![Clustering](https://raw.github.com/eligosource/eventsourced/wip-akka-2.1/doc/images/clustering-2.png)
+
+The code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application, first start the application that hosts the `Destination` actor (and the journal):
+
+    sbt 'test:run-main org.eligosource.eventsourced.example.Journal'
+
+Then start the first seed node of the cluster
+
+    sbt 'test:run-main org.eligosource.eventsourced.example.Node 2561'
+
+then the second seed node
+
+    sbt 'test:run-main org.eligosource.eventsourced.example.Node 2562'
+
+and finally a third cluster node
+
+    sbt 'test:run-main org.eligosource.eventsourced.example.Node'
+
+Most likely the first seed node will become the master which writes 
+
+    MASTER: recovered door at akka://node@127.0.0.1:2561
+
+to `stdout`. The other nodes become slaves that write
+
+    SLAVE: referenced door at akka://node@127.0.0.1:2561
+
+to `stdout`. All nodes prompt the user to enter a door command:
+
+    command (open|close):
+
+We will now enter commands on the last started cluster node (a slave node). 
+
+The `Door` singleton is initially in closed state. Entering `open` will open it:
+
+    command (open|close): open
+    moved 1 times: door now open
+
+Then close it again:
+
+    command (open|close): close
+    moved 2 times: door now closed
+
+Trying to close a closed door will result in an error:
+
+    command (open|close): close
+    cannot close door: door is closed
+
+Now kill the master node with `ctrl^c`. This will also destroy the `Door` singleton. After 1-2 seconds, a new master has been determined by the cluster. The new master is going to recover the event-sourced `Door` singleton. The slave will renew its remote reference to the `Door`. To verify that the `Door` has been properly recovered, open the door again:
+
+    command (open|close): open
+    moved 3 times: door now open
+
+We can see that the `Door` state (which contains the number of past moves) has been properly failed-over to the new master node.
+
 Miscellaneous
 -------------
 
@@ -804,7 +868,7 @@ Applications that want to modify received event `Message`s, before they are forw
     val transformer: Message => Any = msg => msg.event
     val multicast = extension.processorOf(Props(multicast(1, List(target1, target2), transformer)))
 
-In the above example, the `transformer` function extracts the `event` from a received event `Message`. If the `transformer` function is not specified, it defaults to the `identity` function. Another `Multicast` factory method is the `decorator` method for creating a multicast processor with a single target (see also section [State machines](#state-machines)).
+In the above example, the `transformer` function extracts the `event` from a received event `Message`. If the `transformer` function is not specified, it defaults to the `identity` function. Another `Multicast` factory method is the `decorator` method for creating a multicast processor with a single target.
 
 ### Retroactive changes
 
