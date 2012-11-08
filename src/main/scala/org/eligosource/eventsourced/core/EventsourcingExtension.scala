@@ -288,13 +288,14 @@ object EventsourcingExtension extends ExtensionId[EventsourcingExtension] with E
 
 /**
  * [[org.eligosource.eventsourced.core.Eventsourced]] processor configuration object.
+ *
+ * @param id Processor id.
+ * @param processorFactory Processor factory.
+ * @param name Optional processor name.
  */
 case class ProcessorProps(
-  /** Processor id. */
   id: Int,
-  /** Processor factory. */
   processorFactory: Int => Actor with Eventsourced,
-  /** Optional processor name. */
   name: Option[String] = None) {
 
   /**
@@ -319,9 +320,9 @@ case class ProcessorProps(
 trait ChannelProps {
   /** Channel id. */
   def id: Int
-  /** Optional channel name */
+  /** Optional channel name. */
   def name: Option[String]
-  /** Channel destination */
+  /** Channel destination. */
   def destination: ActorRef
 
   /**
