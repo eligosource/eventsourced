@@ -1,5 +1,7 @@
 [![Build Status](https://secure.travis-ci.org/eligosource/eventsourced.png)](http://travis-ci.org/eligosource/eventsourced)
 
+**Note:** This branch is based on Akka 2.0.3 and Scala 2.9.2. For an Akka 2.1 and Scala 2.10 based version switch to the [wip-akka-2.1](https://github.com/eligosource/eventsourced/tree/wip-akka-2.1) branch.
+
 Eventsourced
 ============
 
