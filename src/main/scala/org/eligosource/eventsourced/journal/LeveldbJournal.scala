@@ -34,10 +34,15 @@ object LeveldbJournal {
    *
    *  - deletion of old entries requires full scan
    *
-   * @param dir journal directory
+   * @param dir journal directory.
+   * @param name optional name of the journal actor in the underlying actor system.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    */
-  def processorStructured(dir: File)(implicit system: ActorSystem): ActorRef =
-    system.actorOf(Props(new LeveldbJournalPS(dir)))
+  def processorStructured(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    if (name.isDefined)
+      system.actorOf(Props(new LeveldbJournalPS(dir)), name.get) else
+      system.actorOf(Props(new LeveldbJournalPS(dir)))
 
   /**
    * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
@@ -57,15 +62,24 @@ object LeveldbJournal {
    *    (with optional lower bound)
    *
    * @param dir journal directory
+   * @param name optional name of the journal actor in the underlying actor system.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    */
-  def sequenceStructured(dir: File)(implicit system: ActorSystem): ActorRef =
-    system.actorOf(Props(new LeveldbJournalSS(dir)))
+  def sequenceStructured(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    if (name.isDefined)
+      system.actorOf(Props(new LeveldbJournalSS(dir)), name.get) else
+      system.actorOf(Props(new LeveldbJournalSS(dir)))
 
   /**
    * Creates a LevelDB based journal that organizes entries primarily based on processor id.
    *
+   * @param dir journal directory
+   * @param name optional name of the journal actor in the underlying actor system.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    * @see `LeveldbJournal.processorStructured`
    */
-  def apply(dir: File)(implicit system: ActorSystem) =
-    processorStructured(dir)
+  def apply(dir: File, name: Option[String] = None)(implicit system: ActorSystem) =
+    processorStructured(dir, name)
 }

@@ -78,8 +78,8 @@ object AggregatorExample {
 
     def configure(): ActorRef = {
       val processor = extension.processorOf(Props(new Aggregator with Emitter with Confirm with Eventsourced { val id = 1 } ))
-      extension.channelOf(DefaultChannelProps(1, processor).withName("self"))
-      extension.channelOf(ReliableChannelProps(2, destination).withName("dest"))
+      extension.channelOf(DefaultChannelProps(1, processor))
+      extension.channelOf(ReliableChannelProps(2, destination))
       processor
     }
   }
@@ -98,14 +98,14 @@ object AggregatorExample {
         // count number of InputAggregated receivced
         inputAggregatedCounter = inputAggregatedCounter + 1
         // emit InputAggregated event to destination with sender message id containing the counted aggregations
-        emitter("dest") send { msg => msg.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)) }
+        emitter(2) send { msg => msg.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)) }
         // reply to initial sender that message has been aggregated
         sender ! "aggregated %d messages of %s".format(inputs.size, category)
       }
       case InputAvailable(category, input) => inputs = inputs.get(category) match {
         case Some(List(i2, i1)) => {
           // emit InputAggregated event to self when 3 events of same category exist
-          emitter("self") forwardEvent InputAggregated(category, List(i1, i2, input))
+          emitter(1) forwardEvent InputAggregated(category, List(i1, i2, input))
           inputs - category
         }
         case Some(is) => inputs + (category -> (input :: is))

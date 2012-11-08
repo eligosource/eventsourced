@@ -56,7 +56,7 @@ object FsmExample {
     val destination = system.actorOf(Props(new Destination(queue) with Receiver with Confirm))
 
     def configure(): ActorRef = {
-      extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
+      extension.channelOf(DefaultChannelProps(1, destination))
       extension.processorOf(Props(new Door with Emitter with Eventsourced { val id = 1 } ))
     }
   }
@@ -98,7 +98,7 @@ object FsmExample {
       }
     }
 
-    def emit(event: Any) = emitter("destination") forwardEvent event
+    def emit(event: Any) = emitter(1) forwardEvent event
   }
 
   class Destination(queue: java.util.Queue[Any]) extends Actor {

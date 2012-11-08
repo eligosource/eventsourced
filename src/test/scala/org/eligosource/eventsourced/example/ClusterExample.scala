@@ -39,15 +39,12 @@ class NodeActor(selfAddress: Address) extends Actor {
   var doorCreatedByMe = false
 
   def receive = {
-    case state: CurrentClusterState => {
+    case state: CurrentClusterState =>
       state.leader.foreach(setupDoor)
-    }
-    case LeaderChanged(Some(leaderAddress)) => {
+    case LeaderChanged(Some(leaderAddress)) =>
       setupDoor(leaderAddress)
-    }
-    case cmd: String => {
+    case cmd: String =>
       door foreach { _ forward Message(cmd) }
-    }
   }
 
   def setupDoor(leaderAddress: Address) {
@@ -102,7 +99,7 @@ object Node {
 
 object Journal extends App {
   implicit val system = ActorSystem("journal", ConfigFactory.load("journal"))
-  val journal = system.actorOf(Props(new JournalioJournal(new File("target/cluster"))), "journal")
+  val journal = JournalioJournal(new File("target/cluster"), Some("journal"))
   val destination = system.actorOf(Props(new Destination with Receiver with Confirm), "destination")
 
   class Destination extends Actor {

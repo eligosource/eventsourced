@@ -130,12 +130,15 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    *
    * @param props processor configuration object.
    * @return a processor ref.
+   * @throws InvalidActorNameException if `props.name` is defined and already
+   *         in use in the underlying actor system.
    *
    * @see [[org.eligosource.eventsourced.core.ProcessorProps]]
    */
-  def processorOf(props: ProcessorProps): ActorRef = {
-    registerProcessor(props.id, props.processor)
-    props.processor
+  def processorOf(props: ProcessorProps)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
+    val processor = props.createProcessor()
+    registerProcessor(props.id, processor)
+    processor
   }
 
   /**
@@ -146,7 +149,12 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    * blocking.
    *
    * @param props actor ref configuration object.
+   * @param name optional processor name.
+   * @param actorRefFactory [[org.eligosource.eventsourced.core.Eventsourced]]
+   *        ref factory.
    * @return a processor ref.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    */
   def processorOf(props: Props, name: Option[String] = None)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
     implicit val duration = 5 seconds
@@ -169,6 +177,8 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
    * @param props channel configuration object.
    * @param actorRefFactory [[org.eligosource.eventsourced.core.Channel]] ref factory.
    * @return a channel ref.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    *
    * @see [[org.eligosource.eventsourced.core.DefaultChannelProps]]
    *      [[org.eligosource.eventsourced.core.ReliableChannelProps]]
@@ -278,23 +288,28 @@ object EventsourcingExtension extends ExtensionId[EventsourcingExtension] with E
 
 /**
  * [[org.eligosource.eventsourced.core.Eventsourced]] processor configuration object.
- *
- * @param id processor id.
- * @param processor processor ref.
  */
-case class ProcessorProps(id: Int, processor: ActorRef)
+case class ProcessorProps(
+  /** Processor id. */
+  id: Int,
+  /** Processor factory. */
+  processorFactory: Int => Actor with Eventsourced,
+  /** Optional processor name. */
+  name: Option[String] = None) {
 
-object ProcessorProps {
   /**
-   * Creates a processor configuration object from a processor id and processor factory.
+   * Creates a processor with the settings defined by this configuration object.
    *
-   * @param id processor id.
-   * @param processorFactory [[org.eligosource.eventsourced.core.Eventsourced]] processor factory.
-   * @param actorRefFactory  [[org.eligosource.eventsourced.core.Eventsourced]] processor ref factory.
-   * @return processor configuration object containing the created processor ref.
+   * @param actorRefFactory [[org.eligosource.eventsourced.core.Eventsourced]]
+   *        ref factory.
+   * @return a processor ref.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    */
-  def apply(id: Int, processorFactory: Int => Actor with Eventsourced)(implicit actorRefFactory: ActorRefFactory): ProcessorProps = {
-    new ProcessorProps(id, actorRefFactory.actorOf(Props(processorFactory(id))))
+  def createProcessor()(implicit actorRefFactory: ActorRefFactory): ActorRef = {
+    if (name.isDefined)
+      actorRefFactory.actorOf(Props(processorFactory(id)), name.get) else
+      actorRefFactory.actorOf(Props(processorFactory(id)))
   }
 }
 
@@ -315,6 +330,8 @@ trait ChannelProps {
    * @param journal journal that is used by the channel.
    * @param actorRefFactory [[org.eligosource.eventsourced.core.Channel]] ref factory.
    * @return a channel ref.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory): ActorRef
 }
@@ -338,7 +355,9 @@ case class DefaultChannelProps(
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
-    actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)))
+    if (name.isDefined)
+      actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)), name.get) else
+      actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)))
   }
 }
 
@@ -380,6 +399,8 @@ case class ReliableChannelProps(
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
-    actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)))
+    if (name.isDefined)
+      actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)), name.get) else
+      actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)))
   }
 }

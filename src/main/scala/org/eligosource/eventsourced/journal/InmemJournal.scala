@@ -159,6 +159,8 @@ private [eventsourced] class InmemJournal extends Actor {
  * Creates an in-memory journal for testing purposes.
  */
 object InmemJournal {
-  def apply()(implicit system: ActorSystem): ActorRef =
-    system.actorOf(Props(new InmemJournal))
+  def apply(name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    if (name.isDefined)
+      system.actorOf(Props(new InmemJournal), name.get) else
+      system.actorOf(Props(new InmemJournal))
 }

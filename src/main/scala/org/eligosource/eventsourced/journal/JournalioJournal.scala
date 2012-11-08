@@ -197,7 +197,12 @@ object JournalioJournal {
    *    (with optional lower bound)
    *
    * @param dir journal directory
+   * @param name optional name of the journal actor in the underlying actor system.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
    */
-  def apply(dir: File)(implicit system: ActorSystem): ActorRef =
-    system.actorOf(Props(new JournalioJournal(dir)))
+  def apply(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    if (name.isDefined)
+      system.actorOf(Props(new JournalioJournal(dir)), name.get) else
+      system.actorOf(Props(new JournalioJournal(dir)))
 }
