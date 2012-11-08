@@ -66,7 +66,7 @@ object FsmExample {
   case object Open extends DoorState
   case object Closed extends DoorState
 
-  case class DoorMoved(to: DoorState, times: Int)
+  case class DoorMoved(state: DoorState, times: Int)
   case class DoorNotMoved(state: DoorState, cmd: String)
   case class NotSupported(cmd: Any)
 
