@@ -49,10 +49,10 @@ object Dependency {
   //  Compile
   // -----------------------------------------------
 
-  val akkaActor   = "com.typesafe.akka"         % "akka-actor_2.10.0-RC1" % Akka  % "compile"
-  val commonsIo   = "commons-io"                %  "commons-io"           % "2.3" % "compile"
-  val journalIo   = "journalio"                 %  "journalio"            % "1.2" % "compile"
-  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all"       % "1.2" % "compile"
+  val akkaActor   = "com.typesafe.akka"         % "akka-actor_2.10.0-RC1" % Akka    % "compile"
+  val commonsIo   = "commons-io"                %  "commons-io"           % "2.3"   % "compile"
+  val journalIo   = "journalio"                 %  "journalio"            % "1.2"   % "compile"
+  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all"       % "1.4.1" % "compile"
 
   // -----------------------------------------------
   //  Test
