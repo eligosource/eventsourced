@@ -8,38 +8,32 @@ object Settings {
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := buildOrganization,
     version      := buildVersion,
-    scalaVersion := buildScalaVersion
+    scalaVersion := buildScalaVersion,
+    scalaBinaryVersion <<= scalaVersion.identity
   )
 
   import Resolvers._
 
   val defaultSettings = buildSettings ++ Seq(
-    resolvers ++= Seq(typesafeRepo, journalioRepo, akkaReleases, akkaSnapshots, sonatypeReleases, sonatypeSnapshots),
+    resolvers ++= Seq(journalioRepo),
     scalacOptions ++= Seq("-unchecked"),
     parallelExecution in Test := false
   )
 }
 
 object Resolvers {
-  val akkaReleases  = "Akka Releases"  at "http://repo.akka.io/releases/"
-  val akkaSnapshots = "Akka Snapshots" at "http://repo.akka.io/snapshots/"
-
-  val sonatypeReleases  = "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases"
-  val sonatypeSnapshots = "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"
-
-  val typesafeRepo  = "Typesafe Repo"  at "http://repo.typesafe.com/typesafe/releases/"
   val journalioRepo = "Journalio Repo" at "https://raw.github.com/sbtourist/Journal.IO/master/m2/repo"
 }
 
 object Dependencies {
   import Dependency._
 
-  val core = Seq(akkaActor, akkaCluster, commonsIo, journalIo, levelDbJni, scalaTest)
+  val core = Seq(akkaActor, akkaCluster, commonsIo, journalIo, levelDbJni, scalaTest, scalaActors)
 }
 
 object Version {
   val Scala = "2.10.0-RC2"
-  val Akka  = "2.2-SNAPSHOT"
+  val Akka  = "2.1.0-RC2"
 }
 
 object Dependency {
@@ -49,17 +43,18 @@ object Dependency {
   //  Compile
   // -----------------------------------------------
 
-  val akkaActor   = "com.typesafe.akka"         % "akka-actor_2.10.0-RC1" % Akka    % "compile"
-  val commonsIo   = "commons-io"                %  "commons-io"           % "2.3"   % "compile"
-  val journalIo   = "journalio"                 %  "journalio"            % "1.2"   % "compile"
-  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all"       % "1.4.1" % "compile"
+  val akkaActor   = "com.typesafe.akka"         %% "akka-actor" % Akka % "compile"
+  val commonsIo   = "commons-io"                %  "commons-io"        % "2.3"   % "compile"
+  val journalIo   = "journalio"                 %  "journalio"         % "1.2"   % "compile"
+  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all"    % "1.4.1" % "compile"
 
   // -----------------------------------------------
   //  Test
   // -----------------------------------------------
 
-  val akkaCluster = "com.typesafe.akka" % "akka-cluster-experimental_2.10.0-RC1" % Akka  % "test"
-  val scalaTest   = "org.scalatest"     % "scalatest_2.10.0-RC1"                 % "1.8" % "test"
+  val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % Akka  % "test"
+  val scalaActors = "org.scala-lang"    %  "scala-actors"              % Scala % "test"
+  val scalaTest   = "org.scalatest"     %% "scalatest"                 % "1.8" % "test"
 }
 
 object Publish {
@@ -108,10 +103,7 @@ object EventsourcedBuild extends Build {
   val testNobootcpSetting = test <<= (scalaVersion, streams, fullClasspath in Test) map { (sv, st, cp) =>
     val testCp = cp.map(_.data).mkString(pathSeparator)
     val testExec = "org.scalatest.tools.Runner"
-
-    val testPath = "target/scala-2.10/test-classes" // TEMPORARY
-    //val testPath = "target/scala-%s/test-classes" format sv
-
+    val testPath = "target/scala-%s/test-classes" format sv
     val testOpts = Seq("-classpath", testCp, testExec, "-R", testPath, "-o")
     val result = Fork.java.fork(None, testOpts, None, Map(), false, LoggedOutput(st.log)).exitValue()
     if (result != 0) sys.error("Tests failed")
