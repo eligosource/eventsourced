@@ -196,22 +196,6 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
     Await.result(future, timeout.duration)
   }
 
-  /**
-   * Stops and deregisters the processor identified by `processorId`.
-   *
-   * @param processorId processor id.
-   */
-  def stopProcessor(processorId: Int)(implicit actorRefFactory: ActorRefFactory) =
-    processors.get(processorId) foreach { p => deregisterProcessor(processorId); actorRefFactory.stop(p) }
-
-  /**
-   * Stops and deregisters the channel identified by `channelId`.
-   *
-   * @param channelId channel id.
-   */
-  def stopChannel(channelId: Int)(implicit actorRefFactory: ActorRefFactory) =
-    channels.get(channelId) foreach { c => deregisterChannel(channelId); actorRefFactory.stop(c) }
-
   @tailrec
   private def registerChannel(channelId: Int, channelName: Option[String], channel: ActorRef): Unit = {
     val current = channelsRef.get()
@@ -227,14 +211,14 @@ class EventsourcingExtension(system: ActorSystem) extends Extension {
   }
 
   @tailrec
-  private def deregisterChannel(channelId: Int): Unit = {
+  private [core] final def deregisterChannel(channelId: Int): Unit = {
     val current = channelsRef.get()
     val updated = current.remove(channelId)
     if (!channelsRef.compareAndSet(current, updated)) deregisterChannel(channelId)
   }
 
   @tailrec
-  private def deregisterProcessor(processorId: Int): Unit = {
+  private [core] final def deregisterProcessor(processorId: Int): Unit = {
     val current = processorsRef.get()
     val updated = current - processorId
     if (!processorsRef.compareAndSet(current, updated)) deregisterProcessor(processorId)

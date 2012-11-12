@@ -1,5 +1,7 @@
 [![Build Status](https://secure.travis-ci.org/eligosource/eventsourced.png)](http://travis-ci.org/eligosource/eventsourced)
 
+**Note:** This branch is based on Akka 2.0.3 and Scala 2.9.2. For an Akka 2.1 and Scala 2.10 based version switch to the [wip-akka-2.1](https://github.com/eligosource/eventsourced/tree/wip-akka-2.1) branch.
+
 Eventsourced
 ============
 
@@ -386,7 +388,7 @@ Code from this section is contained in [SenderReferences.scala](https://github.c
 Channels
 --------
 
-A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example. Channels need not be used by event-sourced processors if the event message destination was received via a [sender reference](#sender-references). Sender references are always the `deadLetters` reference during a replay. 
+A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example. Channels need not be used by event-sourced processors if the event message destination was received via a [sender reference](#sender-references). Sender references are always the `deadLetters` reference during a replay. 
 
 Currently, the library provides two different channel implementations: [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/0.4/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/0.4/#org.eligosource.eventsourced.core.ReliableChannel) which are explained in the following two subsections.
 
