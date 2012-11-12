@@ -689,7 +689,7 @@ The example code is contained in [OrderExample.scala](https://github.com/eligoso
 
 ### State machines
 
-![State machines](https://raw.github.com/eligosource/eventsourced/wip-akka-2.1/doc/images/statemachines-1.png)
+![State machines](https://raw.github.com/eligosource/eventsourced/master/doc/images/statemachines-1.png)
 
 With a recent [change](https://www.assembla.com/spaces/akka/tickets/2680) in Akka 2.1, event-sourcing Akka [FSM](http://doc.akka.io/docs/akka/2.0.3/scala/fsm.html)s is now pretty easy. The following state machine example is a `Door` which can be in one of two states: `Open` and `Closed`. 
 
@@ -780,21 +780,21 @@ will produce
     received event DoorMoved(Open,3)
     received event DoorMoved(Closed,4)
 
-The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala).
+The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala).
 
 ### Clustering
 
 This section makes the `Door` state machine from the [previous example](#state-machines) highly-available in an Akka [cluster](http://doc.akka.io/docs/akka/2.1.0-RC1/cluster/index.html). The `Door` state machine is a cluster-wide singleton which is managed by `NodeActor`s. There's one `NodeActor` per cluster node listening to cluster events. If a `NodeActor` becomes the master (= leader) it creates and recovers a `Door` instance. The other `NodeActor`s obtain a remote reference to `Door` instance on master. 
 
-![Clustering](https://raw.github.com/eligosource/eventsourced/wip-akka-2.1/doc/images/clustering-1.png)
+![Clustering](https://raw.github.com/eligosource/eventsourced/master/doc/images/clustering-1.png)
 
 Clients interact with the `Door` singleton via `NodeActor`s by sending them door commands (`"open"` or `"close"`). `NodeActor`s accept commands on any cluster node, not only on master. A `NodeActor` forwards these commands to the `Door` as command [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s. Event `Message`s emitted by the `Door` are sent to a remote `Destination` actor via the named `"destination"` channel. The `Destination` creates a response from the received events and sends that response back to the initial sender. The application that runs the `Destination` actor is not part of the cluster but a standalone remote application. It also hosts the journal that is used by the cluster nodes (which is a SPOF in this example but later versions will use a distributed journal). 
 
 When the master crashes, another node in the cluster becomes the master and recovers the `Door` state machine.
 
-![Clustering](https://raw.github.com/eligosource/eventsourced/wip-akka-2.1/doc/images/clustering-2.png)
+![Clustering](https://raw.github.com/eligosource/eventsourced/master/doc/images/clustering-2.png)
 
-The code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/wip-akka-2.1/src/test/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application, first start the application that hosts the `Destination` actor (and the journal):
+The code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/src/test/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/src/test/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application, first start the application that hosts the `Destination` actor (and the journal):
 
     sbt 'test:run-main org.eligosource.eventsourced.example.Journal'
 
