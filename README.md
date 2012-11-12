@@ -425,7 +425,7 @@ The `channelId` must be a positive integer. The map of registered channels can b
 
     val channel: ActorRef = extension.channelOf(DefaultChannelProps(channelId, destination).withName(channelName))
 
-The map of registered named channels can be obtained via `extension.namedChannels` which returns a map of type Map[String, ActorRef] where the mapping key is the channel name. To stop and de-register a channel, applications should use the 'extension.stopChannel(Int)` method and pass the channel id as argument.
+The map of registered named channels can be obtained via `extension.namedChannels` which returns a map of type Map[String, ActorRef] where the mapping key is the channel name.
 
 ### `ReliableChannel`
 
