@@ -40,8 +40,8 @@ object OrderExample extends App {
   val validator = system.actorOf(Props(new CreditCardValidator(processor) with Receiver))
   val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
 
-  extension.channelOf(ReliableChannelProps(1, validator).withName("validation requests"))
-  extension.channelOf(DefaultChannelProps(2, destination).withName("accepted orders"))
+  extension.channelOf(ReliableChannelProps(1, validator).withName("validation_requests"))
+  extension.channelOf(DefaultChannelProps(2, destination).withName("accepted_orders"))
   extension.recover()
 
   processor ? Message(OrderSubmitted(Order(details = "jelly beans", creditCardNumber = "1234-5678-1234-5678"))) onSuccess {
@@ -79,14 +79,14 @@ object OrderExample extends App {
         val id = orders.size
         val upd = order.copy(id = id)
         orders = orders + (id -> upd)
-        emitter("validation requests") forwardEvent CreditCardValidationRequested(upd)
+        emitter("validation_requests") forwardEvent CreditCardValidationRequested(upd)
       }
       case CreditCardValidated(orderId) => {
         orders.get(orderId).foreach { order =>
           val upd = order.copy(validated = true)
           orders = orders + (orderId -> upd)
           sender ! upd
-          emitter("accepted orders") sendEvent OrderAccepted(upd)
+          emitter("accepted_orders") sendEvent OrderAccepted(upd)
         }
       }
     }
