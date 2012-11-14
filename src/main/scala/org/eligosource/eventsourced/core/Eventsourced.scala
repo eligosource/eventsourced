@@ -17,6 +17,8 @@ package org.eligosource.eventsourced.core
 
 import akka.actor._
 
+import org.eligosource.eventsourced.core.Journal._
+
 /**
  * Stackable modification for making an actor persistent via event-sourcing (or command-sourcing).
  * It writes any input [[org.eligosource.eventsourced.core.Message]] to a journal. Input messages

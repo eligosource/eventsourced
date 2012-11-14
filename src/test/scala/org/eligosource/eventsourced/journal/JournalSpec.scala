@@ -29,6 +29,7 @@ import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Journal._
 
 abstract class JournalSpec extends WordSpec with MustMatchers {
   import JournalSpec._

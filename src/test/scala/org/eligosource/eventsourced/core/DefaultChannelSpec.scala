@@ -21,6 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import akka.actor._
 
 import org.eligosource.eventsourced.core.DefaultChannelSpec._
+import org.eligosource.eventsourced.core.Journal._
 
 class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
   "A default channel" must {

@@ -24,6 +24,7 @@ import org.fusesource.leveldbjni.JniDBFactory._
 import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.util._
 
 /**
@@ -42,7 +43,7 @@ import org.eligosource.eventsourced.util._
  *  - replay of input messages for a single processor requires full scan
  *    (with optional lower bound)
  */
-private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
+private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
   import LeveldbJournalSS._
 
   val levelDbReadOptions = new ReadOptions
@@ -51,110 +52,69 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
 
   val writeOutMsgCache = new WriteOutMsgCache[Long]
 
-  var commandListener: Option[ActorRef] = None
-  var counter = 0L
+  def executeWriteInMsg(cmd: WriteInMsg) {
+    val pmsg = cmd.message.clearConfirmationSettings
+    val pcmd = writeInMsgSerializer.toBytes(cmd.copy(message = pmsg, target = null))
+    leveldb.put(SSKey(In, counter, 0), pcmd)
+  }
 
-  def receive = {
-    case cmd: WriteInMsg => {
-      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.clearConfirmationSettings
+  def executeWriteOutMsg(cmd: WriteOutMsg) = withBatch { batch =>
+    val pmsg = cmd.message.clearConfirmationSettings
+    val pcmd = writeOutMsgSerializer.toBytes(cmd.copy(message = pmsg, target = null))
 
-      val ck = SSKey(In, m.sequenceNr, 0)
-      val sc = writeInMsgSerializer.toBytes(c.copy(message = m, target = null))
-      leveldb.put(ck, sc)
+    batch.put(SSKey(Out, counter, cmd.channelId), pcmd)
 
-      c.target forward Written(c.message)
-
-      counter = m.sequenceNr + 1
-      commandListener.foreach(_ ! cmd)
+    if (cmd.ackSequenceNr != SkipAck) {
+      batch.put(SSKey(In, cmd.ackSequenceNr, cmd.channelId), Array.empty[Byte])
     }
-    case cmd: WriteOutMsg => withBatch { batch =>
-      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.clearConfirmationSettings
 
-      writeOutMsgCache.update(c, m.sequenceNr)
+    writeOutMsgCache.update(cmd, pmsg.sequenceNr)
+  }
 
-      val ck = SSKey(Out, m.sequenceNr, cmd.channelId)
-      val sc = writeOutMsgSerializer.toBytes(c.copy(message = m, target = null))
-      batch.put(ck, sc)
-      if (c.ackSequenceNr != SkipAck) {
-        val ak = SSKey(In, c.ackSequenceNr, c.channelId)
-        batch.put(ak, Array.empty[Byte])
-      }
+  def executeWriteAck(cmd: WriteAck) {
+    leveldb.put(SSKey(In, cmd.ackSequenceNr, cmd.channelId), Array.empty[Byte])
+  }
 
-      c.target forward Written(c.message)
+  def executeDeleteOutMsg(cmd: DeleteOutMsg) {
+    writeOutMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
+  }
 
-      counter = m.sequenceNr + 1
-      commandListener.foreach(_ ! cmd)
+  def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
+    val starts = cmds.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
+      a + (r.processorId -> (r.fromSequenceNr, r.target))
     }
-    case cmd: WriteAck => {
-      leveldb.put(SSKey(In, cmd.ackSequenceNr, cmd.channelId), Array.empty[Byte])
-      commandListener.foreach(_ ! cmd)
-    }
-    case cmd: DeleteOutMsg => {
-      writeOutMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
-      commandListener.foreach(_ ! cmd)
-    }
-    case Loop(msg, target) => {
-      target forward (Looped(msg))
-    }
-    case BatchDeliverOutMsgs(channels) => {
-      channels.foreach(_ ! Deliver)
-    }
-    case BatchReplayInMsgs(replays) => {
-      val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
-        a + (r.processorId -> (r.fromSequenceNr, r.target))
-      }
-      val start = if (starts.isEmpty) 0L else starts.values.map(_._1).min
-      replay(In, start, writeInMsgSerializer) { (cmd, acks) =>
-        starts.get(cmd.processorId) match {
-          case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
-            target tell Written(cmd.message.copy(acks = acks))
-          }
-          case _ => {}
+    val start = if (starts.isEmpty) 0L else starts.values.map(_._1).min
+    replay(In, start, writeInMsgSerializer) { (cmd, acks) =>
+      starts.get(cmd.processorId) match {
+        case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
+          p(cmd.message.copy(acks = acks), target)
         }
+        case _ => {}
       }
-    }
-    case r: ReplayInMsgs => {
-      // call receive directly instead sending to self
-      // (replay must not interleave with other commands)
-      receive(BatchReplayInMsgs(List(r)))
-    }
-    case ReplayOutMsgs(chanId, fromNr, target) => {
-      writeOutMsgCache.messages(chanId, fromNr).foreach(msg => target tell Written(msg))
-    }
-    case GetCounter => {
-      sender ! getCounter
-    }
-    case SetCommandListener(cl) => {
-      commandListener = cl
     }
   }
 
-  override def preStart() {
-    counter = getCounter
+  def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
+    executeBatchReplayInMsgs(List(cmd), (msg, _) => p(msg))
+  }
+
+  def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: Message => Unit) {
+    writeOutMsgCache.messages(cmd.channelId, cmd.fromSequenceNr).foreach(p)
+  }
+
+  def storedCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
+    case null  => 0L
+    case bytes => bytesToCounter(bytes)
+  }
+
+  override def start() {
     replay(Out, 0L, writeOutMsgSerializer) { (cmd, acks) =>
       writeOutMsgCache.update(cmd, cmd.message.sequenceNr)
     }
   }
 
-  override def postStop() {
+  override def stop() {
     leveldb.close()
-  }
-
-  def getCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
-    case null  => 1L
-    case bytes => bytesToCounter(bytes) + 1L
-  }
-
-  def withBatch(p: WriteBatch => Unit) {
-    val batch = leveldb.createWriteBatch()
-    try {
-      p(batch)
-      leveldb.write(batch, levelDbWriteOptions)
-    } finally {
-      batch.close()
-    }
   }
 
   def replay[T](direction: Int, fromSequenceNr: Long, serializer: Serializer[T])(p: (T, List[Int]) => Unit): Unit = {
@@ -196,6 +156,16 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Actor {
         confirmingChannelIds(iter, nextKey, nextKey.confirmingChannelId :: channelIds)
       } else channelIds
     } else channelIds
+  }
+
+  private def withBatch(p: WriteBatch => Unit) {
+    val batch = leveldb.createWriteBatch()
+    try {
+      p(batch)
+      leveldb.write(batch, levelDbWriteOptions)
+    } finally {
+      batch.close()
+    }
   }
 }
 

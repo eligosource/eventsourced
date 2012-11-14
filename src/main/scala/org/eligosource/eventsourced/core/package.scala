@@ -18,8 +18,6 @@ package org.eligosource.eventsourced
 import akka.actor._
 
 package object core {
-  private [eventsourced] val SkipAck: Long = -1L
-
   // ------------------------------------------------------------
   //  Factories for special-purpose processors
   // ------------------------------------------------------------

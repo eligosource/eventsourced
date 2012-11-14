@@ -25,6 +25,8 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
+import org.eligosource.eventsourced.core.Journal._
+
 /**
  * Event-sourcing extension for Akka. Used by applications to create and register
  * [[org.eligosource.eventsourced.core.Eventsourced]] processors and event message

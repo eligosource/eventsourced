@@ -21,9 +21,10 @@ import java.util.concurrent.Executors
 import scala.collection.JavaConverters._
 
 import akka.actor._
-import journal.io.api._
+import journal.io.api.{Journal => JournalIO, _}
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.util.JavaSerializer
 
 /**
@@ -42,8 +43,7 @@ import org.eligosource.eventsourced.util.JavaSerializer
  *  - replay of input messages for a single processor requires full scan
  *    (with optional lower bound)
  */
-private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Actor {
-
+private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Journal {
   // TODO: make configurable
   val serializer = new JavaSerializer[AnyRef]
 
@@ -51,85 +51,59 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
   val writeOutMsgCache = new WriteOutMsgCache[Location]
 
   val disposer = Executors.newSingleThreadScheduledExecutor()
-  val journal = new Journal
+  val journal = new JournalIO
 
-  var commandListener: Option[ActorRef] = None
-  var counter = 0L
+  def executeWriteInMsg(cmd: WriteInMsg) {
+    val pmsg = cmd.message.clearConfirmationSettings
+    val pcmd = cmd.copy(message = pmsg, target = null)
+    journal.write(serializer.toBytes(pcmd), JournalIO.WriteType.SYNC)
+  }
 
-  def receive = {
-    case cmd: WriteInMsg => {
-      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.clearConfirmationSettings
+  def executeWriteOutMsg(cmd: WriteOutMsg) {
+    val pmsg = cmd.message.clearConfirmationSettings
+    val pcmd = serializer.toBytes(cmd.copy(message = pmsg, target = null))
 
-      journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
+    val loc = journal.write(pcmd, JournalIO.WriteType.SYNC)
 
-      c.target forward Written(c.message)
-
-      counter = m.sequenceNr + 1
-      commandListener.foreach(_ ! cmd)
+    if (cmd.ackSequenceNr != SkipAck) {
+      val ac = WriteAck(cmd.ackProcessorId, cmd.channelId, cmd.ackSequenceNr)
+      journal.write(serializer.toBytes(ac), JournalIO.WriteType.SYNC)
     }
-    case cmd: WriteOutMsg => {
-      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      val m = c.message.clearConfirmationSettings
 
-      val loc = journal.write(serializer.toBytes(c.copy(message = m, target = null)), Journal.WriteType.SYNC)
+    writeOutMsgCache.update(cmd, loc)
+  }
 
-      writeOutMsgCache.update(c, loc)
+  def executeWriteAck(cmd: WriteAck) {
+    journal.write(serializer.toBytes(cmd), JournalIO.WriteType.SYNC)
+  }
 
-      if (c.ackSequenceNr != SkipAck) {
-        val ac = WriteAck(c.ackProcessorId, c.channelId, c.ackSequenceNr)
-        journal.write(serializer.toBytes(ac), Journal.WriteType.SYNC)
-      }
+  def executeDeleteOutMsg(cmd: DeleteOutMsg) {
+    writeOutMsgCache.update(cmd).foreach(journal.delete)
+  }
 
-      c.target forward Written(c.message)
-
-      counter = m.sequenceNr + 1
-      commandListener.foreach(_ ! cmd)
+  def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
+    val starts = cmds.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
+      a + (r.processorId -> (r.fromSequenceNr, r.target))
     }
-    case cmd: WriteAck => {
-      journal.write(serializer.toBytes(cmd), Journal.WriteType.SYNC)
-      commandListener.foreach(_ ! cmd)
-    }
-    case cmd: DeleteOutMsg => {
-      writeOutMsgCache.update(cmd).foreach(journal.delete)
-      commandListener.foreach(_ ! cmd)
-    }
-    case Loop(msg, target) => {
-      target forward (Looped(msg))
-    }
-    case BatchDeliverOutMsgs(channels) => {
-      channels.foreach(_ ! Deliver)
-    }
-    case BatchReplayInMsgs(replays) => {
-      val starts = replays.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
-        a + (r.processorId -> (r.fromSequenceNr, r.target))
-      }
-      replayInput { (cmd, acks) =>
-        starts.get(cmd.processorId) match {
-          case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
-            target tell Written(cmd.message.copy(acks = acks))
-          }
-          case _ => {}
+    replayInput { (cmd, acks) =>
+      starts.get(cmd.processorId) match {
+        case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
+          p(cmd.message.copy(acks = acks), target)
         }
+        case _ => {}
       }
-    }
-    case r: ReplayInMsgs => {
-      // call receive directly instead sending to self
-      // (replay must not interleave with other commands)
-      receive(BatchReplayInMsgs(List(r)))
-    }
-    case ReplayOutMsgs(chanId, fromNr, target) => {
-      replayOutput(chanId, fromNr, msg => target tell Written(msg))
-    }
-    case GetCounter => {
-      sender ! getCounter
-    }
-    case SetCommandListener(cl) => {
-      commandListener = cl
     }
   }
 
-  def replayInput(p: (WriteInMsg, List[Int]) => Unit) {
+  def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
+    executeBatchReplayInMsgs(List(cmd), (msg, _) => p(msg))
+  }
+
+  def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: Message => Unit) {
+    writeOutMsgCache.messages(cmd.channelId, cmd.fromSequenceNr).foreach(p)
+  }
+
+  private def replayInput(p: (WriteInMsg, List[Int]) => Unit) {
     journal.redo().asScala.foreach { location =>
       serializer.fromBytes(location.getData) match {
         case cmd: WriteInMsg => {
@@ -150,30 +124,23 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
     writeInMsgQueue.clear()
   }
 
-  def replayOutput(channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
-    writeOutMsgCache.messages(channelId, fromSequenceNr).foreach(p)
-  }
-
-  def getCounter: Long = {
+  def storedCounter: Long = {
     val cmds = journal.undo().asScala.map { location => serializer.fromBytes(location.getData) }
     val cmdo = cmds.collectFirst { case cmd: WriteInMsg => cmd }
-    cmdo.map(_.message.sequenceNr + 1).getOrElse(1L)
+    cmdo.map(_.message.sequenceNr).getOrElse(0L)
   }
 
-  override def preStart() {
+  override def start() {
     dir.mkdirs()
-
     journal.setPhysicalSync(false)
     journal.setDirectory(dir)
     journal.setWriter(system.dispatcher)
     journal.setDisposer(disposer)
     journal.setChecksum(false)
     journal.open()
-
-    counter = getCounter
   }
 
-  override def postStop() {
+  override def stop() {
     journal.close()
     disposer.shutdown()
   }

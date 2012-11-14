@@ -19,7 +19,8 @@ import java.nio.ByteBuffer
 
 import scala.collection.immutable.{Queue, SortedMap}
 
-import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Message
+import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.util.Serializer
 
 package object journal {

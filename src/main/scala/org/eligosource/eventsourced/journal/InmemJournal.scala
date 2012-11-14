@@ -20,105 +20,49 @@ import scala.collection.immutable.SortedMap
 import akka.actor._
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Journal._
 
 /**
  * In-memory journal for testing purposes.
  */
-private [eventsourced] class InmemJournal extends Actor {
-  var commandListener: Option[ActorRef] = None
+private [eventsourced] class InmemJournal extends Journal {
   var redoMap = SortedMap.empty[Key, Any]
-  var counter = 0L
 
-  def receive = {
-    case cmd: WriteInMsg => {
-      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      storeInMsg(c)
-      c.target forward Written(c.message)
-      commandListener.foreach(_ ! cmd)
-    }
-    case cmd: WriteOutMsg => {
-      val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else cmd
-      storeOutMsg(c)
-      c.target forward Written(c.message)
-      commandListener.foreach(_ ! cmd)
-    }
-    case cmd: WriteAck => {
-      storeAck(cmd)
-      commandListener.foreach(_ ! cmd)
-    }
-    case cmd: DeleteOutMsg => {
-      storeDel(cmd)
-      commandListener.foreach(_ ! cmd)
-    }
-    case Loop(msg, target) => {
-      target forward (Looped(msg))
-    }
-    case BatchDeliverOutMsgs(channels) => {
-      channels.foreach(_ ! Deliver)
-    }
-    case BatchReplayInMsgs(replays) => {
-      replays.foreach(replayInMsgs)
-    }
-    case cmd: ReplayInMsgs => {
-      replayInMsgs(cmd)
-    }
-    case ReplayOutMsgs(chanId, fromNr, target) => {
-      replay(Int.MaxValue, chanId, fromNr, msg => target tell Written(msg))
-    }
-    case GetCounter => {
-      sender ! getCounter
-    }
-    case SetCommandListener(cl) => {
-      commandListener = cl
-    }
+  def executeWriteInMsg(cmd: WriteInMsg) {
+    redoMap = redoMap + (Key(cmd.processorId, 0, counter, 0) -> cmd.message.clearConfirmationSettings)
   }
 
-  def storeInMsg(cmd: WriteInMsg) {
-    val msg = cmd.message
-    counter = msg.sequenceNr
-
-    val k = Key(cmd.processorId, 0, counter, 0)
-    redoMap = redoMap + (k -> msg.clearConfirmationSettings)
-
-    counter = counter + 1
-  }
-
-  def storeOutMsg(cmd: WriteOutMsg) {
-    val msg = cmd.message
-    counter = msg.sequenceNr
-
-    val k = Key(Int.MaxValue, cmd.channelId, counter, 0)
-    redoMap = redoMap + (k -> msg.clearConfirmationSettings)
+  def executeWriteOutMsg(cmd: WriteOutMsg) {
+    redoMap = redoMap + (Key(Int.MaxValue, cmd.channelId, counter, 0) -> cmd.message.clearConfirmationSettings)
 
     if (cmd.ackSequenceNr != SkipAck) {
-      val k = Key(cmd.ackProcessorId, 0, cmd.ackSequenceNr, cmd.channelId)
-      redoMap = redoMap + (k -> null)
+      redoMap = redoMap + (Key(cmd.ackProcessorId, 0, cmd.ackSequenceNr, cmd.channelId) -> null)
     }
-
-    counter = counter + 1
   }
 
-  def storeAck(cmd: WriteAck) {
-    val k = Key(cmd.processorId, 0, cmd.ackSequenceNr, cmd.channelId)
-    redoMap = redoMap + (k -> null)
+  def executeWriteAck(cmd: WriteAck) {
+    redoMap = redoMap + (Key(cmd.processorId, 0, cmd.ackSequenceNr, cmd.channelId) -> null)
   }
 
-  def storeDel(cmd: DeleteOutMsg) {
-    val k = Key(Int.MaxValue, cmd.channelId, cmd.msgSequenceNr, 0)
-    redoMap = redoMap - k
+  def executeDeleteOutMsg(cmd: DeleteOutMsg) {
+    redoMap = redoMap - Key(Int.MaxValue, cmd.channelId, cmd.msgSequenceNr, 0)
   }
 
-  def getCounter = counter + 1
-
-  override def preStart() {
-    counter = getCounter
+  def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
+    cmds.foreach(cmd => executeReplayInMsgs(cmd, msg => p(msg, cmd.target)))
   }
 
-  def replayInMsgs(cmd: ReplayInMsgs) {
-    replay(cmd.processorId, 0, cmd.fromSequenceNr, msg => cmd.target.tell(Written(msg)))
+  def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
+    replay(cmd.processorId, 0, cmd.fromSequenceNr, p)
   }
 
-  def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
+  def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: Message => Unit) {
+    replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, p)
+  }
+
+  def storedCounter = counter
+
+  private def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
     val startKey = Key(processorId, channelId, fromSequenceNr, 0)
     val iter = redoMap.from(startKey).iterator.buffered
     replay(iter, startKey, p)
