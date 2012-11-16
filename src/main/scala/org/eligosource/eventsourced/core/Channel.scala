@@ -27,8 +27,10 @@ import org.eligosource.eventsourced.core.Journal._
  * Channels are used by [[org.eligosource.eventsourced.core.Eventsourced]] actors to prevent redundant
  * message delivery to destinations during event message replay.
  *
- * Channels need not be used by `Eventsourced` actors if the event message destination was received via
- * a sender reference. Sender references are always the `deadLetters` reference during a replay.
+ * A less reliable alternative to channels is communication via sender references. Event messages that
+ * are sent to processors during a replay always have a `deadLetters` sender reference which prevents
+ * redundant delivery as well. The main difference is that the delivery guarantee changes from
+ * ''at-least-once'' to ''at-most-once''.
  *
  * @see [[org.eligosource.eventsourced.core.DefaultChannel]]
  *      [[org.eligosource.eventsourced.core.ReliableChannel]]

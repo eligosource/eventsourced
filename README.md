@@ -397,7 +397,7 @@ Code from this section is contained in [SenderReferences.scala](https://github.c
 Channels
 --------
 
-A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example. Channels need not be used by event-sourced processors if the event message destination was received via a [sender reference](#sender-references). Sender references are always the `deadLetters` reference during a replay. 
+A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example.  
 
 Currently, the library provides two different channel implementations: [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) which are explained in the following two subsections.
 
@@ -456,6 +456,10 @@ For channels to work properly, event-sourced processors must copy the `processor
     }
 
 When using a [message emitter](#emitter), this is done automatically.
+
+### Alternatives
+
+A less reliable alternative to channels is communication via sender references. Event messages that are sent to processors during a replay always have a `deadLetters` sender reference which prevents redundant delivery as well. The main difference is that the delivery guarantee changes from *at-least-once* to *at-most-once*.
 
 Recovery
 --------
