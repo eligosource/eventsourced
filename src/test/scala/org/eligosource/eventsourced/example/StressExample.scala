@@ -72,20 +72,19 @@ object StressExample {
   def stress(processor: ActorRef, throttle: Long)(implicit timeout: Timeout, system: ActorSystem) {
     import system.dispatcher
 
-    val start = System.currentTimeMillis()
+    val start = System.nanoTime()
     1 to cycles foreach { i =>
       if (i % 100 == 0) Thread.sleep(throttle)
-      val millis = System.currentTimeMillis()
+      val nanos = System.nanoTime()
       processor ? Message(i) onSuccess {
         case r: Int => if (r % 5000 == 0) {
-          val now = System.currentTimeMillis()
+          val now = System.nanoTime()
 
-          // needs improvement, of course
-          val latency = now - millis
-          val throughput = r * 1000 / (now - start)
+          val latency = (now - nanos) / 1e6
+          val throughput = r * 1e9 / (now - start)
 
           // print some statistics ...
-          println("throughput = %d msgs/sec, latency of response %d = %d ms" format (throughput, r, latency))
+          println("throughput = %.0f msgs/sec, latency of response %d = %.2f ms" format (throughput, r, latency))
         }
       }
     }
