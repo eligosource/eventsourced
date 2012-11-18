@@ -203,7 +203,7 @@ object ReliableChannelSpec {
     val writeOutMsgListenerQueue = new LinkedBlockingQueue[WriteOutMsg]
     val writeOutMsgListener = system.actorOf(Props(new WriteOutMsgListener(writeOutMsgListenerQueue)))
 
-    val policy = new RedeliveryPolicy(10 milliseconds, 10 milliseconds, 3)
+    val policy = new RedeliveryPolicy(5 seconds, 10 milliseconds, 10 milliseconds, 3)
     def channel(destination: ActorRef) = system.actorOf(Props(new ReliableChannel(1, journal, destination, policy)))
 
     /** Synchronous write of out message to journal. */

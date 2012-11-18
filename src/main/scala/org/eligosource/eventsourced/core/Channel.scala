@@ -61,10 +61,6 @@ trait Channel extends Actor {
   }
 }
 
-private [core] object Channel {
-  val DeliveryTimeout = 5 seconds
-}
-
 /**
  * A transient channel that sends event [[org.eligosource.eventsourced.core.Message]]s
  * to `destination`. If `destination` positively confirms the receipt of an event message
@@ -110,28 +106,33 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
 /**
  * Redelivery policy for a [[org.eligosource.eventsourced.core.ReliableChannel]].
  *
- * @param recoveryDelay Delay for re-starting a reliable channel that has been stopped
+ * @param confirmationTimeout Duration to wait for a confirmation. If that duration is
+ *        exceeded a re-delivery is attempted.
+ * @param restartDelay Delay for re-starting a reliable channel that has been stopped
  *        after having reached the maximum number of re-delivery attempts.
- * @param retryDelay Delay between re-delivery attempts.
- * @param retryMax Maximum number of re-delivery attempts.
+ * @param redeliveryDelay Delay between re-delivery attempts.
+ * @param redeliveryMax Maximum number of re-delivery attempts.
  */
 case class RedeliveryPolicy(
-  recoveryDelay: FiniteDuration,
-  retryDelay: FiniteDuration,
-  retryMax: Int)
+  confirmationTimeout: FiniteDuration,
+  restartDelay: FiniteDuration,
+  redeliveryDelay: FiniteDuration,
+  redeliveryMax: Int)
 
 object RedeliveryPolicy {
-  /** Default recovery delay: 5 seconds */
-  val DefaultRecoveryDelay = 5 seconds
+  /** Default confirmation timeout: 5 seconds */
+  val DefaultConfirmationTimeout = 5 seconds
+  /** Default restart delay: 5 seconds */
+  val DefaultRestartDelay = 5 seconds
   /** Default re-delivery delay: 1 second */
-  val DefaultRetryDelay = 1 second
+  val DefaultRedeliveryDelay = 1 second
   //** Default maximum number of re-deliveries: 3 */
-  val DefaultRetryMax = 3
+  val DefaultRedeliveryMax = 3
 
   /**
    * Returns a [[org.eligosource.eventsourced.core.RedeliveryPolicy]] with default settings.
    */
-  def apply() = new RedeliveryPolicy(DefaultRecoveryDelay, DefaultRetryDelay, DefaultRetryMax)
+  def apply() = new RedeliveryPolicy(DefaultConfirmationTimeout, DefaultRedeliveryDelay, DefaultRedeliveryDelay, DefaultRedeliveryMax)
 }
 
 /**
@@ -143,7 +144,7 @@ object RedeliveryPolicy {
  * `destination` negatively confirms the receipt of an event message with `Message.confirm(false)`
  * or no confirmation was made (i.e. a timeout occurred), a re-delivery attempt is made. If the
  * maximum number of re-delivery attempts have been made, the channel restarts itself after
- * a certain ''recovery delay'' (and starts again with re-deliveries).
+ * a certain ''restart delay'' (and starts again with re-deliveries).
  *
  * A `ReliableChannel` preserves the `sender` reference (i.e. forwards it to `destination`) only
  * after initial delivery (which occurs, for example, during `EventsourcingExtension.recover()`
@@ -175,7 +176,7 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
     }
     case Terminated(s) => buffer foreach { b =>
       buffer = None
-      context.system.scheduler.scheduleOnce(policy.recoveryDelay, self, Deliver)
+      context.system.scheduler.scheduleOnce(policy.restartDelay, self, Deliver)
     }
   }
 
@@ -257,7 +258,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
 
       destination tell (m, sdr)
 
-      val task = scheduler.scheduleOnce(Channel.DeliveryTimeout, self, ConfirmationTimeout(m.sequenceNr))
+      val task = scheduler.scheduleOnce(policy.confirmationTimeout, self, ConfirmationTimeout(m.sequenceNr))
 
       currentDelivery = Some(msg, sdr, task)
       retries = r
@@ -269,7 +270,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
       // undo dequeue
       queue = ((msg, sdr) +: queue)
       // and try again ...
-      if (retries < policy.retryMax) self ! Next(retries + 1) else buffer.foreach(s => context.stop(s))
+      if (retries < policy.redeliveryMax) self ! Next(retries + 1) else buffer.foreach(s => context.stop(s))
     }
 
     case Confirmed(snr, true) => currentDelivery match {
@@ -280,13 +281,13 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
     }
     case Confirmed(snr, false) => currentDelivery match {
       case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
-        currentDelivery = None; task.cancel(); scheduler.scheduleOnce(policy.retryDelay, self, Retry(cm, cs))
+        currentDelivery = None; task.cancel(); scheduler.scheduleOnce(policy.redeliveryDelay, self, Retry(cm, cs))
       }
       case None => ()
     }
     case ConfirmationTimeout(snr) => currentDelivery match {
       case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
-        currentDelivery = None; scheduler.scheduleOnce(policy.retryDelay, self, Retry(cm, cs))
+        currentDelivery = None; scheduler.scheduleOnce(policy.redeliveryDelay, self, Retry(cm, cs))
       }
       case None => ()
     }

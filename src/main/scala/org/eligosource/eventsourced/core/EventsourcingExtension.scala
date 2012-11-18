@@ -380,22 +380,28 @@ case class ReliableChannelProps(
     copy(name = Some(name))
 
   /**
-   * Returns a new `ReliableChannelProps` with the specified recovery delay.
+   * Returns a new `ReliableChannelProps` with the specified confirmation timeout.
    */
-  def withRecoveryDelay(recoveryDelay: FiniteDuration) =
-    copy(policy = policy.copy(recoveryDelay = recoveryDelay))
+  def withConfirmationTimeout(confirmationTimeout: FiniteDuration) =
+    copy(policy = policy.copy(confirmationTimeout = confirmationTimeout))
 
   /**
-   * Returns a new `ReliableChannelProps` with the specified retry delay.
+   * Returns a new `ReliableChannelProps` with the specified restart delay.
    */
-  def withRetryDelay(retryDelay: FiniteDuration) =
-    copy(policy = policy.copy(retryDelay = retryDelay))
+  def withRestartDelay(restartDelay: FiniteDuration) =
+    copy(policy = policy.copy(restartDelay = restartDelay))
+
+  /**
+   * Returns a new `ReliableChannelProps` with the specified re-delivery delay.
+   */
+  def withRedeliveryDelay(redeliveryDelay: FiniteDuration) =
+    copy(policy = policy.copy(redeliveryDelay = redeliveryDelay))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified maximum number of re-delivery attempts.
    */
-  def withRetryMax(retryMax: Int) =
-    copy(policy = policy.copy(retryMax = retryMax))
+  def withRedeliveryMax(redeliveryMax: Int) =
+    copy(policy = policy.copy(redeliveryMax = redeliveryMax))
 
   /**
    * Creates a [[org.eligosource.eventsourced.core.ReliableChannel]] with the
