@@ -22,7 +22,7 @@ object Settings {
 }
 
 object Resolvers {
-  val journalioRepo = "Journalio Repo" at "https://raw.github.com/sbtourist/Journal.IO/master/m2/repo"
+  val journalioRepo = "Journalio Repo" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
 }
 
 object Dependencies {
