@@ -25,7 +25,6 @@ import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.util._
 
 /**
  * LevelDB based journal that organizes entries primarily based on processor id.
@@ -46,6 +45,11 @@ private [eventsourced] class LeveldbJournalPS(dir: File) extends Journal {
   val levelDbReadOptions = new ReadOptions
   val levelDbWriteOptions = new WriteOptions().sync(false)
   val leveldb = factory.open(dir, new Options().createIfMissing(true))
+
+  val serialization = Serialization(context.system)
+
+  implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
+  implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
 
   def executeWriteInMsg(cmd: WriteInMsg): Unit = withBatch { batch =>
     val msg = cmd.message
@@ -85,7 +89,7 @@ private [eventsourced] class LeveldbJournalPS(dir: File) extends Journal {
 
   def storedCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
     case null  => 0L
-    case bytes => bytesToCounter(bytes)
+    case bytes => counterFromBytes(bytes)
   }
 
   override def stop() {
@@ -107,13 +111,13 @@ private [eventsourced] class LeveldbJournalPS(dir: File) extends Journal {
   private def replay(iter: DBIterator, key: Key, p: Message => Unit): Unit = {
     if (iter.hasNext) {
       val nextEntry = iter.next()
-      val nextKey = bytesToKey(nextEntry.getKey)
+      val nextKey = keyFromBytes(nextEntry.getKey)
       if (nextKey.confirmingChannelId != 0) {
         // phantom ack (just advance iterator)
         replay(iter, nextKey, p)
       } else if (key.processorId       == nextKey.processorId &&
         key.initiatingChannelId == nextKey.initiatingChannelId) {
-        val msg = msgSerializer.fromBytes(nextEntry.getValue)
+        val msg = serialization.deserializeMessage(nextEntry.getValue)
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(msg.copy(acks = channelIds))
         replay(iter, nextKey, p)
@@ -125,7 +129,7 @@ private [eventsourced] class LeveldbJournalPS(dir: File) extends Journal {
   private def confirmingChannelIds(iter: DBIterator, key: Key, channelIds: List[Int]): List[Int] = {
     if (iter.hasNext) {
       val nextEntry = iter.peekNext()
-      val nextKey = bytesToKey(nextEntry.getKey)
+      val nextKey = keyFromBytes(nextEntry.getKey)
       if (key.processorId       == nextKey.processorId &&
         key.initiatingChannelId == nextKey.initiatingChannelId &&
         key.sequenceNr          == nextKey.sequenceNr) {
@@ -147,34 +151,23 @@ private [eventsourced] class LeveldbJournalPS(dir: File) extends Journal {
 }
 
 private object LeveldbJournalPS {
-  // TODO: make configurable
-  private val msgSerializer = new JavaSerializer[Message]
-
-  val keySerializer = new Serializer[Key] {
-    def toBytes(key: Key): Array[Byte] = {
-      val bb = ByteBuffer.allocate(20)
-      bb.putInt(key.processorId)
-      bb.putInt(key.initiatingChannelId)
-      bb.putLong(key.sequenceNr)
-      bb.putInt(key.confirmingChannelId)
-      bb.array
-    }
-
-    def fromBytes(bytes: Array[Byte]): Key = {
-      val bb = ByteBuffer.wrap(bytes)
-      val processorId = bb.getInt
-      val initiatingChannelId = bb.getInt
-      val sequenceNumber = bb.getLong
-      val confirmingChannelId = bb.getInt
-      new Key(processorId, initiatingChannelId, sequenceNumber, confirmingChannelId)
-    }
+  implicit def keyToBytes(key: Key): Array[Byte] = {
+    val bb = ByteBuffer.allocate(20)
+    bb.putInt(key.processorId)
+    bb.putInt(key.initiatingChannelId)
+    bb.putLong(key.sequenceNr)
+    bb.putInt(key.confirmingChannelId)
+    bb.array
   }
 
-  implicit def msgToBytes(msg: Message): Array[Byte] = msgSerializer.toBytes(msg)
-  implicit def bytesToMsg(bytes: Array[Byte]): Message = msgSerializer.fromBytes(bytes)
-
-  implicit def keyToBytes(key: Key): Array[Byte] = keySerializer.toBytes(key)
-  implicit def bytesToKey(bytes: Array[Byte]): Key = keySerializer.fromBytes(bytes)
+  implicit def keyFromBytes(bytes: Array[Byte]): Key = {
+    val bb = ByteBuffer.wrap(bytes)
+    val processorId = bb.getInt
+    val initiatingChannelId = bb.getInt
+    val sequenceNumber = bb.getLong
+    val confirmingChannelId = bb.getInt
+    new Key(processorId, initiatingChannelId, sequenceNumber, confirmingChannelId)
+  }
 
   val CounterKeyBytes = keyToBytes(Key(0, 0, 0L, 0))
 }

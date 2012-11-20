@@ -35,7 +35,7 @@ import org.eligosource.eventsourced.core.Journal._
  *
  * @param system actor system this extension is associated with.
  */
-class EventsourcingExtension(system: ActorSystem) extends Extension {
+class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   private val journalRef = new AtomicReference[Option[ActorRef]](None)
   private val channelsRef = new AtomicReference[ChannelMappings](ChannelMappings())
   private val processorsRef = new AtomicReference[Map[Int, ActorRef]](Map.empty)

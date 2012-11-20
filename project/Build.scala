@@ -29,7 +29,7 @@ object Resolvers {
 object Dependencies {
   import Dependency._
 
-  val core = Seq(akkaActor, akkaCluster, commonsIo, journalIo, levelDbJni, scalaTest, scalaActors)
+  val core = Seq(akkaActor, akkaCluster, commonsIo, journalIo, levelDbJni, protobuf, scalaTest, scalaActors)
 }
 
 object Version {
@@ -44,10 +44,11 @@ object Dependency {
   //  Compile
   // -----------------------------------------------
 
-  val akkaActor   = "com.typesafe.akka"         %% "akka-actor" % Akka % "compile"
-  val commonsIo   = "commons-io"                %  "commons-io"        % "2.3"   % "compile"
-  val journalIo   = "journalio"                 %  "journalio"         % "1.2"   % "compile"
-  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all"    % "1.4.1" % "compile"
+  val protobuf    = "com.google.protobuf"       %  "protobuf-java"  % "2.4.1" % "compile"
+  val akkaActor   = "com.typesafe.akka"         %% "akka-actor"     % Akka    % "compile"
+  val commonsIo   = "commons-io"                %  "commons-io"     % "2.3"   % "compile"
+  val journalIo   = "journalio"                 %  "journalio"      % "1.2"   % "compile"
+  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all" % "1.4.1" % "compile"
 
   // -----------------------------------------------
   //  Test
@@ -86,6 +87,7 @@ object EventsourcedBuild extends Build {
     ) ++ osgiSettings ++ Seq(
       OsgiKeys.importPackage := Seq(
         "akka*;version=\"[2.1.0,3.0.0)\"",
+        "com.google.protobuf*;version=\"[2.4.0,2.5.0)\"",
         "scala*;version=\"[2.10.0,2.11.0)\"",
         "journal.io.api;version=\"[1.2,2.0)\";resolution:=optional",
         "org.fusesource.leveldbjni;version=\"[1.4.1,2.0.0)\";resolution:=optional",
