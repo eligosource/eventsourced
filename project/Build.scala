@@ -1,5 +1,6 @@
 import sbt._
 import Keys._
+import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettings }
 
 object Settings {
   val buildOrganization = "org.eligosource"
@@ -82,6 +83,19 @@ object EventsourcedBuild extends Build {
       mainRunNobootcpSetting,
       testRunNobootcpSetting,
       testNobootcpSetting
+    ) ++ osgiSettings ++ Seq(
+      OsgiKeys.importPackage := Seq(
+        "akka*;version=\"[2.1.0,3.0.0)\"",
+        "scala*;version=\"[2.10.0,2.11.0)\"",
+        "journal.io.api;version=\"[1.2,2.0)\";resolution:=optional",
+        "org.fusesource.leveldbjni;version=\"[1.4.1,2.0.0)\";resolution:=optional",
+        "org.iq80.leveldb;version=\"[1.4.1,2.0.0)\";resolution:=optional",
+        "*"
+      ),
+      OsgiKeys.exportPackage := Seq(
+        "org.eligosource*"
+      ),
+      OsgiKeys.privatePackage := Nil
     )
   )
 
