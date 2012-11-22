@@ -21,7 +21,10 @@ import java.util.concurrent._
 import scala.concurrent.duration._
 
 import akka.actor._
+import akka.serialization.Serializer
 import akka.util.Timeout
+
+import com.typesafe.config.ConfigFactory
 
 import org.apache.commons.io.FileUtils
 
@@ -37,7 +40,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
   type FixtureParam = Fixture
 
   class Fixture {
-    implicit val system = ActorSystem("test")
+    implicit val system = ActorSystem("test", ConfigFactory.load("persist"))
     implicit val timeout = Timeout(5 seconds)
 
     val journalDir = new File("target/journal")
@@ -137,6 +140,23 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 }
 
 object JournalSpec {
+  case class CustomEvent(s: String)
+
+  class CustomEventSerializer extends Serializer {
+    def identifier = 42
+    def includeManifest = true
+
+    def toBinary(o: AnyRef) = o match {
+      case CustomEvent(s) => s.toUpperCase.getBytes("UTF-8")
+      case _ => throw new IllegalArgumentException("require CustomEvent")
+    }
+
+    def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = manifest match {
+      case Some(c) if (c == classOf[CustomEvent]) => CustomEvent(new String(bytes, "UTF-8"))
+      case _ => throw new IllegalArgumentException("require CustomEvent")
+    }
+  }
+
   class CommandTarget(queue: LinkedBlockingQueue[Message]) extends Actor {
     def receive = {
       case Written(msg) => queue.put(msg)
@@ -144,14 +164,34 @@ object JournalSpec {
   }
 }
 
-class InmenJournalSpec extends JournalSpec {
-  def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    InmemJournal()
-}
-
 class LeveldbJournalPSSpec extends JournalSpec {
+  import JournalSpec._
+
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
     LeveldbJournal.processorStructured(journalDir)
+
+  "persist input messages with a custom event serializer" in { fixture =>
+    import fixture._
+
+    journal ! WriteInMsg(1, Message(CustomEvent("test-1")), writeTarget)
+    journal ! WriteInMsg(1, Message(CustomEvent("test-2")), writeTarget)
+
+    journal ! ReplayInMsgs(1, 0, replayTarget)
+
+    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-1"), sequenceNr = 1)) }
+    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-2"), sequenceNr = 2)) }
+  }
+  "persist output messages with a custom event serializer" in { fixture =>
+    import fixture._
+
+    journal ! WriteOutMsg(1, Message(CustomEvent("test-3")), 1, SkipAck, writeTarget)
+    journal ! WriteOutMsg(1, Message(CustomEvent("test-4")), 1, SkipAck, writeTarget)
+
+    journal ! ReplayOutMsgs(1, 0, replayTarget)
+
+    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-3"), sequenceNr = 1)) }
+    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-4"), sequenceNr = 2)) }
+  }
 }
 
 class LeveldbJournalSSSpec extends JournalSpec {
@@ -162,4 +202,9 @@ class LeveldbJournalSSSpec extends JournalSpec {
 class JournalioJournalSpec extends JournalSpec {
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
     JournalioJournal(journalDir)
+}
+
+class InmenJournalSpec extends JournalSpec {
+  def createJournal(journalDir: File)(implicit system: ActorSystem) =
+    InmemJournal()
 }
