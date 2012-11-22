@@ -13,15 +13,11 @@ public final class JournalProtocol {
     WRITE_IN(0, 1),
     WRITE_OUT(1, 2),
     WRITE_ACK(2, 3),
-    DELETE_IN(3, 4),
-    DELETE_OUT(4, 5),
     ;
     
     public static final int WRITE_IN_VALUE = 1;
     public static final int WRITE_OUT_VALUE = 2;
     public static final int WRITE_ACK_VALUE = 3;
-    public static final int DELETE_IN_VALUE = 4;
-    public static final int DELETE_OUT_VALUE = 5;
     
     
     public final int getNumber() { return value; }
@@ -31,8 +27,6 @@ public final class JournalProtocol {
         case 1: return WRITE_IN;
         case 2: return WRITE_OUT;
         case 3: return WRITE_ACK;
-        case 4: return DELETE_IN;
-        case 5: return DELETE_OUT;
         default: return null;
       }
     }
@@ -63,7 +57,7 @@ public final class JournalProtocol {
     }
     
     private static final CommandType[] VALUES = {
-      WRITE_IN, WRITE_OUT, WRITE_ACK, DELETE_IN, DELETE_OUT, 
+      WRITE_IN, WRITE_OUT, WRITE_ACK, 
     };
     
     public static CommandType valueOf(
@@ -1448,10 +1442,9 @@ public final class JournalProtocol {
       "nt\030\002 \001(\014\022\025\n\reventManifest\030\003 \001(\014\022\031\n\021event" +
       "SerializerId\030\004 \001(\005\022\027\n\017senderMessageId\030\005 " +
       "\001(\t\022\023\n\013processorId\030\006 \001(\005\022\022\n\nsequenceNr\030\007" +
-      " \001(\003*X\n\013CommandType\022\014\n\010WRITE_IN\020\001\022\r\n\tWRI" +
-      "TE_OUT\020\002\022\r\n\tWRITE_ACK\020\003\022\r\n\tDELETE_IN\020\004\022\016",
-      "\n\nDELETE_OUT\020\005B4\n!org.eligosource.events" +
-      "ourced.coreB\017JournalProtocol"
+      " \001(\003*9\n\013CommandType\022\014\n\010WRITE_IN\020\001\022\r\n\tWRI" +
+      "TE_OUT\020\002\022\r\n\tWRITE_ACK\020\003B4\n!org.eligosour",
+      "ce.eventsourced.coreB\017JournalProtocol"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
