@@ -21,7 +21,6 @@ import scala.collection.immutable.{Queue, SortedMap}
 
 import org.eligosource.eventsourced.core.Message
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.util.Serializer
 
 package object journal {
   private [journal] implicit val ordering = new Ordering[Key] {
@@ -37,16 +36,11 @@ package object journal {
       else 0
   }
 
-  private [journal] val ctrSerializer = new Serializer[Long] {
-    def toBytes(ctr: Long): Array[Byte] =
-      ByteBuffer.allocate(8).putLong(ctr).array
+  implicit def counterToBytes(ctr: Long): Array[Byte] =
+    ByteBuffer.allocate(8).putLong(ctr).array
 
-    def fromBytes(bytes: Array[Byte]): Long =
-      ByteBuffer.wrap(bytes).getLong
-  }
-
-  private [journal] implicit def counterToBytes(ctr: Long): Array[Byte] = ctrSerializer.toBytes(ctr)
-  private [journal] implicit def bytesToCounter(bytes: Array[Byte]): Long = ctrSerializer.fromBytes(bytes)
+  implicit def counterFromBytes(bytes: Array[Byte]): Long =
+    ByteBuffer.wrap(bytes).getLong
 
   /**
    * Queue for WriteInMsg commands including a mechanism for matching acknowledgements.

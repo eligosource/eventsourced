@@ -25,7 +25,6 @@ import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.util._
 
 /**
  * LevelDB based journal that organizes entries primarily based on sequence numbers,
@@ -46,21 +45,26 @@ import org.eligosource.eventsourced.util._
 private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
   import LeveldbJournalSS._
 
+  val writeOutMsgCache = new WriteOutMsgCache[Long]
+
   val levelDbReadOptions = new ReadOptions
   val levelDbWriteOptions = new WriteOptions().sync(false)
   val leveldb = factory.open(dir, new Options().createIfMissing(true))
 
-  val writeOutMsgCache = new WriteOutMsgCache[Long]
+  val serialization = Serialization(context.system)
+
+  implicit def cmdToBytes(cmd: AnyRef): Array[Byte] = serialization.serializeCommand(cmd)
+  implicit def cmdFromBytes[A](bytes: Array[Byte]): A = serialization.deserializeCommand(bytes).asInstanceOf[A]
 
   def executeWriteInMsg(cmd: WriteInMsg) {
     val pmsg = cmd.message.clearConfirmationSettings
-    val pcmd = writeInMsgSerializer.toBytes(cmd.copy(message = pmsg, target = null))
+    val pcmd = cmdToBytes(cmd.copy(message = pmsg, target = null))
     leveldb.put(SSKey(In, counter, 0), pcmd)
   }
 
   def executeWriteOutMsg(cmd: WriteOutMsg) = withBatch { batch =>
     val pmsg = cmd.message.clearConfirmationSettings
-    val pcmd = writeOutMsgSerializer.toBytes(cmd.copy(message = pmsg, target = null))
+    val pcmd = cmdToBytes(cmd.copy(message = pmsg, target = null))
 
     batch.put(SSKey(Out, counter, cmd.channelId), pcmd)
 
@@ -84,7 +88,7 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
       a + (r.processorId -> (r.fromSequenceNr, r.target))
     }
     val start = if (starts.isEmpty) 0L else starts.values.map(_._1).min
-    replay(In, start, writeInMsgSerializer) { (cmd, acks) =>
+    replay(In, start, cmdFromBytes[WriteInMsg] _) { (cmd, acks) =>
       starts.get(cmd.processorId) match {
         case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
           p(cmd.message.copy(acks = acks), target)
@@ -104,11 +108,11 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
 
   def storedCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
     case null  => 0L
-    case bytes => bytesToCounter(bytes)
+    case bytes => counterFromBytes(bytes)
   }
 
   override def start() {
-    replay(Out, 0L, writeOutMsgSerializer) { (cmd, acks) =>
+    replay(Out, 0L, cmdFromBytes[WriteOutMsg] _) { (cmd, acks) =>
       writeOutMsgCache.update(cmd, cmd.message.sequenceNr)
     }
   }
@@ -117,30 +121,30 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
     leveldb.close()
   }
 
-  def replay[T](direction: Int, fromSequenceNr: Long, serializer: Serializer[T])(p: (T, List[Int]) => Unit): Unit = {
+  def replay[T](direction: Int, fromSequenceNr: Long, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit): Unit = {
     val iter = leveldb.iterator(levelDbReadOptions.snapshot(leveldb.getSnapshot))
     try {
       val startKey = SSKey(In, fromSequenceNr, 0)
       iter.seek(startKey)
-      replay(iter, startKey, serializer)(p)
+      replay(iter, startKey, deserializer)(p)
     } finally {
       iter.close()
     }
   }
 
   @scala.annotation.tailrec
-  private def replay[T](iter: DBIterator, key: SSKey, serializer: Serializer[T])(p: (T, List[Int]) => Unit): Unit = {
+  private def replay[T](iter: DBIterator, key: SSKey, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit): Unit = {
     if (iter.hasNext) {
       val nextEntry = iter.next()
-      val nextKey = bytesToKey(nextEntry.getKey)
+      val nextKey = keyFromBytes(nextEntry.getKey)
       if (nextKey.confirmingChannelId != 0) {
         // phantom ack (just advance iterator)
-        replay(iter, nextKey, serializer)(p)
+        replay(iter, nextKey, deserializer)(p)
       } else if (key.direction == nextKey.direction) {
-        val cmd = serializer.fromBytes(nextEntry.getValue)
+        val cmd = deserializer(nextEntry.getValue)
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(cmd, channelIds)
-        replay(iter, nextKey, serializer)(p)
+        replay(iter, nextKey, deserializer)(p)
       }
     }
   }
@@ -149,7 +153,7 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
   private def confirmingChannelIds(iter: DBIterator, key: SSKey, channelIds: List[Int]): List[Int] = {
     if (iter.hasNext) {
       val nextEntry = iter.peekNext()
-      val nextKey = bytesToKey(nextEntry.getKey)
+      val nextKey = keyFromBytes(nextEntry.getKey)
       if (key.direction  == nextKey.direction &&
           key.sequenceNr == nextKey.sequenceNr) {
         iter.next()
@@ -180,30 +184,21 @@ private object LeveldbJournalSS {
     confirmingChannelId: Int
   )
 
-  // TODO: make configurable
-  private val writeInMsgSerializer = new JavaSerializer[WriteInMsg]
-  private val writeOutMsgSerializer = new JavaSerializer[WriteOutMsg]
-
-  val keySerializer = new Serializer[SSKey] {
-    def toBytes(key: SSKey): Array[Byte] = {
-      val bb = ByteBuffer.allocate(20)
-      bb.putInt(key.direction)
-      bb.putLong(key.sequenceNr)
-      bb.putInt(key.confirmingChannelId)
-      bb.array
-    }
-
-    def fromBytes(bytes: Array[Byte]): SSKey = {
-      val bb = ByteBuffer.wrap(bytes)
-      val direction = bb.getInt
-      val sequenceNumber = bb.getLong
-      val confirmingChannelId = bb.getInt
-      new SSKey(direction, sequenceNumber, confirmingChannelId)
-    }
+  implicit def keyToBytes(key: SSKey): Array[Byte] = {
+    val bb = ByteBuffer.allocate(20)
+    bb.putInt(key.direction)
+    bb.putLong(key.sequenceNr)
+    bb.putInt(key.confirmingChannelId)
+    bb.array
   }
 
-  implicit def keyToBytes(key: SSKey): Array[Byte] = keySerializer.toBytes(key)
-  implicit def bytesToKey(bytes: Array[Byte]): SSKey = keySerializer.fromBytes(bytes)
+  implicit def keyFromBytes(bytes: Array[Byte]): SSKey = {
+    val bb = ByteBuffer.wrap(bytes)
+    val direction = bb.getInt
+    val sequenceNumber = bb.getLong
+    val confirmingChannelId = bb.getInt
+    new SSKey(direction, sequenceNumber, confirmingChannelId)
+  }
 
   val CounterKeyBytes = keyToBytes(SSKey(0, 0L, 0))
 }
