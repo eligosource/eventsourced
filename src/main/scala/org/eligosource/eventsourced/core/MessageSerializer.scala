@@ -21,7 +21,7 @@ import akka.serialization.Serializer
 class MessageSerializer(system: ExtendedActorSystem) extends Serializer {
   lazy val serialization = Serialization(system)
 
-  def identifier = 100
+  def identifier = 43871
   def includeManifest = true
 
   def toBinary(o: AnyRef) = o match {
