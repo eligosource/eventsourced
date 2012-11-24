@@ -87,6 +87,7 @@ object EventsourcedBuild extends Build {
     ) ++ osgiSettings ++ Seq(
       OsgiKeys.importPackage := Seq(
         "akka*;version=\"[2.1.0,3.0.0)\"",
+        "com.google.protobuf*;version=\"[2.4.0,2.5.0)\"",
         "scala*;version=\"[2.10.0,2.11.0)\"",
         "journal.io.api;version=\"[1.2,2.0)\";resolution:=optional",
         "org.fusesource.leveldbjni;version=\"[1.4.1,2.0.0)\";resolution:=optional",
