@@ -23,6 +23,8 @@ import org.eligosource.eventsourced.core.Message
 import org.eligosource.eventsourced.core.Journal._
 
 package object journal {
+  private [journal] val DISPATCHER = "eventsourced.journal-dispatcher"
+
   private [journal] implicit val ordering = new Ordering[Key] {
     def compare(x: Key, y: Key) =
       if (x.processorId != y.processorId)

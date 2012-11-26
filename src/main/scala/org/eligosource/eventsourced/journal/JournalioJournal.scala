@@ -171,6 +171,6 @@ object JournalioJournal {
    */
   def apply(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
     if (name.isDefined)
-      system.actorOf(Props(new JournalioJournal(dir)), name.get) else
-      system.actorOf(Props(new JournalioJournal(dir)))
+      system.actorOf(Props(new JournalioJournal(dir)).withDispatcher(DISPATCHER), name.get) else
+      system.actorOf(Props(new JournalioJournal(dir)).withDispatcher(DISPATCHER))
 }
