@@ -579,6 +579,37 @@ For detecting duplicates, applications can use the `senderMessageId` and `sequen
 - `Eventsourced` processors that emit an [event message series](#event-series) should encode both, the sequence number and an output message index, in the `senderMessageId` field. Consumers should then compare encoded sequence number - index pairs for detecting duplicates. 
 - Consumers that are `Eventsourced` processors can store the last consumed `senderMessageId` as part of their state which will be recovered during an event message replay. Other consumers must store the `senderMessageId` somewhere else.
 
+Serialization
+-------------
+
+Applications can configure custom serializers for events. Custom serializers are applied for both, writing the event to a journal and for remote communication. They can be configured like any other [Akka serializer](http://doc.akka.io/docs/akka/2.1.0-RC2/scala/serialization.html). For example:
+
+    akka {
+      actor {
+        serializers {
+          custom = "example.MyEventSerializer"
+        }
+        serialization-bindings {
+          "example.MyEvent" = custom
+        }
+      }
+    }
+
+Here, `example.MyEvent` is an application-specific event type and `example.MyEventSerializer` is an application-specific serializer that extends `akka.serialization.Serializer`
+
+    import akka.serialization.Serializer
+
+    class CustomEventSerializer extends Serializer {
+      def identifier = … 
+      def includeManifest = true
+
+      def toBinary(o: AnyRef) = … 
+      def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = … 
+    }
+
+Custom serializers are used only for events of event messages. An event [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) itself is serialized with a [pre-configured](https://github.com/eligosource/eventsourced/blob/master/src/main/resources/reference.conf#L4), library-specific serializer. This serializer is automatically used when the `eventsourced-*.jar` is on the classpath of an Akka application. 
+
+
 Further examples
 ----------------
 

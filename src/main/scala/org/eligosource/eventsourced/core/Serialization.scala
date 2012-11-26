@@ -23,15 +23,42 @@ import com.google.protobuf.ByteString
 import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.core.JournalProtocol._
 
+/**
+ * Extension for protobuf-based (de)serialization of event messages and journal
+ * commands. Serializers for events contained in event messages are looked up in
+ * the Akka [[akka.serialization.Serialization]] extension.
+ */
 class Serialization(system: ExtendedActorSystem) extends Extension {
   val extension = SerializationExtension(system)
 
+  /**
+   * Serializes an event [[org.eligosource.eventsourced.core.Message]].
+   *
+   * @param message event message.
+   * @return serialized event message.
+   */
   def serializeMessage(message: Message): Array[Byte] =
     messageProtocolBuilder(message).build().toByteArray
 
+  /**
+   * Deserializes an event [[org.eligosource.eventsourced.core.Message]].
+   *
+   * @param bytes serialized event message.
+   * @return event message.
+   */
   def deserializeMessage(bytes: Array[Byte]): Message =
     message(MessageProtocol.parseFrom(bytes))
 
+  /**
+   * Serializes journal commands.
+   *
+   *  - [[org.eligosource.eventsourced.core.Journal.WriteInMsg]]
+   *  - [[org.eligosource.eventsourced.core.Journal.WriteOutMsg]]
+   *  - [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+   *
+   * @param command journal command.
+   * @return serialized journal command.
+   */
   def serializeCommand(command: AnyRef): Array[Byte] = {
     import CommandType._
 
@@ -55,6 +82,16 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
     builder.build().toByteArray()
   }
 
+  /**
+   * Deserializes journal commands.
+   *
+   *  - [[org.eligosource.eventsourced.core.Journal.WriteInMsg]]
+   *  - [[org.eligosource.eventsourced.core.Journal.WriteOutMsg]]
+   *  - [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+   *
+   * @param bytes serialized journal command.
+   * @return journal command.
+   */
   def deserializeCommand(bytes: Array[Byte]): AnyRef = {
     import CommandType._
 
@@ -116,6 +153,9 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
   }
 }
 
+/**
+ * Serialization extension access point.
+ */
 object Serialization  extends ExtensionId[Serialization] with ExtensionIdProvider {
   override def lookup = Serialization
   override def createExtension(system: ExtendedActorSystem) = new Serialization(system)

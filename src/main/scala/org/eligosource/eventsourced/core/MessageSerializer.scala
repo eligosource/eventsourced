@@ -18,17 +18,43 @@ package org.eligosource.eventsourced.core
 import akka.actor.ExtendedActorSystem
 import akka.serialization.Serializer
 
+/**
+ * Protobuf-based [[org.eligosource.eventsourced.core.Message]] serializer that uses
+ * the Akka [[akka.serialization.Serialization]] extension to find a serializer for
+ * an event contained in an event message. The eventsourced library configures this
+ * serializer as default serializer for event messages.
+ */
 class MessageSerializer(system: ExtendedActorSystem) extends Serializer {
   lazy val serialization = Serialization(system)
 
+  /**
+   * Returns `43871`.
+   */
   def identifier = 43871
+
+  /**
+   * Returns `true`.
+   */
   def includeManifest = true
 
-  def toBinary(o: AnyRef) = o match {
+  /**
+   * Serializes an event [[org.eligosource.eventsourced.core.Message]].
+   *
+   * @param msg event message.
+   * @return serialized event message.
+   */
+  def toBinary(msg: AnyRef) = msg match {
     case m: Message => serialization.serializeMessage(m)
-    case _          => throw new IllegalArgumentException("Cannot serialize %s" format o.getClass)
+    case _          => throw new IllegalArgumentException("Cannot serialize %s" format msg.getClass)
   }
 
+  /**
+   * Deserializes an event [[org.eligosource.eventsourced.core.Message]].
+   *
+   * @param bytes serialized event message.
+   * @param manifest event message manifest.
+   * @return deserialized event message.
+   */
   def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = manifest match {
     case Some(c) if (c == classOf[Message]) =>  serialization.deserializeMessage(bytes)
     case Some(c) => throw new IllegalArgumentException("Cannot deserialize %s" format c)

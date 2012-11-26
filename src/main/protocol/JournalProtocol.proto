@@ -1,12 +1,18 @@
 option java_package = "org.eligosource.eventsourced.core";
 option java_outer_classname = "JournalProtocol";
 
+/**
+ * Journal command type. Only used for persistence.
+ */
 enum CommandType {
   WRITE_IN = 1;
   WRITE_OUT = 2;
   WRITE_ACK = 3;
 }
 
+/**
+ * Journal command. Only used for persistence.
+ */
 message CommandProtocol {
   required CommandType commandType = 1;
   optional MessageProtocol message = 2;
@@ -15,6 +21,9 @@ message CommandProtocol {
   optional int64 sequenceNr = 5;
 }
 
+/**
+ * Event message. Used for persistence and remoting.
+ */
 message MessageProtocol {
   optional bytes event = 2;
   optional bytes eventManifest = 3;
