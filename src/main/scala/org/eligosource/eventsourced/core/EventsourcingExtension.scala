@@ -35,7 +35,7 @@ import org.eligosource.eventsourced.core.Journal._
  *
  * @param system actor system this extension is associated with.
  */
-class EventsourcingExtension(system: ActorSystem) extends Extension {
+class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   private val journalRef = new AtomicReference[Option[ActorRef]](None)
   private val channelsRef = new AtomicReference[ChannelMappings](ChannelMappings())
   private val processorsRef = new AtomicReference[Map[Int, ActorRef]](Map.empty)
@@ -326,6 +326,8 @@ trait ChannelProps {
   def name: Option[String]
   /** Channel destination. */
   def destination: ActorRef
+  /** Optional dispatcher name. */
+  def dispatcherName: Option[String]
 
   /**
    * Creates a channel with the settings defined by this configuration object.
@@ -345,7 +347,8 @@ trait ChannelProps {
 case class DefaultChannelProps(
     id: Int,
     destination: ActorRef,
-    name: Option[String] = None) extends ChannelProps {
+    name: Option[String] = None,
+    dispatcherName: Option[String] = None) extends ChannelProps {
 
   /**
    * Returns a new `DefaultChannelProps` with the specified name.
@@ -354,13 +357,23 @@ case class DefaultChannelProps(
     copy(name = Some(name))
 
   /**
+   * Returns a new `DefaultChannelProps` with the specified dispatcher name.
+   */
+  def withDispatcherName(dispatcherName: String) =
+    copy(dispatcherName = Some(dispatcherName))
+
+  /**
    * Creates a [[org.eligosource.eventsourced.core.DefaultChannel]] with the
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
+    var props = Props(new DefaultChannel(id, journal, destination))
+    if(dispatcherName.isDefined)
+      props = props.withDispatcher(dispatcherName.get)
+
     if (name.isDefined)
-      actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)), name.get) else
-      actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)))
+      actorRefFactory.actorOf(props, name.get) else
+      actorRefFactory.actorOf(props)
   }
 }
 
@@ -371,13 +384,20 @@ case class ReliableChannelProps(
     id: Int,
     destination: ActorRef,
     policy: RedeliveryPolicy = RedeliveryPolicy(),
-    name: Option[String] = None) extends ChannelProps {
+    name: Option[String] = None,
+    dispatcherName: Option[String] = None) extends ChannelProps {
 
   /**
    * Returns a new `ReliableChannelProps` with the specified name.
    */
   def withName(name: String) =
     copy(name = Some(name))
+
+  /**
+   * Returns a new `ReliableChannelProps` with the specified dispatcher name.
+   */
+  def withDispatcherName(dispatcherName: String) =
+    copy(dispatcherName = Some(dispatcherName))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified confirmation timeout.
@@ -408,8 +428,12 @@ case class ReliableChannelProps(
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
+    var props = Props(new ReliableChannel(id, journal, destination, policy))
+    if(dispatcherName.isDefined)
+      props = props.withDispatcher(dispatcherName.get)
+
     if (name.isDefined)
-      actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)), name.get) else
-      actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)))
+      actorRefFactory.actorOf(props, name.get) else
+      actorRefFactory.actorOf(props)
   }
 }

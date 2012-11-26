@@ -25,7 +25,6 @@ import journal.io.api.{Journal => JournalIO, _}
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.util.JavaSerializer
 
 /**
  * Journal.IO based journal.
@@ -44,37 +43,39 @@ import org.eligosource.eventsourced.util.JavaSerializer
  *    (with optional lower bound)
  */
 private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Journal {
-  // TODO: make configurable
-  val serializer = new JavaSerializer[AnyRef]
-
   val writeInMsgQueue = new WriteInMsgQueue
   val writeOutMsgCache = new WriteOutMsgCache[Location]
 
   val disposer = Executors.newSingleThreadScheduledExecutor()
   val journal = new JournalIO
 
+  val serialization = Serialization(context.system)
+
+  implicit def cmdToBytes(cmd: AnyRef): Array[Byte] = serialization.serializeCommand(cmd)
+  implicit def cmdFromBytes(bytes: Array[Byte]): AnyRef = serialization.deserializeCommand(bytes)
+
   def executeWriteInMsg(cmd: WriteInMsg) {
     val pmsg = cmd.message.clearConfirmationSettings
     val pcmd = cmd.copy(message = pmsg, target = null)
-    journal.write(serializer.toBytes(pcmd), JournalIO.WriteType.SYNC)
+    journal.write(cmdToBytes(pcmd), JournalIO.WriteType.SYNC)
   }
 
   def executeWriteOutMsg(cmd: WriteOutMsg) {
     val pmsg = cmd.message.clearConfirmationSettings
-    val pcmd = serializer.toBytes(cmd.copy(message = pmsg, target = null))
+    val pcmd = cmdToBytes(cmd.copy(message = pmsg, target = null))
 
     val loc = journal.write(pcmd, JournalIO.WriteType.SYNC)
 
     if (cmd.ackSequenceNr != SkipAck) {
       val ac = WriteAck(cmd.ackProcessorId, cmd.channelId, cmd.ackSequenceNr)
-      journal.write(serializer.toBytes(ac), JournalIO.WriteType.SYNC)
+      journal.write(cmdToBytes(ac), JournalIO.WriteType.SYNC)
     }
 
     writeOutMsgCache.update(cmd, loc)
   }
 
   def executeWriteAck(cmd: WriteAck) {
-    journal.write(serializer.toBytes(cmd), JournalIO.WriteType.SYNC)
+    journal.write(cmdToBytes(cmd), JournalIO.WriteType.SYNC)
   }
 
   def executeDeleteOutMsg(cmd: DeleteOutMsg) {
@@ -105,7 +106,7 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
 
   private def replayInput(p: (WriteInMsg, List[Int]) => Unit) {
     journal.redo().asScala.foreach { location =>
-      serializer.fromBytes(location.getData) match {
+      cmdFromBytes(location.getData) match {
         case cmd: WriteInMsg => {
           writeInMsgQueue.enqueue(cmd)
         }
@@ -125,7 +126,7 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
   }
 
   def storedCounter: Long = {
-    val cmds = journal.undo().asScala.map { location => serializer.fromBytes(location.getData) }
+    val cmds = journal.undo().asScala.map { location => cmdFromBytes(location.getData) }
     val cmdo = cmds.collectFirst { case cmd: WriteInMsg => cmd }
     cmdo.map(_.message.sequenceNr).getOrElse(0L)
   }
@@ -170,6 +171,6 @@ object JournalioJournal {
    */
   def apply(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
     if (name.isDefined)
-      system.actorOf(Props(new JournalioJournal(dir)), name.get) else
-      system.actorOf(Props(new JournalioJournal(dir)))
+      system.actorOf(Props(new JournalioJournal(dir)).withDispatcher(DISPATCHER), name.get) else
+      system.actorOf(Props(new JournalioJournal(dir)).withDispatcher(DISPATCHER))
 }

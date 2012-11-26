@@ -41,8 +41,8 @@ object LeveldbJournal {
    */
   def processorStructured(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
     if (name.isDefined)
-      system.actorOf(Props(new LeveldbJournalPS(dir)), name.get) else
-      system.actorOf(Props(new LeveldbJournalPS(dir)))
+      system.actorOf(Props(new LeveldbJournalPS(dir)).withDispatcher(DISPATCHER), name.get) else
+      system.actorOf(Props(new LeveldbJournalPS(dir)).withDispatcher(DISPATCHER))
 
   /**
    * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
@@ -68,8 +68,8 @@ object LeveldbJournal {
    */
   def sequenceStructured(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
     if (name.isDefined)
-      system.actorOf(Props(new LeveldbJournalSS(dir)), name.get) else
-      system.actorOf(Props(new LeveldbJournalSS(dir)))
+      system.actorOf(Props(new LeveldbJournalSS(dir)).withDispatcher(DISPATCHER), name.get) else
+      system.actorOf(Props(new LeveldbJournalSS(dir)).withDispatcher(DISPATCHER))
 
   /**
    * Creates a LevelDB based journal that organizes entries primarily based on processor id.
