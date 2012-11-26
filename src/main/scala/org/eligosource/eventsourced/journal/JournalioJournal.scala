@@ -166,11 +166,19 @@ object JournalioJournal {
    *
    * @param dir journal directory
    * @param name optional name of the journal actor in the underlying actor system.
+   * @param dispatcherName optional dispatcher name.
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def apply(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+  def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
+    var props = Props(new JournalioJournal(dir))
+
+    dispatcherName.foreach { name =>
+      props = props.withDispatcher(name)
+    }
+
     if (name.isDefined)
-      system.actorOf(Props(new JournalioJournal(dir)), name.get) else
-      system.actorOf(Props(new JournalioJournal(dir)))
+      system.actorOf(props, name.get) else
+      system.actorOf(props)
+  }
 }

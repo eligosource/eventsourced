@@ -294,11 +294,13 @@ object EventsourcingExtension extends ExtensionId[EventsourcingExtension] with E
  * @param id Processor id.
  * @param processorFactory Processor factory.
  * @param name Optional processor name.
+ * @param dispatcherName Optional dispatcher name.
  */
 case class ProcessorProps(
   id: Int,
   processorFactory: Int => Actor with Eventsourced,
-  name: Option[String] = None) {
+  name: Option[String] = None,
+  dispatcherName: Option[String] = None) {
 
   /**
    * Creates a processor with the settings defined by this configuration object.
@@ -310,9 +312,14 @@ case class ProcessorProps(
    *         in the underlying actor system.
    */
   def createProcessor()(implicit actorRefFactory: ActorRefFactory): ActorRef = {
+    var props = Props(processorFactory(id))
+
+    if (dispatcherName.isDefined)
+      props = props.withDispatcher(dispatcherName.get)
+
     if (name.isDefined)
-      actorRefFactory.actorOf(Props(processorFactory(id)), name.get) else
-      actorRefFactory.actorOf(Props(processorFactory(id)))
+      actorRefFactory.actorOf(props, name.get) else
+      actorRefFactory.actorOf(props)
   }
 }
 
@@ -324,6 +331,8 @@ trait ChannelProps {
   def id: Int
   /** Optional channel name. */
   def name: Option[String]
+  /** Optional dispatcher name. */
+  def dispatcherName: Option[String]
   /** Channel destination. */
   def destination: ActorRef
 
@@ -345,7 +354,8 @@ trait ChannelProps {
 case class DefaultChannelProps(
     id: Int,
     destination: ActorRef,
-    name: Option[String] = None) extends ChannelProps {
+    name: Option[String] = None,
+    dispatcherName: Option[String] = None) extends ChannelProps {
 
   /**
    * Returns a new `DefaultChannelProps` with the specified name.
@@ -354,13 +364,23 @@ case class DefaultChannelProps(
     copy(name = Some(name))
 
   /**
+   * Returns a new `DefaultChannelProps` with the specified dispatcher name.
+   */
+  def withDispatcherName(dispatcherName: String) =
+    copy(dispatcherName = Some(dispatcherName))
+
+  /**
    * Creates a [[org.eligosource.eventsourced.core.DefaultChannel]] with the
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
+    var props = Props(new DefaultChannel(id, journal, destination))
+    if(dispatcherName.isDefined)
+      props = props.withDispatcher(dispatcherName.get)
+
     if (name.isDefined)
-      actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)), name.get) else
-      actorRefFactory.actorOf(Props(new DefaultChannel(id, journal, destination)))
+      actorRefFactory.actorOf(props, name.get) else
+      actorRefFactory.actorOf(props)
   }
 }
 
@@ -371,13 +391,20 @@ case class ReliableChannelProps(
     id: Int,
     destination: ActorRef,
     policy: RedeliveryPolicy = RedeliveryPolicy(),
-    name: Option[String] = None) extends ChannelProps {
+    name: Option[String] = None,
+    dispatcherName: Option[String] = None) extends ChannelProps {
 
   /**
    * Returns a new `ReliableChannelProps` with the specified name.
    */
   def withName(name: String) =
     copy(name = Some(name))
+
+  /**
+   * Returns a new `ReliableChannelProps` with the specified dispatcher name.
+   */
+  def withDispatcherName(dispatcherName: String) =
+    copy(dispatcherName = Some(dispatcherName))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified confirmation timeout.
@@ -408,8 +435,13 @@ case class ReliableChannelProps(
    * settings defined by this configuration object.
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) = {
+    var props = Props(new ReliableChannel(id, journal, destination, policy, dispatcherName))
+
+    if(dispatcherName.isDefined)
+      props = props.withDispatcher(dispatcherName.get)
+
     if (name.isDefined)
-      actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)), name.get) else
-      actorRefFactory.actorOf(Props(new ReliableChannel(id, journal, destination, policy)))
+      actorRefFactory.actorOf(props, name.get) else
+      actorRefFactory.actorOf(props)
   }
 }

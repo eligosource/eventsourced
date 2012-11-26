@@ -36,13 +36,21 @@ object LeveldbJournal {
    *
    * @param dir journal directory.
    * @param name optional name of the journal actor in the underlying actor system.
+   * @param dispatcherName optional dispatcher name.
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def processorStructured(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+  def processorStructured(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
+    var props = Props(new LeveldbJournalPS(dir))
+
+    dispatcherName.foreach { name =>
+      props = props.withDispatcher(name)
+    }
+
     if (name.isDefined)
-      system.actorOf(Props(new LeveldbJournalPS(dir)), name.get) else
-      system.actorOf(Props(new LeveldbJournalPS(dir)))
+      system.actorOf(props, name.get) else
+      system.actorOf(props)
+  }
 
   /**
    * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
@@ -63,13 +71,21 @@ object LeveldbJournal {
    *
    * @param dir journal directory
    * @param name optional name of the journal actor in the underlying actor system.
+   * @param dispatcherName optional dispatcher name.
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def sequenceStructured(dir: File, name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+  def sequenceStructured(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
+    var props = Props(new LeveldbJournalSS(dir))
+
+    dispatcherName.foreach { name =>
+      props = props.withDispatcher(name)
+    }
+
     if (name.isDefined)
-      system.actorOf(Props(new LeveldbJournalSS(dir)), name.get) else
-      system.actorOf(Props(new LeveldbJournalSS(dir)))
+      system.actorOf(props, name.get) else
+      system.actorOf(props)
+  }
 
   /**
    * Creates a LevelDB based journal that organizes entries primarily based on processor id.

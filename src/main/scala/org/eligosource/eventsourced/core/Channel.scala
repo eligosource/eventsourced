@@ -154,13 +154,15 @@ object RedeliveryPolicy {
  * @param journal journal of the [[org.eligosource.eventsourced.core.EventsourcingExtension]]
  *        at which this channel is registered.
  * @param destination delivery destination of event messages added to this channel.
+ * @param policy redelivery policy.
+ * @param dispatcherName optional dispatcher name.
  *
  * @see [[org.eligosource.eventsourced.core.Channel]]
  * @see [[org.eligosource.eventsourced.core.RedeliveryPolicy]]
  * @see [[org.eligosource.eventsourced.core.Journal.WriteOutMsg]]
  * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
  */
-class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy) extends Channel {
+class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String] = None) extends Channel {
   require(id > 0, "channel id must be a positive integer")
 
   private var buffer: Option[ActorRef] = None
@@ -171,7 +173,7 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
       journal forward WriteOutMsg(id, msg, msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
     }
     case Deliver => {
-      if (!buffer.isDefined) buffer = Some(createBuffer(destination))
+      if (!buffer.isDefined) buffer = Some(createBuffer())
       deliverPendingMessages(buffer.get)
     }
     case Terminated(s) => buffer foreach { b =>
@@ -184,8 +186,14 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
     journal ! ReplayOutMsgs(id, 0L, dst)
   }
 
-  private def createBuffer(dst: ActorRef) = {
-    context.watch(context.actorOf(Props(new ReliableChannelBuffer(id, journal, dst, policy))))
+  private def createBuffer() = {
+    var props = Props(new ReliableChannelBuffer(id, journal, destination, policy, dispatcherName))
+
+    dispatcherName.foreach { name =>
+      props = props.withDispatcher(name)
+    }
+
+    context.watch(context.actorOf(props))
   }
 }
 
@@ -200,13 +208,13 @@ private [core] object ReliableChannel {
   case class ConfirmationTimeout(snr: Long)
 }
 
-private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy) extends Actor {
+private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String]) extends Actor {
   import ReliableChannel._
 
   var delivererQueue = Queue.empty[(Message, ActorRef)]
   var delivererBusy = false
 
-  val deliverer = context.actorOf(Props(new ReliableChannelDeliverer(channelId, journal, destination, policy)))
+  val deliverer = createDeliverer()
 
   def receive = {
     case Written(msg) => {
@@ -224,6 +232,16 @@ private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, de
         delivererQueue = Queue.empty
       }
     }
+  }
+
+  def createDeliverer() = {
+    var props = Props(new ReliableChannelDeliverer(channelId, journal, destination, policy))
+
+    dispatcherName.foreach { name =>
+      props = props.withDispatcher(name)
+    }
+
+    context.actorOf(props)
   }
 }
 
