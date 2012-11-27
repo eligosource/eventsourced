@@ -22,11 +22,12 @@ import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor._
 
+import org.eligosource.eventsourced.core.Channel._
 import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.core.ReliableChannelSpec._
 
 class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
-  "A reliable channel" when {
+  "A reliable channel" must {
     "deliver already stored output messages" in { fixture =>
       import fixture._
 
@@ -37,8 +38,8 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
 
       c ! Deliver
 
-      dequeue match { case Right(msg) => { msg.event must be("a"); msg.sequenceNr must be(4L) } }
-      dequeue match { case Right(msg) => { msg.event must be("b"); msg.sequenceNr must be(5L) } }
+      dq() must be (Right(Message("a", sequenceNr = 4L)))
+      dq() must be (Right(Message("b", sequenceNr = 5L)))
     }
     "store and deliver new output messages" in { fixture =>
       import fixture._
@@ -62,8 +63,8 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
         }
       }
 
-      dequeue match { case Right(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Right(msg) => { msg.event must be("b"); msg.sequenceNr must be(2L) } }
+      dq() must be (Right(Message("a", sequenceNr = 1L)))
+      dq() must be (Right(Message("b", sequenceNr = 2L)))
     }
     "prevent writing an acknowledgement if requested" in { fixture =>
       import fixture._
@@ -94,7 +95,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       respondTo(Message("a")) must be("re: a")
       respondTo(Message("b")) must be("re: b")
     }
-    "forward the message sender to the destination before reaching maxRetry" in { fixture =>
+    "forward the message sender to the destination before reaching maxRedelivery" in { fixture =>
       import fixture._
 
       val c = channel(failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 2))
@@ -104,11 +105,11 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
 
       respondTo(Message("a")) must be("re: a")
 
-      dequeue match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue match { case Right(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
+      dq() must be (Left(Message("a", sequenceNr = 1L)))
+      dq() must be (Left(Message("a", sequenceNr = 1L)))
+      dq() must be (Right(Message("a", sequenceNr = 1L)))
     }
-    "forward deadLetters to the destination after reaching maxRetry" in { fixture =>
+    "forward deadLetters to the destination after reaching maxRedelivery" in { fixture =>
       import fixture._
 
       val d = failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 4)
@@ -125,12 +126,16 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       c ! Deliver
       c ! Message("a")
 
-      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue      match { case Left(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue      match { case Right(msg) => { msg.event must be("a"); msg.sequenceNr must be(1L) } }
-      dequeue(dlq) match { case Right(msg) => msg.event must be("re: a") } // added via event stream subscriber
+      dq() must be (Left(Message("a", sequenceNr = 1L)))
+      dq() must be (Left(Message("a", sequenceNr = 1L)))
+      dq() must be (Left(Message("a", sequenceNr = 1L)))
+      dq() must be (Left(Message("a", sequenceNr = 1L)))
+      dq() must be (Right(Message("a", sequenceNr = 1L)))
+
+      dq(dlq) match {
+        case Right(msg) => msg.event must be("re: a")
+        case Left(msg)  => fail("unexpected Left result")
+      }
     }
     "forward deadLetters to the destination before it is initialized" in { fixture =>
       import fixture._
@@ -149,9 +154,17 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       c ! Message("a")
       c ! Deliver
 
-      dequeue(dlq)
-      dequeue      match { case Right(msg) => msg.event must be("a") }
-      dequeue(dlq) match { case Right(msg) => msg.event must be("re: a") }
+      dq(dlq)
+
+      dq match {
+        case Right(msg) => msg.event must be("a")
+        case Left(msg)  => fail("unexpected Left result")
+      }
+
+      dq(dlq) match {
+        case Right(msg) => msg.event must be("re: a")
+        case Left(msg)  => fail("unexpected Left result")
+      }
     }
     "recover from destination failures and preserve message order" in { fixture =>
       import fixture._
@@ -166,27 +179,45 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
         Right(Message(1, sequenceNr = 1L)), // success    at event 1
         Right(Message(2, sequenceNr = 2L)), // success    at event 2
         Right(Message(3, sequenceNr = 3L)), // success    at event 3
-        Left( Message(4, sequenceNr = 4L)), // failure #1 at event 4
-        Left( Message(4, sequenceNr = 4L)), // failure #2 at event 4, retry #1 before recovery
-        Left( Message(4, sequenceNr = 4L)), // failure #3 at event 4, retry #2 before recovery
-        Left( Message(4, sequenceNr = 4L)), // failure #4 at event 4, retry #3 before recovery
-        Left( Message(4, sequenceNr = 4L)), // failure #5 at event 4, retry #1 after recovery #1
-        Right(Message(4, sequenceNr = 4L)), // success    at event 4, retry #2 after recovery #1
+        Left (Message(4, sequenceNr = 4L)), // failure #1 at event 4
+        Left (Message(4, sequenceNr = 4L)), // failure #2 at event 4, redelivery #1 before restart
+        Left (Message(4, sequenceNr = 4L)), // failure #3 at event 4, redelivery #2 before restart
+        Left (Message(4, sequenceNr = 4L)), // failure #4 at event 4, redelivery #3 before restart
+        Left (Message(4, sequenceNr = 4L)), // failure #5 at event 4, redelivery #1 after restart #1
+        Right(Message(4, sequenceNr = 4L)), // success    at event 4, redelivery #2 after restart #1
         Right(Message(5, sequenceNr = 5L)), // success    at event 5
         Right(Message(6, sequenceNr = 6L)), // success    at event 6
         Right(Message(7, sequenceNr = 7L))  // success    at event 7
       )
 
-      List.fill(12)(dequeue() match {
-        case Left(msg)  => Left(Message(msg.event, sequenceNr = msg.sequenceNr))
-        case Right(msg) => Right(Message(msg.event, sequenceNr = msg.sequenceNr))
-      }) must be(expected)
+      List.fill(12)(dq()) must be(expected)
 
       // send another message to reliable channel
       c ! Message(8, sequenceNr = 0L)
 
       // check that sequence number is updated appropriately
-      dequeue() match { case Right(msg) => { msg.event must be(8); msg.sequenceNr must be(8L) } }
+      dq() must be (Right(Message(8, sequenceNr = 8L)))
+
+    }
+    "stop delivery after having reached restartMax and resume on request" in { fixture =>
+      import fixture._
+
+      val c = channel(failureDestination(failAtEvent = 1, enqueueFailures = true, failureCount = 8))
+      val q = new LinkedBlockingQueue[DeliveryStopped]
+
+      system.eventStream.subscribe(system.actorOf(Props(new Actor {
+        def receive = { case event: DeliveryStopped => q add event }
+      })), classOf[DeliveryStopped])
+
+      c ! Deliver
+      c ! Message(1)
+
+      1 to 8 foreach { _ => dq() must be (Left(Message(1, sequenceNr = 1L))) }
+
+      dequeue(q) // wait for DeliveryStopped event
+
+      c ! Deliver
+      dq() must be (Right(Message(1, sequenceNr = 1L)))
     }
   }
 }
@@ -203,10 +234,17 @@ object ReliableChannelSpec {
     val writeOutMsgListenerQueue = new LinkedBlockingQueue[WriteOutMsg]
     val writeOutMsgListener = system.actorOf(Props(new WriteOutMsgListener(writeOutMsgListenerQueue)))
 
-    val policy = new RedeliveryPolicy(5 seconds, 10 milliseconds, 10 milliseconds, 3)
+    val policy = new RedeliveryPolicy(5 seconds, 10 milliseconds, 1, 10 milliseconds, 3)
     def channel(destination: ActorRef) = system.actorOf(Props(new ReliableChannel(1, journal, destination, policy)))
 
-    /** Synchronous write of out message to journal. */
+
+    def dq(queue: LinkedBlockingQueue[Either[Message, Message]]): Either[Message, Message] = super.dequeue(queue) match {
+      case Left(msg)  => Left(Message(msg.event, sequenceNr = msg.sequenceNr))
+      case Right(msg) => Right(Message(msg.event, sequenceNr = msg.sequenceNr))
+    }
+
+    def dq(): Either[Message, Message] = dq(queue)
+
     def writeOutMsg(msg: Message) {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
       request(journal)(WriteOutMsg(1, msg, msg.processorId, ackSequenceNr, responder, false))
@@ -215,9 +253,6 @@ object ReliableChannelSpec {
 
   class Destination(queue: Queue[Either[Message, Message]], failAtEvent: Any, var failureCount: Int, enqueueFailures: Boolean) extends Actor { this: Receiver =>
     def receive = {
-      /*case DeadLetter(response, _, _) => {
-        queue.add(Right(Message(response)))
-      }*/
       case event => {
         if (failAtEvent == event && failureCount > 0) {
           failureCount = failureCount - 1

@@ -61,6 +61,26 @@ trait Channel extends Actor {
   }
 }
 
+object Channel {
+
+  /**
+   * Channel command for starting delivery of pending event messages.
+   */
+  case object Deliver
+
+  /**
+   * Channel event that is published when a reliable channel (identified by `channelId`)
+   * stops event message delivery. The event is published to the event stream of the
+   * [[akka.actor.ActorSystem]] the reliable channel belongs to.
+   *
+   * @param channelId id of the reliable channel that stopped event message
+   *        delivery.
+   *
+   * @see [[org.eligosource.eventsourced.core.ReliableChannel]]
+   */
+  case class DeliveryStopped(channelId: Int)
+}
+
 /**
  * A transient channel that sends event [[org.eligosource.eventsourced.core.Message]]s
  * to `destination`. If `destination` positively confirms the receipt of an event message
@@ -79,6 +99,8 @@ trait Channel extends Actor {
  * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
  */
 class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorRef) extends Channel {
+  import Channel.Deliver
+
   require(id > 0, "channel id must be a positive integer")
 
   private var retain = true
@@ -110,12 +132,14 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
  *        exceeded a re-delivery is attempted.
  * @param restartDelay Delay for re-starting a reliable channel that has been stopped
  *        after having reached the maximum number of re-delivery attempts.
+ * @param restartMax Maximum number of re-starts.
  * @param redeliveryDelay Delay between re-delivery attempts.
  * @param redeliveryMax Maximum number of re-delivery attempts.
  */
 case class RedeliveryPolicy(
   confirmationTimeout: FiniteDuration,
   restartDelay: FiniteDuration,
+  restartMax: Int,
   redeliveryDelay: FiniteDuration,
   redeliveryMax: Int)
 
@@ -123,7 +147,9 @@ object RedeliveryPolicy {
   /** Default confirmation timeout: 5 seconds */
   val DefaultConfirmationTimeout = 5 seconds
   /** Default restart delay: 5 seconds */
-  val DefaultRestartDelay = 5 seconds
+  val DefaultRestartDelay = 10 seconds
+  //** Default maximum number of re-starts: 1 */
+  val DefaultRestartMax = 1
   /** Default re-delivery delay: 1 second */
   val DefaultRedeliveryDelay = 1 second
   //** Default maximum number of re-deliveries: 3 */
@@ -132,23 +158,37 @@ object RedeliveryPolicy {
   /**
    * Returns a [[org.eligosource.eventsourced.core.RedeliveryPolicy]] with default settings.
    */
-  def apply() = new RedeliveryPolicy(DefaultConfirmationTimeout, DefaultRedeliveryDelay, DefaultRedeliveryDelay, DefaultRedeliveryMax)
+  def apply() = new RedeliveryPolicy(
+    DefaultConfirmationTimeout,
+    DefaultRestartDelay,
+    DefaultRestartMax,
+    DefaultRedeliveryDelay,
+    DefaultRedeliveryMax)
 }
 
 /**
  * A persistent channel that sends event [[org.eligosource.eventsourced.core.Message]]s to
  * `destination`. Every event message sent to this channel is stored in the journal together
  * with an ''acknowledgement'' (which is used during replay to decide if the channel should
- * ignore a message or not). If `destination` positively confirms the receipt of an event
- * message with `Message.confirm()` the stored message is deleted from the journal. If
- * `destination` negatively confirms the receipt of an event message with `Message.confirm(false)`
- * or no confirmation was made (i.e. a timeout occurred), a re-delivery attempt is made. If the
- * maximum number of re-delivery attempts have been made, the channel restarts itself after
- * a certain ''restart delay'' (and starts again with re-deliveries).
+ * ignore a message or not).
  *
- * A `ReliableChannel` preserves the `sender` reference (i.e. forwards it to `destination`) only
- * after initial delivery (which occurs, for example, during `EventsourcingExtension.recover()`
- * or `EventsourcingExtension.deliver()`).
+ * If `destination` positively confirms the receipt of an event message with `Message.confirm()`
+ * the stored message is deleted from the journal. If `destination` negatively confirms the
+ * receipt of an event message with `Message.confirm(false)` or no confirmation is made (i.e.
+ * a timeout occurrs), a re-delivery attempt is made after a certain ''redelivery delay''
+ * (specified by `policy.redeliveryDelay`).
+ *
+ * If the maximum number of re-delivery attempts have been made (specified by `policy.redeliveryMax`),
+ * the channel restarts itself after a certain ''restart delay'' (specified by `policy.restartDelay`)
+ * and starts again with re-deliveries. If the maximum number of restarts has been reached (specified
+ * by `policy.restartMax`) the channel stops message delivery and publishes a
+ * [[org.eligosource.eventsourced.core.Channel.DeliveryStopped]] event to the event stream of the
+ * [[akka.actor.ActorSystem]] this channel belongs to. Applications can then re-activate the channel
+ * by calling `EventsourcingExtension.deliver(Int)` with the channel id as argument.
+ *
+ * A `ReliableChannel` preserves `sender` references (i.e. forwards them to `destination`) only
+ * after initial delivery (which can be triggered, by calling `EventsourcingExtension.recover()`,
+ * `EventsourcingExtension.deliver()` or `EventsourcingExtension.deliver(Int)`).
  *
  * @param id channel id. Must be a positive integer.
  * @param journal journal of the [[org.eligosource.eventsourced.core.EventsourcingExtension]]
@@ -163,22 +203,31 @@ object RedeliveryPolicy {
  * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
  */
 class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String] = None) extends Channel {
+  import Channel._
+
   require(id > 0, "channel id must be a positive integer")
 
   private var buffer: Option[ActorRef] = None
+  private var restarts = 0
 
   def receive = {
     case msg: Message if (!msg.acks.contains(id)) => {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
       journal forward WriteOutMsg(id, msg, msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
     }
-    case Deliver => {
-      if (!buffer.isDefined) buffer = Some(createBuffer())
+    case Deliver => if (!buffer.isDefined) {
+      buffer = Some(createBuffer())
       deliverPendingMessages(buffer.get)
     }
     case Terminated(s) => buffer foreach { b =>
       buffer = None
-      context.system.scheduler.scheduleOnce(policy.restartDelay, self, Deliver)
+      if (restarts < policy.restartMax) {
+        restarts += 1
+        context.system.scheduler.scheduleOnce(policy.restartDelay, self, Deliver)
+      } else {
+        restarts = 0
+        context.system.eventStream.publish(DeliveryStopped(id))
+      }
     }
   }
 
@@ -254,7 +303,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
   var buffer: Option[ActorRef] = None
   var queue = Queue.empty[(Message, ActorRef)]
 
-  var retries = 0
+  var redeliveries = 0
   var currentDelivery: Option[(Message, ActorRef, Cancellable)] = None
 
   def receive = {
@@ -264,7 +313,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
     case q: Queue[(Message, ActorRef)] => {
       buffer = Some(sender)
       queue = q
-      self ! Next(retries)
+      self ! Next(redeliveries)
     }
     case Next(r) => if (queue.size > 0) {
       val ((msg, sdr), q) = queue.dequeue
@@ -279,7 +328,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
       val task = scheduler.scheduleOnce(policy.confirmationTimeout, self, ConfirmationTimeout(m.sequenceNr))
 
       currentDelivery = Some(msg, sdr, task)
-      retries = r
+      redeliveries = r
       queue = q
     } else {
       buffer.foreach(_ ! FeedMe)
@@ -288,7 +337,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
       // undo dequeue
       queue = ((msg, sdr) +: queue)
       // and try again ...
-      if (retries < policy.redeliveryMax) self ! Next(retries + 1) else buffer.foreach(s => context.stop(s))
+      if (redeliveries < policy.redeliveryMax) self ! Next(redeliveries + 1) else buffer.foreach(b => context.stop(b))
     }
 
     case Confirmed(snr, true) => currentDelivery match {

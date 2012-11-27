@@ -8,6 +8,7 @@ import akka.actor._
  * object.
  */
 trait Journal extends Actor {
+  import Channel.Deliver
   import Journal._
 
   private val deadLetters = context.system.deadLetters
@@ -327,5 +328,4 @@ object Journal {
   case class Written(msg: Message)
 
   private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
-  private [eventsourced] case object Deliver
 }
