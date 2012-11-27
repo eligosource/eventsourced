@@ -17,7 +17,8 @@ object Settings {
 
   val defaultSettings = buildSettings ++ Seq(
     resolvers ++= Seq(journalioRepo),
-    scalacOptions ++= Seq("-unchecked"),
+    scalacOptions in Compile ++= Seq("-target:jvm-1.6", "-unchecked"),
+    javacOptions in Compile ++= Seq("-source", "1.6", "-target", "1.6"),
     parallelExecution in Test := false
   )
 }
