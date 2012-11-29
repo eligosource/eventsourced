@@ -50,15 +50,16 @@ object LeveldbJournal {
   /**
    * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
    * organizes entries primarily based on processor id and additionally supports
-   * throttled input message replay. The journal suspends input message replay
-   * for a duration specified by `throttleFor` after every `throttleAfter` replayed
-   * messages.
+   * throttled input message replay. The journal suspends replay for a certain
+   * duration, specified by `throttleFor`, after every n replayed messages,
+   * specified by `throttleAfter`.
    *
    * Pros:
    *
    *  - efficient replay of input messages for all processors (batch replay), optionally throttled
    *  - efficient replay of input messages for a single processor, optionally throttled
    *  - efficient replay of output messages
+   *  - avoids growing of mailboxes of slow processors during replay.
    *
    * Cons:
    *
@@ -67,6 +68,8 @@ object LeveldbJournal {
    * @param dir journal directory.
    * @param name optional name of the journal actor in the underlying actor system.
    * @param dispatcherName optional dispatcher name.
+   * @param throttleAfter number of messages after which replay is suspended.
+   * @param throttleFor duration to suspend replay.
    *
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
@@ -85,7 +88,6 @@ object LeveldbJournal {
    *  - efficient replay of input messages for all processors (batch replay with optional lower bound).
    *  - efficient replay of output messages
    *  - efficient deletion of old entries
-   *  - avoids growing of mailboxes of slow processors during replay.
    *
    * Cons:
    *
