@@ -63,6 +63,12 @@ object BasicExample extends App {
   // send message to p (bypasses journaling because it's not an instance of Message)
   p ! "blah"
 
+  // wait for all messages to arrive (graceful shutdown coming soon)
+  Thread.sleep(1000)
+
+  // then shutdown
+  system.shutdown()
+
   // -----------------------------------------------------------
   //  Actor definitions
   // -----------------------------------------------------------

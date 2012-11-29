@@ -34,8 +34,8 @@ object Dependencies {
 }
 
 object Version {
-  val Scala = "2.10.0-RC2"
-  val Akka  = "2.1.0-RC2"
+  val Scala = "2.10.0-RC3"
+  val Akka  = "2.1.0-RC3"
 }
 
 object Dependency {
@@ -55,9 +55,9 @@ object Dependency {
   //  Test
   // -----------------------------------------------
 
-  val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % Akka  % "test"
-  val scalaActors = "org.scala-lang"    %  "scala-actors"              % Scala % "test"
-  val scalaTest   = "org.scalatest"     %% "scalatest"                 % "1.8" % "test"
+  val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % Akka     % "test"
+  val scalaActors = "org.scala-lang"    %  "scala-actors"              % Scala    % "test"
+  val scalaTest   = "org.scalatest"     %% "scalatest"                 % "1.8-B1" % "test"
 }
 
 object Publish {

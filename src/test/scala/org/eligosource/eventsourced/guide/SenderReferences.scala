@@ -63,7 +63,7 @@ object SenderReferences extends App {
         // confirm receipt of event message from channel
         msg.confirm()
         // reply to sender
-        sender ! ("done processing event = %s (%d)" format msg.event)
+        sender ! ("done processing event = %s" format msg.event)
       }
     }
   }
