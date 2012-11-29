@@ -32,15 +32,13 @@ import org.eligosource.eventsourced.core.Journal._
  *
  * Pros:
  *
- *  - efficient replay of input messages for all processors (batch replay
- *    with optional lower bound).
+ *  - efficient replay of input messages for all processors (batch replay with optional lower bound).
  *  - efficient replay of output messages
  *  - efficient deletion of old entries
  *
  * Cons:
  *
- *  - replay of input messages for a single processor requires full scan
- *    (with optional lower bound)
+ *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
 private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
   import LeveldbJournalSS._
@@ -96,6 +94,7 @@ private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
         case _ => {}
       }
     }
+    sender ! ReplayDone
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {

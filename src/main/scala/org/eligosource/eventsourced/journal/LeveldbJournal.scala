@@ -17,7 +17,11 @@ package org.eligosource.eventsourced.journal
 
 import java.io.File
 
+import scala.concurrent.duration._
+
 import akka.actor._
+
+import org.eligosource.eventsourced.core.Journal
 
 object LeveldbJournal {
   /**
@@ -40,34 +44,52 @@ object LeveldbJournal {
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def processorStructured(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
-    var props = Props(new LeveldbJournalPS(dir))
+  def processorStructuredDefault(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    Journal(new DefaultLeveldbJournal(dir), name, dispatcherName)
 
-    dispatcherName.foreach { name =>
-      props = props.withDispatcher(name)
-    }
-
-    if (name.isDefined)
-      system.actorOf(props, name.get) else
-      system.actorOf(props)
-  }
+  /**
+   * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
+   * organizes entries primarily based on processor id and additionally supports
+   * throttled input message replay. The journal suspends input message replay
+   * for a duration specified by `throttleFor` after every `throttleAfter` replayed
+   * messages.
+   *
+   * Pros:
+   *
+   *  - efficient replay of input messages for all processors (batch replay), optionally throttled
+   *  - efficient replay of input messages for a single processor, optionally throttled
+   *  - efficient replay of output messages
+   *
+   * Cons:
+   *
+   *  - deletion of old entries requires full scan
+   *
+   * @param dir journal directory.
+   * @param name optional name of the journal actor in the underlying actor system.
+   * @param dispatcherName optional dispatcher name.
+   *
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
+   */
+  def processorStructuredThrottled(dir: File, throttleAfter: Int = 10000, throttleFor: FiniteDuration = 100 milliseconds,
+      name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    Journal(new ThrottledReplayJournal(dir, throttleAfter, throttleFor), name, dispatcherName)
 
   /**
    * Creates a [[http://code.google.com/p/leveldb/ LevelDB]] based journal that
    * organizes entries primarily based on sequence numbers, keeping input and
-   * output entries separated.
+   * output messages separated.
    *
    * Pros:
    *
-   *  - efficient replay of input messages for all processors (batch replay
-   *    with optional lower bound).
+   *  - efficient replay of input messages for all processors (batch replay with optional lower bound).
    *  - efficient replay of output messages
    *  - efficient deletion of old entries
+   *  - avoids growing of mailboxes of slow processors during replay.
    *
    * Cons:
    *
-   *  - replay of input messages for a single processor requires full scan
-   *    (with optional lower bound)
+   *  - replay of input messages for a single processor requires full scan (with optional lower bound)
    *
    * @param dir journal directory
    * @param name optional name of the journal actor in the underlying actor system.
@@ -75,17 +97,8 @@ object LeveldbJournal {
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def sequenceStructured(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
-    var props = Props(new LeveldbJournalSS(dir))
-
-    dispatcherName.foreach { name =>
-      props = props.withDispatcher(name)
-    }
-
-    if (name.isDefined)
-      system.actorOf(props, name.get) else
-      system.actorOf(props)
-  }
+  def sequenceStructured(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    Journal(new LeveldbJournalSS(dir), name, dispatcherName)
 
   /**
    * Creates a LevelDB based journal that organizes entries primarily based on processor id.
@@ -94,8 +107,8 @@ object LeveldbJournal {
    * @param name optional name of the journal actor in the underlying actor system.
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
-   * @see `LeveldbJournal.processorStructured`
+   * @see `LeveldbJournal.processorStructuredDefault`
    */
-  def apply(dir: File, name: Option[String] = None)(implicit system: ActorSystem) =
-    processorStructured(dir, name)
-}
+  def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem) =
+    processorStructuredDefault(dir, name = name, dispatcherName = dispatcherName)
+  }

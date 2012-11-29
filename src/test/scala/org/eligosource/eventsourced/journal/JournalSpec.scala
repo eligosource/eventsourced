@@ -18,9 +18,11 @@ package org.eligosource.eventsourced.journal
 import java.io.File
 import java.util.concurrent._
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import akka.actor._
+import akka.pattern.ask
 import akka.serialization.Serializer
 import akka.util.Timeout
 
@@ -41,7 +43,8 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 
   class Fixture {
     implicit val system = ActorSystem("test", ConfigFactory.load("persist"))
-    implicit val timeout = Timeout(5 seconds)
+    implicit val duration = 5 seconds
+    implicit val timeout = Timeout(duration)
 
     val journalDir = new File("target/journal")
     val journal = createJournal(journalDir)
@@ -56,9 +59,17 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       p(queue.poll(5000, TimeUnit.MILLISECONDS))
     }
 
+    def replayInMsgs(processorId: Int, fromSequenceNr: Long, target: ActorRef) {
+      Await.result(journal ? ReplayInMsgs(processorId, fromSequenceNr, target), duration)
+    }
+
+    def replayOutMsgs(channelId: Int, fromSequenceNr: Long, target: ActorRef) {
+      journal ! ReplayOutMsgs(channelId, fromSequenceNr, target)
+    }
+
     def shutdown() {
       system.shutdown()
-      system.awaitTermination(5 seconds)
+      system.awaitTermination(duration)
       FileUtils.deleteDirectory(journalDir)
     }
   }
@@ -77,7 +88,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteInMsg(1, Message("test-1"), writeTarget)
       journal ! WriteInMsg(1, Message("test-2"), writeTarget)
 
-      journal ! ReplayInMsgs(1, 0, replayTarget)
+      replayInMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1)) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
@@ -88,7 +99,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteInMsg(1, Message("test-1", sequenceNr = 5), writeTarget, false)
       journal ! WriteInMsg(1, Message("test-2"), writeTarget)
 
-      journal ! ReplayInMsgs(1, 0, replayTarget)
+      replayInMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 5)) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 6)) }
@@ -99,7 +110,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteInMsg(1, Message("test-1"), writeTarget)
       journal ! WriteAck(1, 1, 1)
 
-      journal ! ReplayInMsgs(1, 0, replayTarget)
+      replayInMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
     }
@@ -109,8 +120,8 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteInMsg(1, Message("test-1"), writeTarget)
       journal ! WriteOutMsg(1, Message("test-2"), 1, 1, writeTarget)
 
-      journal ! ReplayInMsgs(1, 0, replayTarget)
-      journal ! ReplayOutMsgs(1, 0, replayTarget)
+      replayInMsgs(1, 0, replayTarget)
+      replayOutMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
       dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
@@ -127,14 +138,25 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       journal ! WriteInMsg(3, Message("test-3a"), writeTarget)
       journal ! WriteInMsg(3, Message("test-3b"), writeTarget)
 
-      journal ! BatchReplayInMsgs(List(
+      Await.result(journal ? BatchReplayInMsgs(List(
         ReplayInMsgs(1, 0L, replayTarget),
         ReplayInMsgs(3, 6L, replayTarget)
-      ))
+      )), duration)
 
       dequeue(replayQueue) { _ must be(Message("test-1a", sequenceNr = 1)) }
       dequeue(replayQueue) { _ must be(Message("test-1b", sequenceNr = 2)) }
       dequeue(replayQueue) { _ must be(Message("test-3b", sequenceNr = 6)) }
+    }
+    "tolerate phantom acknowledgements" in { fixture =>
+      import fixture._
+
+      journal ! WriteInMsg(1, Message("test-1"), writeTarget)
+      journal ! WriteAck(1, 1, 1)
+      journal ! WriteAck(1, 1, 2)
+
+      replayInMsgs(1, 0, replayTarget)
+
+      dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
     }
   }
 }
@@ -164,11 +186,8 @@ object JournalSpec {
   }
 }
 
-class LeveldbJournalPSSpec extends JournalSpec {
+abstract class LeveldbJournalPSSpec extends JournalSpec {
   import JournalSpec._
-
-  def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    LeveldbJournal.processorStructured(journalDir)
 
   "persist input messages with a custom event serializer" in { fixture =>
     import fixture._
@@ -192,6 +211,16 @@ class LeveldbJournalPSSpec extends JournalSpec {
     dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-3"), sequenceNr = 1)) }
     dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-4"), sequenceNr = 2)) }
   }
+}
+
+class DefaultJournalSpec extends LeveldbJournalPSSpec {
+  def createJournal(journalDir: File)(implicit system: ActorSystem) =
+    LeveldbJournal.processorStructuredDefault(journalDir)
+}
+
+class ThrottledJournalSpec extends LeveldbJournalPSSpec {
+  def createJournal(journalDir: File)(implicit system: ActorSystem) =
+    LeveldbJournal.processorStructuredThrottled(journalDir)
 }
 
 class LeveldbJournalSSSpec extends JournalSpec {

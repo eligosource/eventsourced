@@ -16,13 +16,15 @@
 package org.eligosource.eventsourced.core
 
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
 import scala.concurrent._
 import scala.concurrent.duration._
+import scala.util.{Try, Success, Failure}
 
 import akka.actor._
-import akka.pattern.ask
+import akka.pattern._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core.Journal._
@@ -66,66 +68,6 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    */
   def processors: Map[Int, ActorRef] =
     processorsRef.get
-
-  /**
-   * Replays input messages to selected processors. This method does not wait for
-   * replayed input messages being processed. However, any new message sent to any
-   * of the selected processors, after this method returned, is guaranteed to be
-   * processed after the replayed event messages.
-   *
-   * @param f function called for each processor id. If the function returns `None`
-   *        no message replay will be done for that processor. If it returns `Some(snr)`
-   *        message replay will start from sequence number `snr` for that processor.
-   */
-  def replay(f: (Int) => Option[Long]) {
-    val replays = processors.collect { case kv if (f(kv._1).isDefined) => ReplayInMsgs(kv._1, f(kv._1).get, kv._2) }
-    journal ! BatchReplayInMsgs(replays.toList)
-  }
-
-  /**
-   * Enables all registered channels and starts delivery of pending messages.
-   */
-  def deliver() {
-    journal ! BatchDeliverOutMsgs(channels.values.toList)
-  }
-
-  /**
-   * Enables the channel registered under `channelId` and starts delivery of pending messages.
-   */
-  def deliver(channelId: Int) {
-    journal ! BatchDeliverOutMsgs(channels.get(channelId).toList)
-  }
-
-  /**
-   * Recovers all processors and channels registered at this extension by first
-   * calling `replay(_ => Some(0))` and then `deliver()`. Replay is done with no
-   * lower bound (i.e. with all messages in the journal) for all processors of
-   * this context.
-   *
-   * This method does not wait for replayed input messages being processed. However,
-   * any new message sent to any of the processors, after this method returned, is
-   * guaranteed to be processed after the replayed event messages.
-   */
-  def recover() {
-    recover(_ => Some(0))
-  }
-
-  /**
-   * Recovers selected processors and all channels registered at this extension by first
-   * calling `replay(f)` and then `deliver()`.
-   *
-   * This method does not wait for replayed input messages being processed. However,
-   * any new message sent to any of the selected processors, after this method returned,
-   * is guaranteed to be processed after the replayed event messages.
-   *
-   * @param f function called for each processor id. If the function returns `None`
-   *        no message replay will be done for that processor. If it returns `Some(snr)`
-   *        message replay will start from sequence number `snr` for that processor.
-   */
-  def recover(f: (Int) => Option[Long]) {
-    replay(f)
-    deliver()
-  }
 
   /**
    * Registers an [[org.eligosource.eventsourced.core.Eventsourced]] processor.
@@ -192,20 +134,106 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   /**
+   * Replays input messages to selected processors. This method waits for replayed
+   * messages being added to processor mailboxes but does not wait for replayed input
+   * messages being processed. However, any new message sent to any of the selected
+   * processors, after this method successfully returned, is guaranteed to be processed
+   * after the replayed event messages.
+   *
+   * Clients that want to wait for replayed messages being processed should call the
+   * `awaitProcessing` method after this method successfully returned.
+   *
+   * @param f function called for each processor id. If the function returns `None`
+   *        no message replay will be done for that processor. If it returns `Some(snr)`
+   *        message replay will start from sequence number `snr` for that processor.
+   * @param waitAtMost wait for the specified duration for the replay to complete.
+   * @throws TimeoutException if replay doesn't complete within the specified duration.
+   */
+  def replay(f: (Int) => Option[Long], waitAtMost: FiniteDuration = 1 minute) {
+    val replays = processors.collect { case kv if (f(kv._1).isDefined) => ReplayInMsgs(kv._1, f(kv._1).get, kv._2) }
+
+    Try(Await.result(journal.ask(BatchReplayInMsgs(replays.toList))(Timeout(waitAtMost)), waitAtMost)) match {
+      case Success(_) => ()
+      case Failure(e: TimeoutException) => throw new TimeoutException("replay could not be completed within %s" format waitAtMost)
+      case Failure(e) =>                   throw e
+    }
+  }
+
+  /**
+   * Enables all registered channels and starts delivery of pending messages.
+   */
+  def deliver() {
+    journal ! BatchDeliverOutMsgs(channels.values.toList)
+  }
+
+  /**
+   * Enables the channel registered under `channelId` and starts delivery of pending messages.
+   */
+  def deliver(channelId: Int) {
+    journal ! BatchDeliverOutMsgs(channels.get(channelId).toList)
+  }
+
+  /**
+   * Recovers all processors and channels registered at this extension by first
+   * calling `replay(_ => Some(0))` and then `deliver()`. Replay is done with no
+   * lower bound (i.e. with all messages in the journal).
+   *
+   * This method waits for replayed messages being added to processor mailboxes but
+   * does not wait for replayed input messages being processed. However, any new message
+   * sent to any of the selected processors, after this method successfully returned,
+   * is guaranteed to be processed after the replayed event messages.
+   *
+   * Clients that want to wait for replayed messages being processed should call the
+   * `awaitProcessing` method after this method successfully returned.
+   *
+   * @param waitAtMost  wait for the specified duration for the replay to complete.
+   * @throws TimeoutException if replay doesn't complete within the specified duration.
+   */
+  def recover(waitAtMost: FiniteDuration = 1 minute) {
+    recover(_ => Some(0), waitAtMost)
+  }
+
+  /**
+   * Recovers selected processors and all channels registered at this extension by first
+   * calling `replay(f)` and then `deliver()`.
+   *
+   * This method waits for replayed messages being added to processor mailboxes but
+   * does not wait for replayed input messages being processed. However, any new message
+   * sent to any of the selected processors, after this method successfully returned,
+   * is guaranteed to be processed after the replayed event messages.
+   *
+   * Clients that want to wait for replayed messages being processed should call the
+   * `awaitProcessing` method after this method successfully returned.
+   *
+   * @param f function called for each processor id. If the function returns `None`
+   *        no message replay will be done for that processor. If it returns `Some(snr)`
+   *        message replay will start from sequence number `snr` for that processor.
+   * @param waitAtMost  wait for the specified duration for the replay to complete.
+   * @throws TimeoutException if replay doesn't complete within the specified duration.
+   */
+  def recover(f: (Int) => Option[Long], waitAtMost: FiniteDuration) {
+    replay(f, waitAtMost)
+    deliver()
+  }
+
+  /**
    * Waits for selected processors to complete processing of all pending messages
    * in their mailboxes.
    *
    * @param processorIds ids of registered processors to wait for. Default value
    *        is the set of all registered processor ids.
+   * @param atMost maximum duration to wait for processing to complete.
    */
-  def awaitProcessorCompletion(processorIds: Set[Int] = processors.keySet)(implicit timeout: Timeout) {
+  def awaitProcessing(processorIds: Set[Int] = processors.keySet, atMost: FiniteDuration = 1 minute) {
     import Eventsourced._
     import system.dispatcher
+
+    implicit val timeout = Timeout(atMost)
 
     val selected = processors.filter { case (k, _) => processorIds.contains(k) }.values
     val future = Future.sequence(selected.map(p => p.ask(AwaitCompletion)))
 
-    Await.result(future, timeout.duration)
+    Await.result(future, atMost)
   }
 
   @tailrec

@@ -33,11 +33,11 @@ The library doesn't impose any restrictions on the structure and semantics of ap
 
 For persisting event messages, *Eventsourced* currently provides the following journal implementations:
 
-- [`LeveldbJournal`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournal$), a [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni) based journal which is currently recommended for production use. It comes with two different optimizations which are further explained in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournal$) (see methods `processorStructured` and `sequenceStructured`). It will also be used in the following examples. Because LevelDB is a native library, this journal requires a special [project configuration](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). 
+- [`LeveldbJournal`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournal$), a [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni) based journal which is currently recommended for production use. It comes with different optimizations and features sets which are further explained in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournal$). It will also be used in the following examples. Because LevelDB is a native library, this journal requires a special [project configuration](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). 
 - [`JournalioJournal`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.JournalioJournal$), a [Journal.IO](https://github.com/sbtourist/Journal.IO) based journal. 
 - [`InmemJournal`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.JournalioJournal$), an in-memory journal for testing purposes.
 
-Further journal implementations are planned, including replicated and horizontally scalable journals (based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/) or [Redis](http://redis.io/), for example). Also planned for the near future is a journal plugin API and an event archive.  
+Further journal implementations are planned, including replicated and horizontally scalable journals (based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/) or [Redis](http://redis.io/), for example).  
 
 ### Resources
 
@@ -485,11 +485,9 @@ Recovery is a procedure needed to re-create the state of event-sourced applicati
     // processors and channels are now ready to use
     // …
 
-The `recover()` method first replays journaled event messages to all registered processors. By replaying the event message history, processors can recover state. Processors that emit event messages to one or more channels will also do so during replay. These channels will either ignore (discard) event messages that have already been successfully delivered (i.e. *acknowledged*) in previous application runs or buffer them for later delivery. 
+The `recover()` method first replays journaled event messages to all registered processors. By replaying the event message history, processors can recover state. Processors that emit event messages to one or more channels will also do so during replay. These channels will either ignore (discard) event messages that have already been successfully delivered (i.e. *acknowledged*) in previous application runs or buffer them for later delivery. After replay, the `recover()` method triggers the delivery of buffered messages by activating channels.
 
-If a channel delivered event messages immediately instead of buffering them, delivered event messages could wrongly interleave with replayed event messages. This could lead to inconsistencies in event message ordering across application runs and therefore to inconsistencies in application state. Therefore, recovery must ensure that buffered event messages are only delivered after all replayed event messages have been added to their corresponding processors' mailboxes. 
-
-Delivery of buffered event messages is triggered by activating channels. The implementation of `recover()` activates registered channels immediately after having finished the replay. By ensuring that buffered event messages are only delivered after replayed event messages, consistency in event message ordering can be guaranteed. This is especially important for the recovery of processors and channels that are connected to a cyclic, directed graph.
+If channels delivered event messages immediately instead of buffering them, delivered event messages could wrongly interleave with replayed event messages. This could lead to inconsistencies in event message ordering across application runs and therefore to inconsistencies in application state. Therefore, recovery must ensure that buffered event messages are only delivered after all replayed event messages have been added to their corresponding processors' mailboxes. This is especially important for the recovery of processors and channels that are connected to a cyclic, directed graph.
 
 The [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension) also supports event message replay for individual processors (refer to the API docs for details). This can be useful in situations where processors are registered at `extension` after an initial recovery.
 
@@ -506,16 +504,16 @@ The [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/sn
 
 A call to `replay` can be omitted if a processor did not journal any event message in previous application runs. Channels can be activated individually with the `deliver(channelId: Int)` method. Whatever `EventsourcingExtension` methods applications use to recover state of event-sourced applications, they must ensure that processor ids and channel ids are consistently used across application runs.
 
-### Awaiting completion
+### Await processing
 
-The `replay` and `recover` methods do *not* wait for replayed event messages being processed by the corresponding processors. However, any new message sent to any registered processor, after `replay` or `recover` returned, is guaranteed to be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessorCompletion()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced). 
+The `replay` and `recover` methods wait for replayed messages being added to the corresponding processor mailboxes but do not wait for replayed event messages being processed by these processors. However, any new message sent to any registered processor, after `replay` or `recover` successfully returned, is guaranteed to be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessing()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension). 
 
     val extension: EventsourcingExtension = … 
 
     extension.recover()
-    extension.awaitProcessorCompletion()
+    extension.awaitProcessing()
 
-For example, this is useful in situations where event-sourced processors maintain state via STM references and the application wants to ensure that the (externally visible) state is fully recovered before accepting new read requests from client applications. By default, the `awaitProcessorCompletion()` method waits for all registered processors to complete but applications can also specify a subset of registered processors.
+This can be useful in situations where event-sourced processors maintain state via STM references and the application wants to ensure that the (externally visible) state is fully recovered before accepting new read requests from client applications. By default, the `awaitProcessing()` method waits for all registered processors to complete but applications can also specify a subset of registered processors.
 
 ### State dependencies
 

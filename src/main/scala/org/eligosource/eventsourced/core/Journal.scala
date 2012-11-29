@@ -45,9 +45,6 @@ trait Journal extends Actor {
     case Loop(msg, target) => {
       target forward (Looped(msg))
     }
-    case BatchDeliverOutMsgs(channels) => {
-      channels.foreach(_ ! Deliver)
-    }
     case BatchReplayInMsgs(replays) => {
       executeBatchReplayInMsgs(replays, (msg, target) => target tell (Written(msg), deadLetters))
     }
@@ -56,6 +53,9 @@ trait Journal extends Actor {
     }
     case cmd: ReplayOutMsgs => {
       executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters))
+    }
+    case BatchDeliverOutMsgs(channels) => {
+      channels.foreach(_ ! Deliver)
     }
     case SetCommandListener(cl) => {
       commandListener = cl
@@ -128,7 +128,10 @@ trait Journal extends Actor {
   def executeDeleteOutMsg(cmd: DeleteOutMsg)
 
   /**
-   * Instructs a journal provider to batch-replay input messages.
+   * Instructs a journal provider to batch-replay input messages. The provider must
+   * reply to the sender with [[org.eligosource.eventsourced.core.Journal.ReplayDone]]
+   * when all replayed messages have been added to the corresponding replay targets'
+   * mailboxes.
    *
    * @param cmds command batch to be executed by the journal provider.
    * @param p function to be called by the provider for every replayed input message.
@@ -143,7 +146,10 @@ trait Journal extends Actor {
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit)
 
   /**
-   * Instructs a journal provider to replay input messages.
+   * Instructs a journal provider to replay input messages. The provider must
+   * reply to the sender with [[org.eligosource.eventsourced.core.Journal.ReplayDone]]
+   * when all replayed messages have been added to the corresponding replay target's
+   * mailbox.
    *
    * @param cmd command to be executed by the journal provider.
    * @param p function to be called by the provider for each replayed input message.
@@ -181,6 +187,29 @@ trait Journal extends Actor {
  */
 object Journal {
   val SkipAck: Long = -1L
+
+  private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
+
+  /**
+   * Instantiates, configures and returns a [[org.eligosource.eventsourced.core.Journal]] actor.
+   *
+   * @param journalActor journal actor factory.
+   * @param name optional name of the journal actor in the underlying actor system.
+   * @param dispatcherName optional dispatcher name.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
+   */
+  def apply(journalActor: => Journal, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
+    var props = Props(journalActor)
+
+    dispatcherName.foreach { name =>
+      props = props.withDispatcher(name)
+    }
+
+    if (name.isDefined)
+      system.actorOf(props, name.get) else
+      system.actorOf(props)
+  }
 
   /**
    * Instructs a `Journal` to write an input `message`. An input message is an event message
@@ -266,7 +295,7 @@ object Journal {
   case class BatchDeliverOutMsgs(channels: Seq[ActorRef])
 
   /**
-   * Instructs a `Journal` to batch-replay input messages for multiple `Eventsourced` processors.
+   * Instructs a `Journal` to batch-replay input messages to multiple `Eventsourced` processors.
    *
    * @param replays command batch.
    *
@@ -275,7 +304,7 @@ object Journal {
   case class BatchReplayInMsgs(replays: Seq[ReplayInMsgs])
 
   /**
-   * Instructs a `Journal` to replay input messages for a single `Eventsourced` processor.
+   * Instructs a `Journal` to replay input messages to a single `Eventsourced` processor.
    *
    * @param processorId id of the `Eventsourced` processor.
    * @param fromSequenceNr sequence number from where the replay should start.
@@ -297,6 +326,11 @@ object Journal {
    *        sender reference is set to `system.deadLetters`.
    */
   case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, target: ActorRef)
+
+  /**
+   * Response from a journal to a sender when input message replay has been completed.
+   */
+  case object ReplayDone
 
   /**
    * Instructs a `Journal` to forward `msg` to `target` wrapped in a
@@ -326,6 +360,4 @@ object Journal {
    * @param msg wrapped event message.
    */
   case class Written(msg: Message)
-
-  private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
 }

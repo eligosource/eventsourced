@@ -31,16 +31,13 @@ import org.eligosource.eventsourced.core.Journal._
  *
  * Pros:
  *
- *  - efficient replay of input messages for all processors (batch replay
- *    with optional lower bound).
- *  - efficient replay of output messages
- *    (after initial replay of input messages)
+ *  - efficient replay of input messages for all processors (batch replay with optional lower bound).
+ *  - efficient replay of output messages (after initial replay of input messages)
  *  - efficient deletion of old entries
  *
  * Cons:
  *
- *  - replay of input messages for a single processor requires full scan
- *    (with optional lower bound)
+ *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
 private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Journal {
   val writeInMsgQueue = new WriteInMsgQueue
@@ -94,6 +91,7 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
         case _ => {}
       }
     }
+    sender ! ReplayDone
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
@@ -170,15 +168,6 @@ object JournalioJournal {
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
-    var props = Props(new JournalioJournal(dir))
-
-    dispatcherName.foreach { name =>
-      props = props.withDispatcher(name)
-    }
-
-    if (name.isDefined)
-      system.actorOf(props, name.get) else
-      system.actorOf(props)
-  }
+  def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    Journal(new JournalioJournal(dir), name, dispatcherName)
 }

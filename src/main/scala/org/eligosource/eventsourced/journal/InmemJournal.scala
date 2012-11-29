@@ -49,11 +49,13 @@ private [eventsourced] class InmemJournal extends Journal {
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
-    cmds.foreach(cmd => executeReplayInMsgs(cmd, msg => p(msg, cmd.target)))
+    cmds.foreach(cmd => replay(cmd.processorId, 0, cmd.fromSequenceNr, msg => p(msg, cmd.target)))
+    sender ! ReplayDone
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
     replay(cmd.processorId, 0, cmd.fromSequenceNr, p)
+    sender ! ReplayDone
   }
 
   def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: Message => Unit) {
@@ -73,8 +75,10 @@ private [eventsourced] class InmemJournal extends Journal {
     if (iter.hasNext) {
       val nextEntry = iter.next()
       val nextKey   = nextEntry._1
-      assert(nextKey.confirmingChannelId == 0)
-      if (key.processorId         == nextKey.processorId &&
+      if (nextKey.confirmingChannelId != 0) {
+        // phantom ack (just advance iterator)
+        replay(iter, nextKey, p)
+      } else if (key.processorId  == nextKey.processorId &&
           key.initiatingChannelId == nextKey.initiatingChannelId) {
         val msg = nextEntry._2.asInstanceOf[Message]
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
@@ -103,8 +107,6 @@ private [eventsourced] class InmemJournal extends Journal {
  * Creates an in-memory journal for testing purposes.
  */
 object InmemJournal {
-  def apply(name: Option[String] = None)(implicit system: ActorSystem): ActorRef =
-    if (name.isDefined)
-      system.actorOf(Props(new InmemJournal), name.get) else
-      system.actorOf(Props(new InmemJournal))
+  def apply(name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    Journal(new InmemJournal, name, dispatcherName)
 }
