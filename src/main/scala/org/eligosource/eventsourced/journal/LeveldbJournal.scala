@@ -113,4 +113,4 @@ object LeveldbJournal {
    */
   def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem) =
     processorStructuredDefault(dir, name = name, dispatcherName = dispatcherName)
-  }
+}

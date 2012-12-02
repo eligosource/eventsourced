@@ -199,17 +199,8 @@ object Journal {
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def apply(journalActor: => Journal, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef = {
-    var props = Props(journalActor)
-
-    dispatcherName.foreach { name =>
-      props = props.withDispatcher(name)
-    }
-
-    if (name.isDefined)
-      system.actorOf(props, name.get) else
-      system.actorOf(props)
-  }
+  def apply(journalActor: => Journal, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
+    actor(journalActor, name, dispatcherName)
 
   /**
    * Instructs a `Journal` to write an input `message`. An input message is an event message

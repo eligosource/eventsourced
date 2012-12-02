@@ -189,7 +189,7 @@ private [eventsourced] class DefaultLeveldbJournal(dir: File) extends LeveldbJou
  * specified by `throttleFor`, after every n replayed messages, specified by
  * `throttleAfter`.
  */
-private [eventsourced] class ThrottledReplayJournal(dir: File, throttleAfter: Int, throttleFor: FiniteDuration) extends LeveldbJournalPS(dir) {
+private [eventsourced] class ThrottledReplayJournal(dir: File, throttleAfter: Int, throttleFor: FiniteDuration, dispatcherName: Option[String] = None) extends LeveldbJournalPS(dir) {
   import LeveldbJournalPS._
   import ReplayThrottler._
 
@@ -203,7 +203,7 @@ private [eventsourced] class ThrottledReplayJournal(dir: File, throttleAfter: In
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
-    val replay = context.actorOf(Props(new ThrottledReplay(cmds, p)))
+    val replay = actor(new ThrottledReplay(cmds, p), dispatcherName = dispatcherName)
     replay forward Start
   }
 
@@ -256,6 +256,7 @@ private [eventsourced] class ThrottledReplayJournal(dir: File, throttleAfter: In
 
     var initiator: Option[ActorRef] = None
     var todo = messageTargetPairs
+    var ctr = 0
 
     // ---------------------------------------
     // TODO: send failure reply on exception
@@ -267,14 +268,18 @@ private [eventsourced] class ThrottledReplayJournal(dir: File, throttleAfter: In
         self ! Continue
       }
       case Continue => {
-        val (xs, ys) = todo.splitAt(throttleAfter)
-        xs.foreach { case (message, target) => p(message, target) }
-        if (ys.isEmpty) {
+        if (todo.isEmpty) {
           initiator.foreach(_ ! ReplayDone)
           context.stop(self)
-        } else {
-          todo = ys
+        } else if (ctr == throttleAfter) {
+          ctr = 0
           context.system.scheduler.scheduleOnce(throttleFor, self, Continue)
+        } else {
+          val (message, target) = todo.head
+          p(message, target)
+          ctr += 1
+          todo = todo.tail
+          self ! Continue
         }
       }
     }

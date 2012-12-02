@@ -18,6 +18,28 @@ package org.eligosource.eventsourced
 import akka.actor._
 
 package object core {
+
+  /**
+   * Instantiates, configures and returns a actor.
+   *
+   * @param actor actor factory.
+   * @param name optional name of the actor in the underlying actor system.
+   * @param dispatcherName optional dispatcher name.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
+   */
+  def actor(actor: => Actor, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
+    var props = Props(actor)
+
+    dispatcherName.foreach { name =>
+      props = props.withDispatcher(name)
+    }
+
+    if (name.isDefined)
+      actorRefFactory.actorOf(props, name.get) else
+      actorRefFactory.actorOf(props)
+  }
+
   // ------------------------------------------------------------
   //  Factories for special-purpose processors
   // ------------------------------------------------------------
