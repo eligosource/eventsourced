@@ -18,7 +18,8 @@ package org.eligosource.eventsourced.journal
 import java.io.{Closeable, File}
 import java.nio.ByteBuffer
 
-import scala.concurrent.duration._
+import akka.util.Duration
+import akka.util.duration._
 
 import akka.actor._
 
@@ -189,7 +190,7 @@ private [eventsourced] class DefaultLeveldbJournal(dir: File) extends LeveldbJou
  * specified by `throttleFor`, after every n replayed messages, specified by
  * `throttleAfter`.
  */
-private [eventsourced] class ThrottledReplayJournal(dir: File, throttleAfter: Int, throttleFor: FiniteDuration, dispatcherName: Option[String] = None) extends LeveldbJournalPS(dir) {
+private [eventsourced] class ThrottledReplayJournal(dir: File, throttleAfter: Int, throttleFor: Duration, dispatcherName: Option[String] = None) extends LeveldbJournalPS(dir) {
   import LeveldbJournalPS._
   import ReplayThrottler._
 

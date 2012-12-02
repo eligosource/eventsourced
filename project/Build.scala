@@ -9,33 +9,33 @@ object Settings {
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := buildOrganization,
     version      := buildVersion,
-    scalaVersion := buildScalaVersion,
-    scalaBinaryVersion <<= scalaVersion.identity
+    scalaVersion := buildScalaVersion
   )
 
   import Resolvers._
 
   val defaultSettings = buildSettings ++ Seq(
-    resolvers ++= Seq(journalioRepo),
-    scalacOptions in Compile ++= Seq("-target:jvm-1.6", "-unchecked"),
-    javacOptions in Compile ++= Seq("-source", "1.6", "-target", "1.6"),
+    resolvers ++= Seq(akkaRepo, journalioRepo),
+    scalacOptions in Compile ++= Seq("-target:jvm-1.5", "-unchecked"),
+    javacOptions in Compile ++= Seq("-source", "1.5", "-target", "1.5"),
     parallelExecution in Test := false
   )
 }
 
 object Resolvers {
+  val akkaRepo =      "Akka Repo"      at "http://repo.akka.io/releases"
   val journalioRepo = "Journalio Repo" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
 }
 
 object Dependencies {
   import Dependency._
 
-  val core = Seq(akkaActor, akkaCluster, commonsIo, journalIo, levelDbJni, protobuf, scalaTest, scalaActors)
+  val core = Seq(akkaActor, akkaRemote, commonsIo, journalIo, levelDbJni, protobuf, scalaTest)
 }
 
 object Version {
-  val Scala = "2.10.0-RC3"
-  val Akka  = "2.1.0-RC3"
+  val Scala = "2.9.2"
+  val Akka  = "2.0.4"
 }
 
 object Dependency {
@@ -46,7 +46,7 @@ object Dependency {
   // -----------------------------------------------
 
   val protobuf    = "com.google.protobuf"       %  "protobuf-java"  % "2.4.1" % "compile"
-  val akkaActor   = "com.typesafe.akka"         %% "akka-actor"     % Akka    % "compile"
+  val akkaActor   = "com.typesafe.akka"         %  "akka-actor"     % Akka    % "compile"
   val commonsIo   = "commons-io"                %  "commons-io"     % "2.3"   % "compile"
   val journalIo   = "journalio"                 %  "journalio"      % "1.2"   % "compile"
   val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all" % "1.4.1" % "compile"
@@ -55,9 +55,8 @@ object Dependency {
   //  Test
   // -----------------------------------------------
 
-  val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % Akka     % "test"
-  val scalaActors = "org.scala-lang"    %  "scala-actors"              % Scala    % "test"
-  val scalaTest   = "org.scalatest"     %% "scalatest"                 % "1.8-B1" % "test"
+  val akkaRemote  = "com.typesafe.akka" %  "akka-remote"  % Akka  % "test"
+  val scalaTest   = "org.scalatest"     %% "scalatest"    % "1.8" % "test"
 }
 
 object Publish {

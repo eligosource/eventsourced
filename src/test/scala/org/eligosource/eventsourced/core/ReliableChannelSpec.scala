@@ -15,12 +15,11 @@
  */
 package org.eligosource.eventsourced.core
 
-import scala.concurrent.duration._
-
 import java.util.Queue
 import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor._
+import akka.util.duration._
 
 import org.eligosource.eventsourced.core.Channel._
 import org.eligosource.eventsourced.core.Journal._

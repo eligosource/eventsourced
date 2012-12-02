@@ -18,12 +18,11 @@ package org.eligosource.eventsourced.journal
 import java.io.File
 import java.util.concurrent._
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 import akka.actor._
+import akka.dispatch.Await
 import akka.pattern.ask
 import akka.serialization.Serializer
+import akka.util.duration._
 import akka.util.Timeout
 
 import com.typesafe.config.ConfigFactory

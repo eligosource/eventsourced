@@ -19,12 +19,12 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.util.{Try, Success, Failure}
 
 import akka.actor._
+import akka.dispatch._
 import akka.pattern._
+import akka.util.Duration
+import akka.util.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core.Journal._
@@ -149,13 +149,13 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @param waitAtMost wait for the specified duration for the replay to complete.
    * @throws TimeoutException if replay doesn't complete within the specified duration.
    */
-  def replay(f: (Int) => Option[Long], waitAtMost: FiniteDuration = 1 minute) {
+  def replay(f: (Int) => Option[Long], waitAtMost: Duration = 1 minute) {
     val replays = processors.collect { case kv if (f(kv._1).isDefined) => ReplayInMsgs(kv._1, f(kv._1).get, kv._2) }
 
-    Try(Await.result(journal.ask(BatchReplayInMsgs(replays.toList))(Timeout(waitAtMost)), waitAtMost)) match {
-      case Success(_) => ()
-      case Failure(e: TimeoutException) => throw new TimeoutException("replay could not be completed within %s" format waitAtMost)
-      case Failure(e) =>                   throw e
+    try {
+      Await.result(journal.ask(BatchReplayInMsgs(replays.toList))(Timeout(waitAtMost)), waitAtMost)
+    } catch {
+      case e: TimeoutException => throw new TimeoutException("replay could not be completed within %s" format waitAtMost)
     }
   }
 
@@ -189,7 +189,7 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @param waitAtMost  wait for the specified duration for the replay to complete.
    * @throws TimeoutException if replay doesn't complete within the specified duration.
    */
-  def recover(waitAtMost: FiniteDuration = 1 minute) {
+  def recover(waitAtMost: Duration = 1 minute) {
     recover(_ => Some(0), waitAtMost)
   }
 
@@ -211,7 +211,7 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @param waitAtMost  wait for the specified duration for the replay to complete.
    * @throws TimeoutException if replay doesn't complete within the specified duration.
    */
-  def recover(f: (Int) => Option[Long], waitAtMost: FiniteDuration) {
+  def recover(f: (Int) => Option[Long], waitAtMost: Duration) {
     replay(f, waitAtMost)
     deliver()
   }
@@ -224,11 +224,11 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    *        is the set of all registered processor ids.
    * @param atMost maximum duration to wait for processing to complete.
    */
-  def awaitProcessing(processorIds: Set[Int] = processors.keySet, atMost: FiniteDuration = 1 minute) {
+  def awaitProcessing(processorIds: Set[Int] = processors.keySet, atMost: Duration = 1 minute) {
     import Eventsourced._
-    import system.dispatcher
 
     implicit val timeout = Timeout(atMost)
+    implicit val executor = system.dispatcher
 
     val selected = processors.filter { case (k, _) => processorIds.contains(k) }.values
     val future = Future.sequence(selected.map(p => p.ask(AwaitCompletion)))
@@ -437,19 +437,19 @@ case class ReliableChannelProps(
   /**
    * Returns a new `ReliableChannelProps` with the specified confirmation timeout.
    */
-  def withConfirmationTimeout(confirmationTimeout: FiniteDuration) =
+  def withConfirmationTimeout(confirmationTimeout: Duration) =
     copy(policy = policy.copy(confirmationTimeout = confirmationTimeout))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified restart delay.
    */
-  def withRestartDelay(restartDelay: FiniteDuration) =
+  def withRestartDelay(restartDelay: Duration) =
     copy(policy = policy.copy(restartDelay = restartDelay))
 
   /**
    * Returns a new `ReliableChannelProps` with the specified re-delivery delay.
    */
-  def withRedeliveryDelay(redeliveryDelay: FiniteDuration) =
+  def withRedeliveryDelay(redeliveryDelay: Duration) =
     copy(policy = policy.copy(redeliveryDelay = redeliveryDelay))
 
   /**

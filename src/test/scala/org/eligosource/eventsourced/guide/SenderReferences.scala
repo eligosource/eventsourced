@@ -17,10 +17,9 @@ package org.eligosource.eventsourced.guide
 
 import java.io.File
 
-import scala.concurrent.duration._
-
 import akka.actor._
 import akka.pattern.ask
+import akka.util.duration._
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._

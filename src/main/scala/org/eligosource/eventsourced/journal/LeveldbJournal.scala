@@ -17,7 +17,8 @@ package org.eligosource.eventsourced.journal
 
 import java.io.File
 
-import scala.concurrent.duration._
+import akka.util.Duration
+import akka.util.duration._
 
 import akka.actor._
 
@@ -74,7 +75,7 @@ object LeveldbJournal {
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
    */
-  def processorStructuredThrottled(dir: File, throttleAfter: Int = 10000, throttleFor: FiniteDuration = 100 milliseconds,
+  def processorStructuredThrottled(dir: File, throttleAfter: Int = 10000, throttleFor: Duration = 100 milliseconds,
       name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
     Journal(new ThrottledReplayJournal(dir, throttleAfter, throttleFor), name, dispatcherName)
 

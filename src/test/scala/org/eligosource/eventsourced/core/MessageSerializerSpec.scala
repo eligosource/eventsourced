@@ -15,11 +15,10 @@
  */
 package org.eligosource.eventsourced.core
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 import akka.actor._
+import akka.dispatch.Await
 import akka.pattern.ask
+import akka.util.duration._
 import akka.util.Timeout
 
 import com.typesafe.config.ConfigFactory

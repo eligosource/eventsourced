@@ -15,10 +15,11 @@
  */
 package org.eligosource.eventsourced.core
 
-import scala.concurrent.duration._
 import scala.collection.immutable.Queue
 
 import akka.actor._
+import akka.util.Duration
+import akka.util.duration._
 
 import org.eligosource.eventsourced.core.Journal._
 
@@ -137,10 +138,10 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
  * @param redeliveryMax Maximum number of re-delivery attempts.
  */
 case class RedeliveryPolicy(
-  confirmationTimeout: FiniteDuration,
-  restartDelay: FiniteDuration,
+  confirmationTimeout: Duration,
+  restartDelay: Duration,
   restartMax: Int,
-  redeliveryDelay: FiniteDuration,
+  redeliveryDelay: Duration,
   redeliveryMax: Int)
 
 object RedeliveryPolicy {

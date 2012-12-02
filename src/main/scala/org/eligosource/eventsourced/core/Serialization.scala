@@ -136,12 +136,15 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
 
   private def message(messageProtocol: MessageProtocol): Message = {
     val eventClass = if (messageProtocol.hasEventManifest)
-      Some(system.dynamicAccess.getClassFor[AnyRef](messageProtocol.getEventManifest.toStringUtf8).get) else None
+      system.dynamicAccess.getClassFor[AnyRef](messageProtocol.getEventManifest.toStringUtf8).fold(throw _, Some(_)) else None
 
     val event = extension.deserialize(
       messageProtocol.getEvent.toByteArray,
       messageProtocol.getEventSerializerId,
-      eventClass).get
+      eventClass) match {
+        case Left(e)  ⇒ throw e
+        case Right(r) ⇒ r
+    }
 
     val senderMessageId = if (messageProtocol.hasSenderMessageId) Some(messageProtocol.getSenderMessageId) else None
 
