@@ -23,7 +23,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.journal.LeveldbJournal
+import org.eligosource.eventsourced.journal.LeveldbJournalProps
 
 object OrderExample extends App {
   implicit val system = ActorSystem("example")
@@ -32,7 +32,7 @@ object OrderExample extends App {
   import system.dispatcher
 
   val journalDir = new java.io.File("target/example-1")
-  val journal = LeveldbJournal(journalDir)
+  val journal = Journal(LeveldbJournalProps(journalDir))
 
   val extension = EventsourcingExtension(system, journal)
 

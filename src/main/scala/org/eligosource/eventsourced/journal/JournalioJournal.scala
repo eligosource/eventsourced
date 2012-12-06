@@ -27,7 +27,7 @@ import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
 
 /**
- * Journal.IO based journal.
+ * [[https://github.com/sbtourist/Journal.IO Journal.IO]] based journal.
  *
  * Pros:
  *
@@ -39,7 +39,7 @@ import org.eligosource.eventsourced.core.Journal._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorSystem) extends Journal {
+private [eventsourced] class JournalioJournal(props: JournalioJournalProps) extends Journal {
   val writeInMsgQueue = new WriteInMsgQueue
   val writeOutMsgCache = new WriteOutMsgCache[Location]
 
@@ -130,12 +130,13 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
   }
 
   override def start() {
-    dir.mkdirs()
-    journal.setPhysicalSync(false)
-    journal.setDirectory(dir)
-    journal.setWriter(system.dispatcher)
+    props.dir.mkdirs()
+
+    journal.setPhysicalSync(props.fsync)
+    journal.setDirectory(props.dir)
+    journal.setWriter(context.dispatcher)
     journal.setDisposer(disposer)
-    journal.setChecksum(false)
+    journal.setChecksum(props.checksum)
     journal.open()
   }
 
@@ -145,29 +146,11 @@ private [eventsourced] class JournalioJournal(dir: File)(implicit system: ActorS
   }
 }
 
+/**
+ * @see [[org.eligosource.eventsourced.journal.JournalioJournalProps]]
+ */
 object JournalioJournal {
-  /**
-   * Creates a [[https://github.com/sbtourist/Journal.IO Journal.IO]] based journal.
-   *
-   * Pros:
-   *
-   *  - efficient replay of input messages for all processors (batch replay
-   *    with optional lower bound).
-   *  - efficient replay of output messages
-   *    (after initial replay of input messages)
-   *  - efficient deletion of old entries
-   *
-   * Cons:
-   *
-   *  - replay of input messages for a single processor requires full scan
-   *    (with optional lower bound)
-   *
-   * @param dir journal directory
-   * @param name optional name of the journal actor in the underlying actor system.
-   * @param dispatcherName optional dispatcher name.
-   * @throws InvalidActorNameException if `name` is defined and already in use
-   *         in the underlying actor system.
-   */
+  @deprecated("use Journal(JournalioJournalProps(dir)) instead", "0.5")
   def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
-    Journal(new JournalioJournal(dir), name, dispatcherName)
+    Journal(JournalioJournalProps(dir, name, dispatcherName))
 }

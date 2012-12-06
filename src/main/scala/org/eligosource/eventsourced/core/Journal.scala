@@ -188,19 +188,14 @@ trait Journal extends Actor {
 object Journal {
   val SkipAck: Long = -1L
 
-  private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
-
   /**
-   * Instantiates, configures and returns a [[org.eligosource.eventsourced.core.Journal]] actor.
+   * Creates a journal actor from the specified journal configuration object.
    *
-   * @param journalActor journal actor factory.
-   * @param name optional name of the journal actor in the underlying actor system.
-   * @param dispatcherName optional dispatcher name.
-   * @throws InvalidActorNameException if `name` is defined and already in use
-   *         in the underlying actor system.
+   * @param props journal configuration object.
+   * @return journal actor.
    */
-  def apply(journalActor: => Journal, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
-    actor(journalActor, name, dispatcherName)
+  def apply(props: JournalProps)(implicit actorRefFactory: ActorRefFactory): ActorRef =
+    actor(props.journal, props.name, props.dispatcherName)
 
   /**
    * Instructs a `Journal` to write an input `message`. An input message is an event message
@@ -351,4 +346,6 @@ object Journal {
    * @param msg wrapped event message.
    */
   case class Written(msg: Message)
+
+  private [eventsourced] case class SetCommandListener(listener: Option[ActorRef])
 }

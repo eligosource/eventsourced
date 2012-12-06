@@ -143,13 +143,13 @@ object Node {
  * are used by the cluster. This application is a standalone application
  * that is remotely accessed but not part of the cluster.
  */
-object Journal extends App {
+object Destination extends App {
   // create an actor system with a configruation loaded from "cluster.conf"
   implicit val system = ActorSystem("journal", ConfigFactory.load("journal"))
 
   // create a journal and register that journal actor actor under name "journal"
   // in the underlying actor system (needed for remote lookup).
-  val journal = JournalioJournal(new File("target/cluster"), Some("journal"))
+  val journal = Journal(JournalioJournalProps(new File("target/cluster")).withName("journal"))
 
   // create a destination and register that destination actor under name "destination"
   // in the underlying actor system (needed for remote lookup).

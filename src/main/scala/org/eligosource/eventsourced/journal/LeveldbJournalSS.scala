@@ -15,7 +15,6 @@
  */
 package org.eligosource.eventsourced.journal
 
-import java.io.File
 import java.nio.ByteBuffer
 
 import akka.actor._
@@ -27,8 +26,8 @@ import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
 
 /**
- * LevelDB based journal that organizes entries primarily based on sequence numbers,
- * keeping input and output entries separated.
+ * [[http://code.google.com/p/leveldb/ LevelDB]] based journal that orders entries
+ * by sequence number, keeping input and output entries separated.
  *
  * Pros:
  *
@@ -40,14 +39,14 @@ import org.eligosource.eventsourced.core.Journal._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class LeveldbJournalSS(dir: File) extends Journal {
+private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extends Journal {
   import LeveldbJournalSS._
 
   val writeOutMsgCache = new WriteOutMsgCache[Long]
 
-  val levelDbReadOptions = new ReadOptions
-  val levelDbWriteOptions = new WriteOptions().sync(false)
-  val leveldb = factory.open(dir, new Options().createIfMissing(true))
+  val levelDbReadOptions = new ReadOptions().verifyChecksums(props.checksum)
+  val levelDbWriteOptions = new WriteOptions().sync(props.fsync)
+  val leveldb = factory.open(props.dir, new Options().createIfMissing(true))
 
   val serialization = Serialization(context.system)
 

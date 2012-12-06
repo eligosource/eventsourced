@@ -35,9 +35,9 @@ The *Eventsourced* library fits well into applications that implement the [CQRS]
 
 For persisting event messages, *Eventsourced* currently provides the following journal implementations:
 
-- [`LeveldbJournal`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournal$), a [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni) based journal which is currently recommended for production use. It comes with different optimizations and features sets which are further explained in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournal$). It will also be used in the following examples. Because LevelDB is a native library, this journal requires a special [configuration](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native) in [sbt](http://www.scala-sbt.org/) projects. 
-- [`JournalioJournal`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.JournalioJournal$), a [Journal.IO](https://github.com/sbtourist/Journal.IO) based journal. 
-- [`InmemJournal`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.JournalioJournal$), an in-memory journal for testing purposes.
+- A [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni) based journal which is currently recommended for production use (see also [`LeveldbJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournalProps)). Because LevelDB is a native library, this journal requires a special [sbt](http://www.scala-sbt.org/) project [configuration](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). It will be used in the following examples.
+- A [Journal.IO](https://github.com/sbtourist/Journal.IO) based journal (see also [`JournalioJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.JournalioJournalProps)). 
+- An in-memory journal for testing purposes (see also [`InmemJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.InmemJournalProps)).
 
 Distributed journal implementations (e.g. based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/)) as well as event archives (for long-term event storage) will come soon.
 
@@ -77,7 +77,7 @@ An `EventsourcingExtension` is initialized with an `ActorSystem` and a journal `
     import org.eligosource.eventsourced.journal._
 
     val system: ActorSystem = ActorSystem("example")
-    val journal: ActorRef = LeveldbJournal(new File("target/example-1"))
+    val journal: ActorRef = Journal(LeveldbJournalProps(new File("target/example-1")))
     val extension: EventsourcingExtension = EventsourcingExtension(system, journal)
 
 This example uses a [LevelDB](http://code.google.com/p/leveldb/) based journal but any other [journal implementation](#journals) can be used as well.
@@ -840,7 +840,7 @@ When the master crashes, another node in the cluster becomes the master and reco
 
 Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/src/test/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/src/test/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application, first start the application that hosts the `Destination` actor and the journal:
 
-    sbt 'test:run-main org.eligosource.eventsourced.example.Journal'
+    sbt 'test:run-main org.eligosource.eventsourced.example.Destination'
 
 Then start the first seed node of the cluster
 

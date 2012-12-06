@@ -213,27 +213,27 @@ abstract class LeveldbJournalPSSpec extends JournalSpec {
   }
 }
 
-class DefaultJournalSpec extends LeveldbJournalPSSpec {
+class LeveldbJournalPSDefaultSpec extends LeveldbJournalPSSpec {
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    LeveldbJournal.processorStructuredDefault(journalDir)
+    Journal(LeveldbJournalProps(journalDir))
 }
 
-class ThrottledJournalSpec extends LeveldbJournalPSSpec {
+class LeveldbJournalPSThrottledSpec extends LeveldbJournalPSSpec {
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    LeveldbJournal.processorStructuredThrottled(journalDir)
+    Journal(LeveldbJournalProps(journalDir).withThrottledReplay(10000))
 }
 
 class LeveldbJournalSSSpec extends JournalSpec {
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    LeveldbJournal.sequenceStructured(journalDir)
+    Journal(LeveldbJournalProps(journalDir).withSequenceStructure)
 }
 
 class JournalioJournalSpec extends JournalSpec {
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    JournalioJournal(journalDir)
+    Journal(JournalioJournalProps(journalDir))
 }
 
 class InmenJournalSpec extends JournalSpec {
   def createJournal(journalDir: File)(implicit system: ActorSystem) =
-    InmemJournal()
+    Journal(InmemJournalProps())
 }

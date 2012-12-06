@@ -24,7 +24,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.journal.LeveldbJournal
+import org.eligosource.eventsourced.journal.LeveldbJournalProps
 
 object SenderReferences extends App {
   implicit val system = ActorSystem("guide")
@@ -33,7 +33,7 @@ object SenderReferences extends App {
   import system.dispatcher
 
   // create a journal
-  val journal: ActorRef = LeveldbJournal(new File("target/guide-3"))
+  val journal: ActorRef = Journal(LeveldbJournalProps(new File("target/guide-3")))
 
   // create an event-sourcing extension
   val extension = EventsourcingExtension(system, journal)

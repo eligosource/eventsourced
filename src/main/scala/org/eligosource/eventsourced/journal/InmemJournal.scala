@@ -104,9 +104,10 @@ private [eventsourced] class InmemJournal extends Journal {
 }
 
 /**
- * Creates an in-memory journal for testing purposes.
+ * @see [[org.eligosource.eventsourced.journal.InmemJournalProps]]
  */
 object InmemJournal {
+  @deprecated("use Journal(InmemJournalProps(dir)) instead", "0.5")
   def apply(name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
-    Journal(new InmemJournal, name, dispatcherName)
+    Journal(InmemJournalProps(name, dispatcherName))
 }

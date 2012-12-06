@@ -31,7 +31,7 @@ import org.apache.commons.io.FileUtils
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
-import org.eligosource.eventsourced.journal.LeveldbJournal
+import org.eligosource.eventsourced.journal.LeveldbJournalProps
 
 abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extends WordSpec with MustMatchers {
   type FixtureParam = T
@@ -54,7 +54,7 @@ trait EventsourcingFixture[A] {
   implicit val timeout = Timeout(5 seconds)
 
   val journalDir = new File("target/journal")
-  val journal = LeveldbJournal(journalDir)
+  val journal = Journal(LeveldbJournalProps(journalDir))
   val queue = new LinkedBlockingQueue[A]
 
   val extension = EventsourcingExtension(system, journal)
