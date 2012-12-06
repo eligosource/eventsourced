@@ -235,15 +235,8 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
     journal ! ReplayOutMsgs(id, 0L, dst)
   }
 
-  private def createBuffer() = {
-    var props = Props(new ReliableChannelBuffer(id, journal, destination, policy, dispatcherName))
-
-    dispatcherName.foreach { name =>
-      props = props.withDispatcher(name)
-    }
-
-    context.watch(context.actorOf(props))
-  }
+  private def createBuffer() =
+    context.watch(actor(new ReliableChannelBuffer(id, journal, destination, policy, dispatcherName), dispatcherName = dispatcherName))
 }
 
 private [core] object ReliableChannel {
@@ -283,15 +276,8 @@ private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, de
     }
   }
 
-  def createDeliverer() = {
-    var props = Props(new ReliableChannelDeliverer(channelId, journal, destination, policy))
-
-    dispatcherName.foreach { name =>
-      props = props.withDispatcher(name)
-    }
-
-    context.actorOf(props)
-  }
+  def createDeliverer() =
+    actor(new ReliableChannelDeliverer(channelId, journal, destination, policy), dispatcherName = dispatcherName)
 }
 
 private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy) extends Actor {
