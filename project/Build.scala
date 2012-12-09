@@ -34,8 +34,8 @@ object Dependencies {
 }
 
 object Version {
-  val Scala = "2.10.0-RC3"
-  val Akka  = "2.1.0-RC3"
+  val Scala = "2.10.0-RC5"
+  val Akka  = "2.1.0-RC4"
 }
 
 object Dependency {
