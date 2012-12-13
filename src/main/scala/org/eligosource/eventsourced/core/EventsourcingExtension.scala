@@ -150,7 +150,9 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @throws TimeoutException if replay doesn't complete within the specified duration.
    */
   def replay(f: (Int) => Option[Long], waitAtMost: FiniteDuration = 1 minute) {
-    val replays = processors.collect { case kv if (f(kv._1).isDefined) => ReplayInMsgs(kv._1, f(kv._1).get, kv._2) }
+    val replays = processors.collect {
+      case (pid, p) if (f(pid).isDefined) => ReplayInMsgs(pid, f(pid).get, p)
+    }
 
     Try(Await.result(journal.ask(BatchReplayInMsgs(replays.toList))(Timeout(waitAtMost)), waitAtMost)) match {
       case Success(_) => ()
