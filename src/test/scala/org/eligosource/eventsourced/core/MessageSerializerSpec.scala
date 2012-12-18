@@ -35,8 +35,11 @@ class MessageSerializerSpec extends WordSpec with MustMatchers {
   class Fixture {
     implicit val timeout = Timeout(5 seconds)
 
-    val server = ActorSystem("server", ConfigFactory.load("remote-server"))
-    val client = ActorSystem("client", ConfigFactory.load("remote-client"))
+    val config = ConfigFactory.load("serializer")
+    val configCommon = config.getConfig("common")
+
+    val server = ActorSystem("server", config.getConfig("server").withFallback(configCommon))
+    val client = ActorSystem("client", config.getConfig("client").withFallback(configCommon))
 
     server.actorOf(Props[RemoteActor], "remote")
 
