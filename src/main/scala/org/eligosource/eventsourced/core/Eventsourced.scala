@@ -64,8 +64,8 @@ import org.eligosource.eventsourced.core.Journal._
 trait Eventsourced extends Behavior {
   import Eventsourced._
 
-  private val extension = EventsourcingExtension(context.system)
-  private val journal = extension.journal
+  protected val extension = EventsourcingExtension(context.system)
+  protected val journal = extension.journal
 
   /**
    * Processor id. Must be a positive integer.

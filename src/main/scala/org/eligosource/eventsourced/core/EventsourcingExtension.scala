@@ -176,6 +176,13 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   /**
+   * Enables the specified channels and starts delivery of pending messages.
+   */
+  def deliver(channels: Seq[ActorRef]) {
+    journal ! BatchDeliverOutMsgs(channels)
+  }
+
+  /**
    * Recovers all processors and channels registered at this extension by first
    * calling `replay(_ => Some(0))` and then `deliver()`. Replay is done with no
    * lower bound (i.e. with all messages in the journal).
