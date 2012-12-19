@@ -42,7 +42,7 @@ object CounterExample extends App {
   process ! AddCounter(counter3)
 
   for {
-    _ <- process ? Recover
+    _ <- process ? Recover(timeout)
     _ <- process ? Message(Increment(2)) // will fail after 3 retries
     _ <- process ? Message(Increment(3)) // will fail after failure reply
     _ <- process ? Message(Increment(4)) // will succeed
@@ -97,15 +97,17 @@ class IncrementProcess(val id: Int) extends Actor { this: Receiver with Eventsou
       proxy ! SetScatterSource(self)
       targets = channel :: targets
     }
-    case Recover => {
-      // recover this process instance ...
-      extension.replay {
-        case `id` => Some(0L)
-        case _    => None
+    case Recover(timeout) => {
+      import context.dispatcher
+      val initiator = sender
+      val composite = for {
+        _ <- extension.replay(pid => if (pid == id) Some(0L) else None)(timeout)
+        _ <- extension.deliver(targets)(timeout)
+      } yield ()
+
+      composite onSuccess {
+        case _ => initiator ! Recovered
       }
-      // incl. the reliable channels used for this instance
-      extension.deliver(targets)
-      sender ! Recovered
     }
   }
 
@@ -134,7 +136,7 @@ class IncrementProcess(val id: Int) extends Actor { this: Receiver with Eventsou
 
 object IncrementProcess {
   case class AddCounter(counter: ActorRef)
-  case object Recover
+  case class Recover(timeout: Timeout)
   case object Recovered
 }
 

@@ -507,13 +507,15 @@ The [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/sn
     extension.processorOf(ProcessorProps(processorId, …))
 
     // replay event messages for that processor individually
-    extension.replay(id => if (id == processorId) Some(0) else None)
+    extension.replay(id => if (id == processorId) Some(0) else None) onSuccess {
+      case _ => // start using processor ...
+    }
 
 A call to `replay` can be omitted if a processor did not journal any event message in previous application runs. Channels can be activated individually with the `deliver(channelId: Int)` method. 
 
 ### Await processing
 
-The `replay` and `recover` methods wait for replayed messages being added to the corresponding processor mailboxes but do not wait for replayed event messages being processed by these processors. However, any new message sent to any registered processor, after `replay` or `recover` successfully returned, is guaranteed to be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessing()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension). 
+The `recover` method waits for replayed messages being added to the corresponding processor mailboxes but does not wait for replayed event messages being processed by these processors. However, any new message sent to any registered processor, after `recover` successfully returned, will be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessing()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension). 
 
     val extension: EventsourcingExtension = … 
 
@@ -521,6 +523,24 @@ The `replay` and `recover` methods wait for replayed messages being added to the
     extension.awaitProcessing()
 
 This can be useful in situations where event-sourced processors maintain state via STM references and the application wants to ensure that the (externally visible) state is fully recovered before accepting new read requests from client applications. By default, the `awaitProcessing()` method waits for all registered processors to complete processing but applications can also specify a subset of registered processors.
+
+### Non-blocking recovery
+
+The `recover` and `awaitProcessing` methods block the calling thread. This may be convenient in scenarios where a main thread wants to recover the state of an event-sourced application before taking any further actions. In other scenarios, for example, where recovery is done for individual child processors (and channels) inside an actor, the non-blocking recovery API should be used: 
+
+    val extension: EventsourcingExtension = … 
+
+    val future = for {
+      _ <- extension.replay(…)
+      _ <- extension.deliver(…)            // optional
+      _ <- extension.completeProcessing(…) // optional
+    } yield ()
+
+    future onSuccess {
+      case _ => // event-sourced processors now ready to use … 
+    }
+
+The futures returned by `replay`, `deliver` and `completeProcessing` are monadically composed with a for-comprehension which ensures a sequential execution of these methods. The composite `future` is completed once all methods have completed their returned futures. More details in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension).
 
 ### State dependencies
 

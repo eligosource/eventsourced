@@ -56,6 +56,7 @@ trait Journal extends Actor {
     }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
+      sender ! DeliveryDone
     }
     case SetCommandListener(cl) => {
       commandListener = cl
@@ -317,6 +318,11 @@ object Journal {
    * Response from a journal to a sender when input message replay has been completed.
    */
   case object ReplayDone
+
+  /**
+   * Response from a journal when message delivery by channels has been initiated.
+   */
+  case object DeliveryDone
 
   /**
    * Instructs a `Journal` to forward `msg` to `target` wrapped in a

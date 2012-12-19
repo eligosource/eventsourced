@@ -134,63 +134,56 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   /**
-   * Replays input messages to selected processors. This method waits for replayed
-   * messages being added to processor mailboxes but does not wait for replayed input
-   * messages being processed. However, any new message sent to any of the selected
-   * processors, after this method successfully returned, is guaranteed to be processed
-   * after the replayed event messages.
+   * Replays input messages to selected processors. The returned `Future` will be
+   * completed when the replayed messages have been added to the selected processor's
+   * mailboxes. Any new message sent to any of the selected processors, after successful
+   * completion of the returned `Future`, will be processed after the replayed input
+   * messages.
    *
    * Clients that want to wait for replayed messages being processed should call the
-   * `awaitProcessing` method after this method successfully returned.
+   * `awaitProcessing` method after the returned `Future` successfully completed.
    *
    * @param f function called for each processor id. If the function returns `None`
    *        no message replay will be done for that processor. If it returns `Some(snr)`
    *        message replay will start from sequence number `snr` for that processor.
-   * @param waitAtMost wait for the specified duration for the replay to complete.
-   * @throws TimeoutException if replay doesn't complete within the specified duration.
    */
-  def replay(f: (Int) => Option[Long], waitAtMost: FiniteDuration = 1 minute) {
+  def replay(f: (Int) => Option[Long])(implicit timeout: Timeout): Future[Any] = {
     val replays = processors.collect {
       case (pid, p) if (f(pid).isDefined) => ReplayInMsgs(pid, f(pid).get, p)
     }
-
-    Try(Await.result(journal.ask(BatchReplayInMsgs(replays.toList))(Timeout(waitAtMost)), waitAtMost)) match {
-      case Success(_) => ()
-      case Failure(e: TimeoutException) => throw new TimeoutException("replay could not be completed within %s" format waitAtMost)
-      case Failure(e) =>                   throw e
-    }
+    journal ? (BatchReplayInMsgs(replays.toList))
   }
 
   /**
    * Enables all registered channels and starts delivery of pending messages.
    */
-  def deliver() {
-    journal ! BatchDeliverOutMsgs(channels.values.toList)
+  def deliver()(implicit timeout: Timeout): Future[Any] = {
+    journal ? BatchDeliverOutMsgs(channels.values.toList)
   }
 
   /**
    * Enables the channel registered under `channelId` and starts delivery of pending messages.
    */
-  def deliver(channelId: Int) {
-    journal ! BatchDeliverOutMsgs(channels.get(channelId).toList)
+  def deliver(channelId: Int)(implicit timeout: Timeout): Future[Any] = {
+    journal ? BatchDeliverOutMsgs(channels.get(channelId).toList)
   }
 
   /**
    * Enables the specified channels and starts delivery of pending messages.
    */
-  def deliver(channels: Seq[ActorRef]) {
-    journal ! BatchDeliverOutMsgs(channels)
+  def deliver(channels: Seq[ActorRef])(implicit timeout: Timeout): Future[Any] = {
+    journal ? BatchDeliverOutMsgs(channels)
   }
 
   /**
-   * Recovers all processors and channels registered at this extension by first
-   * calling `replay(_ => Some(0))` and then `deliver()`. Replay is done with no
-   * lower bound (i.e. with all messages in the journal).
+   * Recovers all processors and channels registered at this extension by
+   * sequentially executing `replay(_ => Some(0))` and then `deliver()`.
+   * Replay is done with no lower bound (i.e. with all messages in the journal).
    *
    * This method waits for replayed messages being added to processor mailboxes but
    * does not wait for replayed input messages being processed. However, any new message
    * sent to any of the selected processors, after this method successfully returned,
-   * is guaranteed to be processed after the replayed event messages.
+   * will be processed after the replayed event messages.
    *
    * Clients that want to wait for replayed messages being processed should call the
    * `awaitProcessing` method after this method successfully returned.
@@ -203,13 +196,13 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   /**
-   * Recovers selected processors and all channels registered at this extension by first
-   * calling `replay(f)` and then `deliver()`.
+   * Recovers selected processors and all channels registered at this extension by
+   * sequentially executing `replay(f)` and then `deliver()`.
    *
    * This method waits for replayed messages being added to processor mailboxes but
    * does not wait for replayed input messages being processed. However, any new message
    * sent to any of the selected processors, after this method successfully returned,
-   * is guaranteed to be processed after the replayed event messages.
+   * will be processed after the replayed event messages.
    *
    * Clients that want to wait for replayed messages being processed should call the
    * `awaitProcessing` method after this method successfully returned.
@@ -221,12 +214,37 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @throws TimeoutException if replay doesn't complete within the specified duration.
    */
   def recover(f: (Int) => Option[Long], waitAtMost: FiniteDuration) {
-    replay(f, waitAtMost)
-    deliver()
+    implicit val timeout = Timeout(waitAtMost)
+    import system.dispatcher
+    val c = for {
+      _ <- replay(f)
+      _ <- deliver()
+    } yield ()
+
+    Try(Await.result(c, waitAtMost)) match {
+      case Success(_) => ()
+      case Failure(e: TimeoutException) => throw new TimeoutException("recovery could not be completed within %s" format waitAtMost)
+      case Failure(e) =>                   throw e
+    }
   }
 
   /**
-   * Waits for selected processors to complete processing of all pending messages
+   * Returns a `Future` that will be completed when selected processors have finished
+   * processing all pending messages in their mailboxes.
+   *
+   * @param processorIds ids of registered processors to wait for. Default value
+   *        is the set of all registered processor ids.
+   */
+  def completeProcessing(processorIds: Set[Int] = processors.keySet)(implicit timeout: Timeout): Future[Any] = {
+    import Eventsourced._
+    import system.dispatcher
+
+    val selected = processors.filter { case (k, _) => processorIds.contains(k) }.values
+    Future.sequence(selected.map(p => p.ask(CompleteProcessing))).mapTo[Any]
+  }
+
+  /**
+   * Waits for selected processors to finish processing of all pending messages
    * in their mailboxes.
    *
    * @param processorIds ids of registered processors to wait for. Default value
@@ -234,15 +252,7 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @param atMost maximum duration to wait for processing to complete.
    */
   def awaitProcessing(processorIds: Set[Int] = processors.keySet, atMost: FiniteDuration = 1 minute) {
-    import Eventsourced._
-    import system.dispatcher
-
-    implicit val timeout = Timeout(atMost)
-
-    val selected = processors.filter { case (k, _) => processorIds.contains(k) }.values
-    val future = Future.sequence(selected.map(p => p.ask(AwaitCompletion)))
-
-    Await.result(future, atMost)
+    Await.result(completeProcessing(processorIds)(Timeout(atMost)), atMost)
   }
 
   @tailrec
