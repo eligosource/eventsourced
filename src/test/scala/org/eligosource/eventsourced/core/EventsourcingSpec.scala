@@ -16,7 +16,7 @@
 package org.eligosource.eventsourced.core
 
 import java.io.File
-import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -79,5 +79,25 @@ trait EventsourcingFixture[A] {
     system.shutdown()
     system.awaitTermination(5 seconds)
     FileUtils.deleteDirectory(journalDir)
+  }
+}
+
+trait FutureCommands {
+  def await()
+}
+
+class CommandListener(latch: CountDownLatch, predicate: PartialFunction[Any, Boolean]) extends Actor {
+  def receive = {
+    case msg => if (predicate.isDefinedAt(msg) && predicate(msg)) latch.countDown()
+  }
+}
+
+object CommandListener {
+  def apply(journal: ActorRef, count: Int)(predicate: PartialFunction[Any, Boolean])(implicit system: ActorSystem): FutureCommands = {
+    val latch = new CountDownLatch(count)
+    journal ! Journal.SetCommandListener(Some(system.actorOf(Props(new CommandListener(latch, predicate)))))
+    new FutureCommands {
+      def await() = latch.await(5, TimeUnit.SECONDS)
+    }
   }
 }

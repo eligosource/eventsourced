@@ -21,6 +21,7 @@ import akka.actor._
 import akka.pattern.ask
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Journal._
 
 import AggregatorExample._
 
@@ -31,6 +32,7 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
 
       {
         val aggregator = configure()
+        val completion = CommandListener(journal, 2) { case WriteAck(_, 1, _) | DeleteOutMsg(2, _) => true }
 
         extension.recover()
 
@@ -47,6 +49,10 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
         val delivered = dequeue()
         delivered.event must be(InputAggregated("category-a", List("input-1", "input-2", "input-3")))
         delivered.senderMessageId must be(Some("aggregated-1"))
+
+        // wait for delivery confirmation to be written to journal
+        // (only needed because processors are replaced in the next step)
+        completion.await()
       }
 
       {
@@ -74,7 +80,7 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
 
 object AggregatorExample {
   class Fixture extends EventsourcingFixture[Message] {
-    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Idempotent with Confirm))
+    val destination = system.actorOf(Props(new Destination(queue) with Receiver with Confirm))
 
     def configure(): ActorRef = {
       val processor = extension.processorOf(Props(new Aggregator with Emitter with Confirm with Eventsourced { val id = 1 } ))

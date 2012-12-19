@@ -18,6 +18,7 @@ package org.eligosource.eventsourced.example
 import akka.actor._
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Journal._
 
 import FsmExample._
 
@@ -27,6 +28,7 @@ class FsmExample extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val door = configure()
+      val completion = CommandListener(journal, 3) { case cmd: WriteAck => true }
       extension.recover()
 
       door ! Message("open")
@@ -36,6 +38,8 @@ class FsmExample extends EventsourcingSpec[Fixture] {
       dequeue must be(DoorMoved(Open, 1))
       dequeue must be(DoorMoved(Closed, 2))
       dequeue must be(DoorNotMoved(Closed, "cannot close door"))
+
+      completion.await()
 
       val recoveredDoor = configure()
       extension.recover()
