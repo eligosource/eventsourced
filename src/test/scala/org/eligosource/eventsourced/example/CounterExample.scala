@@ -10,7 +10,7 @@ import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal._
-import org.eligosource.eventsourced.patterns._
+import org.eligosource.eventsourced.patterns.aggregate._
 
 object CounterExample extends App {
   import IncrementProcess._
@@ -25,16 +25,16 @@ object CounterExample extends App {
   val extension = EventsourcingExtension(system, journal)
 
   // external services (running locally in this example)
-  val counter1 = system.actorOf(Props(new Counter("counter 1")))
-  val counter2 = system.actorOf(Props(new Counter("counter 2")))
-  val counter3 = system.actorOf(Props(new Counter("counter 3")))
+  val counter1 = system.actorOf(Props(new Counter("counter 1") with CounterIdempotency))
+  val counter2 = system.actorOf(Props(new Counter("counter 2") with CounterIdempotency))
+  val counter3 = system.actorOf(Props(new Counter("counter 3") with CounterIdempotency))
 
   // set some failure conditions
-  counter2 ! MuteOn(2) // ignore increment of 2 and do not respond
+  counter2 ! FailOn(2) // send failure reply on increment of 2
   counter1 ! FailOn(3) // send failure reply on increment of 3
 
   // create single process instance
-  val process = extension.processorOf(Props(new IncrementProcess(1) with Receiver with Eventsourced))
+  val process = extension.processorOf(Props(new IncrementProcess(1) with GatherIdempotency with Receiver with Eventsourced))
 
   // add (external) services to the process instance
   process ! AddCounter(counter1)
@@ -48,7 +48,7 @@ object CounterExample extends App {
     _ <- process ? Message(Increment(4)) // will succeed
   } ()
 
-  Thread.sleep(10000)
+  Thread.sleep(1000)
   system.shutdown()
 }
 
@@ -78,7 +78,7 @@ class IncrementProcess(val id: Int) extends Actor { this: Receiver with Eventsou
   val idle: Receive = {
     case inc: Increment => {
       initiator = sender
-      val sg = new ScatterGather(this, targets.map((_ -> inc)))
+      val sg = new ScatterGather(this, targets.map((_ -> inc.copy(compensation = false, clientId = id, processId = message.sequenceNr))))
       // scatter increments to external counters
       sg.scatter()
       // switch to 'gathering' behavior and call
@@ -94,7 +94,7 @@ class IncrementProcess(val id: Int) extends Actor { this: Receiver with Eventsou
         .withRedeliveryDelay(0 seconds)
         .withConfirmationTimeout(2 seconds))
 
-      proxy ! SetScatterSource(self)
+      proxy ! ScatterTarget.SetScatterSource(self)
       targets = channel :: targets
     }
     case Recover(timeout) => {
@@ -119,7 +119,9 @@ class IncrementProcess(val id: Int) extends Actor { this: Receiver with Eventsou
     } else {
       println("increment failed")
       val sg = new ScatterGather(this, result.gatheredSuccess.map {
-        case GatheredSuccess(target, Increment(delta), _) => target -> Increment(-delta) // compensation messages
+        case GatheredSuccess(target, Increment(inc, _, cid, pid), _) => {
+          target -> Increment(-inc, true, cid, pid) // compensation message
+        }
       })
       // scatter compensation messages to targets
       sg.scatter()
@@ -159,7 +161,7 @@ class CounterProxy(counter: ActorRef) extends ScatterTarget { this: Receiver =>
         case f: IncrementFailure => onFailure(f)
       }
       future onFailure {
-        case t => if (redeliveries > 2) onFailure(IncrementFailure("increment timeout", r.delta))
+        case t => if (redeliveries > 2) onFailure(IncrementFailure("increment timeout", r.value))
       }
     }
   }
@@ -176,39 +178,47 @@ class Counter(name: String) extends Actor {
   import Counter._
 
   var failOn: Int = 0
-  var muteOn: Int = 0
-  var value = 0
+  var counter = 0
 
   def receive = {
-    case Increment(d) => {
-      if (failOn == d) {
-        println("%s: state = %d, reject = %d" format (name, value, d))
-        sender ! IncrementFailure("invalid delta", d)
+    case inc @ Increment(value, _, _, _) => {
+      if (failOn == inc.value) {
+        println("%s: state = %d, increment = %s, rejected" format (name, counter, inc))
+        sender ! IncrementFailure("invalid increment", value)
       } else {
-        if (muteOn != d) {
-          value += d
-          println("%s: state = %d, accept = %d" format (name, value, d))
-          sender ! IncrementSuccess(value)
-        } else {
-          println("%s: state = %d, no service" format (name, value))
-        }
+        counter += value
+        println("%s: state = %d, increment = %s, accepted" format (name, counter, inc))
+        sender ! IncrementSuccess(counter)
       }
     }
-    case FailOn(d)    => failOn = d
-    case MuteOn(d)    => muteOn = d
-    case Get          => sender ! value
+    case FailOn(d) => failOn = d
+  }
+}
+
+trait CounterIdempotency extends Actor { this: Counter =>
+  import Counter._
+
+  // clientId -> (lastProcessId, compensation)
+  var processes = Map.empty[Int, (Long, Boolean)]
+
+  abstract override def receive = {
+    case inc @ Increment(_, compensation, clientId, processId) => processes.get(clientId) match {
+      case Some((`processId`, `compensation`)) => println("duplicate detected and dropped %s" format inc)
+      case _ => { super.receive(inc); processes = processes + (clientId -> (processId, compensation)) }
+    }
+    case msg => super.receive(msg)
   }
 }
 
 object Counter extends App {
-  case class Increment(delta: Int)
-  case class IncrementSuccess(value: Int)
-  case class IncrementFailure(message: String, delta: Int)
-
-  case class FailOn(delta: Int)
-  case class MuteOn(delta: Int)
-
-  case object Get
+  case class Increment(
+    value: Int,                    // increment value
+    compensation: Boolean = false, // whether this is compensation
+    clientId: Int = 0,             // identifies the sending client (needed for duplicate detection)
+    processId: Long = 0L)          // identifies the sending process (sending 1 increment and 0..1 compensations)
+  case class IncrementSuccess(counter: Int)
+  case class IncrementFailure(message: String, value: Int)
+  case class FailOn(increment: Int)
 
   val system = ActorSystem("counter")
   val counter = system.actorOf(Props[Counter], "counter")
