@@ -32,7 +32,6 @@ import akka.actor._
  *       case "foo event" => {
  *         val msg = message          // current message
  *         val snr = sequenceNr       // sequence number of message
- *         val sid = senderMessageId  // sender message id of current message (for duplicate detection)
  *
  *         assert(snr > 0L)
  *         // ...
@@ -77,14 +76,6 @@ trait Receiver extends Behavior {
    * @see `messageOption`
    */
   def message: Message = messageOption.getOrElse(throw new IllegalStateException("no current event or command message"))
-
-  /**
-   * Sender message id of current event message.
-   *
-   * @throws IllegalStateException if the the last message received by this receiver
-   * is not of type [[org.eligosource.eventsourced.core.Message]]
-   */
-  def senderMessageId: Option[String] = message.senderMessageId
 
   /**
    * Sequence number of current event message

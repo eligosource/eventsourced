@@ -60,13 +60,13 @@ class GraphRecoverySpec extends EventsourcingSpec[Fixture] {
         // 7.) output message from processor 2 (written by channel 'echo' and deleted after delivery)
         //journal ! WriteOutMsg(2, Message(InputModified("a-0-0"), 2, SkipAck, Some("4"), 5), None, dl, false)
         // 8.) output message from processor 2 is again input message 1'' for processor 1
-        journal ! WriteInMsg(1, Message(InputModified("a-0-0"), Some("4"), 6), dl, false)
+        journal ! WriteInMsg(1, Message(InputModified("a-0-0", 4), 6), dl, false)
 
         setupReliableChannels()
         extension.recover()
 
-        dequeue { m => { m.event must be(InputModified("a-0-0-2")); m.senderMessageId must be(Some("4")) } }
-        dequeue { m =>   m.event must be(InputModified("b-1-1-3")) }
+        dequeue { m => m.event must be(InputModified("a-0-0-2")) }
+        dequeue { m => m.event must be(InputModified("b-1-1-3")) }
       }
       "recover from failures and support duplicate detection" in { fixture =>
         import fixture._
@@ -89,17 +89,17 @@ class GraphRecoverySpec extends EventsourcingSpec[Fixture] {
         journal ! WriteAck(2, 2, 4)
         // 7.) output message from processor 2 (written by channel 'echo')
         // DELIVERED TO NEXT PROCESSOR BUT NOT YET DELETED BY RELIABLE CHANNEL:
-        // WILL CAUSE A DUPLICATE (which is detected via senderMessageId)
-        journal ! WriteOutMsg(2, Message(InputModified("a-0-0"), Some("4"), 5), 2, SkipAck, dl, false)
+        // WILL CAUSE A DUPLICATE (which is detected via InputModified.msgId field)
+        journal ! WriteOutMsg(2, Message(InputModified("a-0-0", 4), 5), 2, SkipAck, dl, false)
         // 8.) output message from processor 2 is again input message 1'' for processor 1
-        journal ! WriteInMsg(1, Message(InputModified("a-0-0"), Some("4"), 6), dl, false)
+        journal ! WriteInMsg(1, Message(InputModified("a-0-0", 4), 6), dl, false)
 
         setupReliableChannels()
         extension.recover()
 
-        dequeue { m => { m.event must be(InputModified("a-0-0-2")); m.senderMessageId must be(Some("4")) } }
-        dequeue { m =>   m.event must be(InputModified("a-0-0-dup")) }
-        dequeue { m =>   m.event must be(InputModified("b-1-1-3")) }
+        dequeue { m => m.event must be(InputModified("a-0-0-2")) }
+        dequeue { m => m.event must be(InputModified("a-0-0-dup")) }
+        dequeue { m => m.event must be(InputModified("b-1-1-3")) }
       }
     }
     "using default channels" must {
@@ -119,15 +119,15 @@ class GraphRecoverySpec extends EventsourcingSpec[Fixture] {
         // 4.) ACK that output message of processor 1 has been stored by processor 2
         journal ! WriteAck(1, 1, 1)
         // 5.) output message from processor 2 is again input message 1'' for processor 1
-        journal ! WriteInMsg(1, Message(InputModified("a-0-0"), Some("3"), 4), dl, false)
+        journal ! WriteInMsg(1, Message(InputModified("a-0-0", 3), 4), dl, false)
         // 6.) ACK that output message of processor 2 has been stored by processor 1
         journal ! WriteAck(2, 2, 3)
 
         setupDefaultChannels()
         extension.recover()
 
-        dequeue { m => { m.event must be(InputModified("a-0-0-2")); m.senderMessageId must be(Some("3")) } }
-        dequeue { m =>   m.event must be(InputModified("b-1-1-3")) }
+        dequeue { m => m.event must be(InputModified("a-0-0-2")) }
+        dequeue { m => m.event must be(InputModified("b-1-1-3")) }
       }
       "recover from failures and support duplicate detection" in { fixture =>
         import fixture._
@@ -145,17 +145,17 @@ class GraphRecoverySpec extends EventsourcingSpec[Fixture] {
         // 4.) ACK that output message of processor 1 has been stored by processor 2
         journal ! WriteAck(1, 1, 1)
         // 5.) output message from processor 2 is again input message 1'' for processor 1
-        journal ! WriteInMsg(1, Message(InputModified("a-0-0"), Some("3"), 4), dl, false)
+        journal ! WriteInMsg(1, Message(InputModified("a-0-0", 3), 4), dl, false)
         // 6.) ACK that output message of processor 2 has been stored by processor 1
-        // NOT YET ACKNOWLEDGED: WILL CAUSE A DUPLICATE (which is detected via senderMessageId)
+        // NOT YET ACKNOWLEDGED: WILL CAUSE A DUPLICATE (which is detected via InputModified.msgId field)
         //journal ! WriteAck(2, 2, 3)
 
         setupDefaultChannels()
         extension.recover()
 
-        dequeue { m => { m.event must be(InputModified("a-0-0-2")); m.senderMessageId must be(Some("3")) } }
-        dequeue { m =>   m.event must be(InputModified("a-0-0-dup")) }
-        dequeue { m =>   m.event must be(InputModified("b-1-1-3")) }
+        dequeue { m => m.event must be(InputModified("a-0-0-2")) }
+        dequeue { m => m.event must be(InputModified("a-0-0-dup")) }
+        dequeue { m => m.event must be(InputModified("b-1-1-3")) }
       }
     }
   }
@@ -185,25 +185,24 @@ object GraphRecoverySpec {
   }
 
   case class InputCreated(s: String)
-  case class InputModified(s: String)
+  case class InputModified(s: String, msgId: Long = 0L)
 
   class Processor1 extends Actor { this: Emitter =>
     var numProcessed = 0
-    var lastSenderMessageId = 0L
+    var lastMessageId = 0L
 
     def receive = {
       case InputCreated(s)  => {
         emitter("processor2") sendEvent InputModified("%s-%d" format (s, numProcessed))
         numProcessed = numProcessed + 1
       }
-      case InputModified(s) => {
-        val sid = senderMessageId.get.toLong
-        if (sid <= lastSenderMessageId) { // duplicate detected
+      case InputModified(s, msgId) => {
+        if (msgId <= lastMessageId) { // duplicate detected
           emitter("dest") sendEvent InputModified("%s-%s" format (s, "dup"))
         } else {
           emitter("dest") sendEvent InputModified("%s-%d" format (s, numProcessed))
           numProcessed = numProcessed + 1
-          lastSenderMessageId = sid
+          lastMessageId = msgId
         }
       }
     }
@@ -213,11 +212,8 @@ object GraphRecoverySpec {
     var numProcessed = 0
 
     def receive = {
-      case InputModified(s) => {
-        val evt = InputModified("%s-%d" format (s, numProcessed))
-        val sid = Some(sequenceNr.toString) // for detecting duplicates
-
-        emitter("echo") send (msg => msg.copy(event = evt, senderMessageId = sid))
+      case InputModified(s, _) => {
+        emitter("echo") sendEvent InputModified("%s-%d" format (s, numProcessed), sequenceNr)
         numProcessed = numProcessed + 1
       }
     }

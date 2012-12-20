@@ -28,7 +28,6 @@ message MessageProtocol {
   optional bytes event = 2;
   optional bytes eventManifest = 3;
   optional int32 eventSerializerId = 4;
-  optional string senderMessageId = 5;
   optional int32 processorId = 6;
   optional int64 sequenceNr = 7;
 }

@@ -91,7 +91,6 @@ object BasicExample extends App {
         // Receiver actors have access to:
         val msg = message          // current message
         val snr = sequenceNr       // sequence number of message
-        val sid = senderMessageId  // sender message id of current message (for duplicate detection)
         // ...
 
         // Eventsourced actors have access to processor id
@@ -133,7 +132,6 @@ object BasicExample extends App {
         // Receiver actors have access to:
         val msg = message          // current message
         val snr = sequenceNr       // sequence number of message
-        val sid = senderMessageId  // sender message id of current message (for duplicate detection)
         // ...
 
         // do something with event

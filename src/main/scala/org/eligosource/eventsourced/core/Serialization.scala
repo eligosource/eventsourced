@@ -123,10 +123,6 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
       .setProcessorId(message.processorId)
       .setSequenceNr(message.sequenceNr)
 
-    message.senderMessageId.foreach { smid =>
-      builder.setSenderMessageId(smid)
-    }
-
     if (serializer.includeManifest) {
       builder.setEventManifest(ByteString.copyFromUtf8(event.getClass.getName))
     }
@@ -143,11 +139,8 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
       messageProtocol.getEventSerializerId,
       eventClass).get
 
-    val senderMessageId = if (messageProtocol.hasSenderMessageId) Some(messageProtocol.getSenderMessageId) else None
-
     Message(
       event = event,
-      senderMessageId = senderMessageId,
       processorId = messageProtocol.getProcessorId,
       sequenceNr = messageProtocol.getSequenceNr)
   }

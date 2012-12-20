@@ -603,11 +603,59 @@ Under certain failure conditions, [channels](#channels) may deliver event messag
 
 For these (but also other) reasons, channel destinations must be idempotent event message consumers which is an application-level concern. For example, an event message consumer that stores received purchase orders in a map (where the map key is the order id) is likely to be an idempotent consumer because receiving a purchase order only once or several times will lead to the same result: the purchase order is contained in the map only once. An event message consumer that counts the number of received purchase orders is not an idempotent consumer: a re-delivery will lead to a wrong counter value from a business logic perspective. In this case the event message consumer must implement some extra means to detect event message *duplicates*. 
 
-For detecting duplicates, applications can use the `senderMessageId` and `sequenceNr` fields of event [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s. A sequence number (`sequenceNr`) is assigned to an event message when it is written to a journal i.e. before it is received by an `Eventsourced` processor or after it has been added to a reliable channel. The `senderMessageId` is an optional `String` that is used on application-level only (i.e. it is neither changed nor interpreted by the library). Therefore, event messages that are re-delivered by a channel are guaranteed to have the same `senderMessageId`. Consumers that keep track of `senderMessageId` values can therefore detect duplicates. What follows are some general guidelines for implementing idempotent event message processing based on these two `Message` fields. 
+For detecting duplicates, applications should use identifiers with their events. Identifier values should be set by an event-sourced processor before an event is emitted via a channel. Channel destinations (or other downstream consumers) should keep track of identifiers of successfully processed events and compare them to identifiers of newly received events. A newly received event with an already known identifier can be considered as a duplicate (assuming that the emitting processor generates unique identifiers). For generating unique identifiers, processors can use the sequence number of received event messages:
 
-- `Eventsourced` processors can encode the message sequence number (`sequenceNr`) in the `senderMessageId` field to allow downstream event message consumers to detect duplicates. Encoding the sequence number has the advantage that downstream consumers only need to remember the last consumed `senderMessageId`: if the `senderMessageId` of a newly received event message encodes a sequence number that is less than or equal to the one encoded in the last consumed `senderMessageId` then the newly received event message is a duplicate and can/should be ignored by the consumer.
-- `Eventsourced` processors that emit an [event message series](#event-series) should encode both, the sequence number and an output message index, in the `senderMessageId` field. Consumers should then compare encoded sequence number - index pairs for detecting duplicates. 
-- Consumers that are `Eventsourced` processors can store the last consumed `senderMessageId` as part of their state which will be recovered during an event message replay. Other consumers must store the `senderMessageId` somewhere else.
+    case class MyEvent(details: Any, eventId: Long)
+
+    class Processor extends Actor { this: Emitter with Eventsourced =>
+      def receive = {
+        case event => {
+          // get sequence number of current event message
+          val snr: Long = sequenceNr
+          val details: Any = … 
+          // … 
+          emitter("channelName") sendEvent MyEvent(details, snr)
+        }
+      }
+    }
+
+Using the sequence number has the advantage that consumers of emitted events only need to remember the identifier of the last successfully consumed event. If the identifier of a newly received event is less than or equal to that of the last consumed event then it is a duplicate and can therefore be ignored. 
+
+    class Consumer extends Actor {
+      var lastEventId = 0L
+    
+      def receive = {
+        case MyEvent(details, eventId) =>
+          if (eventId <= lastEventId) {
+            // duplicate
+          } else {
+            // ...
+            lastEventId = eventId
+          }
+      }
+    }
+
+Consumers that are event-sourced processors can store the event identifier as part of their state which will be recovered during an event message replay. Other consumers must store the identifier somewhere else. 
+
+Processors that emit [event message series](#event-series) should use an event message index in addition to the sequence number to uniquely identify an emitted event:
+
+    case class MyEvent(details: Any, eventId: (Long, Int))
+
+    class Processor extends Actor { this: Emitter with Eventsourced =>
+      def receive = {
+        case event => {
+          // get sequence number of current event message
+          val snr: Long = sequenceNr
+          val details: Seq[Any] = … 
+          // … 
+          emitter("channelName") send (msg => msg.copy(event = MyEvent(details(0), (snr, 0)), ack = false))
+          emitter("channelName") send (msg => msg.copy(event = MyEvent(details(1), (snr, 1)), ack = false))
+          // … 
+        }
+      }
+    }
+
+Consumers should then compare the sequence number - index pairs for detecting duplicates. 
 
 Serialization
 -------------

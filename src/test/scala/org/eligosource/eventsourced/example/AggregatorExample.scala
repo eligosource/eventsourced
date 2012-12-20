@@ -47,8 +47,7 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
 
         // obtain output event message delivered to destination
         val delivered = dequeue()
-        delivered.event must be(InputAggregated("category-a", List("input-1", "input-2", "input-3")))
-        delivered.senderMessageId must be(Some("aggregated-1"))
+        delivered.event must be(InputAggregated("category-a", List("input-1", "input-2", "input-3"), 1))
 
         // wait for delivery confirmation to be written to journal
         // (only needed because processors are replaced in the next step)
@@ -71,8 +70,7 @@ class AggregatorExample extends EventsourcingSpec[Fixture] {
 
         // obtain next output event message delivered to destination
         val delivered = dequeue()
-        delivered.event must be(InputAggregated("category-b", List("input-7", "input-8", "input-9")))
-        delivered.senderMessageId must be(Some("aggregated-2"))
+        delivered.event must be(InputAggregated("category-b", List("input-7", "input-8", "input-9"), 2))
       }
     }
   }
@@ -92,7 +90,7 @@ object AggregatorExample {
 
   // Events
   case class InputAvailable(category: String, input: String)
-  case class InputAggregated(category: String, inputs: List[String])
+  case class InputAggregated(category: String, inputs: List[String], count: Int = 0)
 
   // Event-sourced aggregator
   class Aggregator extends Actor { this: Emitter =>
@@ -100,11 +98,11 @@ object AggregatorExample {
     var inputs = Map.empty[String, List[String]] // category -> inputs
 
     def receive = {
-      case InputAggregated(category, inputs) => {
+      case InputAggregated(category, inputs, _) => {
         // count number of InputAggregated receivced
         inputAggregatedCounter = inputAggregatedCounter + 1
         // emit InputAggregated event to destination with sender message id containing the counted aggregations
-        emitter(2) send { msg => msg.copy(senderMessageId = Some("aggregated-%d" format inputAggregatedCounter)) }
+        emitter(2) sendEvent InputAggregated(category, inputs, inputAggregatedCounter)
         // reply to initial sender that message has been aggregated
         sender ! "aggregated %d messages of %s".format(inputs.size, category)
       }

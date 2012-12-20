@@ -32,8 +32,6 @@ import akka.actor.ActorRef
  * initial senders using the actor's current `sender` reference.
  *
  * @param event Application event (or command).
- * @param senderMessageId Optional, sender-defined message id that allows receivers
- *        to detect duplicates (which may occur during recovery or fail-over).
  * @param sequenceNr Sequence number that is generated when messages are written
  *        to the journal. Can also be used for detecting duplicates, in special cases.
  * @param processorId Id of the event processor that stored (and emitted) this message.
@@ -48,7 +46,6 @@ import akka.actor.ActorRef
  */
 case class Message(
   event: Any,
-  senderMessageId: Option[String] = None,
   sequenceNr: Long = 0L,
   processorId: Int = 0,
   acks: Seq[Int] = Nil,

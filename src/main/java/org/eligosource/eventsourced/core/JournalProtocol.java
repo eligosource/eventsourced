@@ -363,7 +363,7 @@ public final class JournalProtocol {
         maybeForceBuilderInitialization();
       }
       
-      private Builder(BuilderParent parent) {
+      private Builder(com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -764,10 +764,6 @@ public final class JournalProtocol {
     boolean hasEventSerializerId();
     int getEventSerializerId();
     
-    // optional string senderMessageId = 5;
-    boolean hasSenderMessageId();
-    String getSenderMessageId();
-    
     // optional int32 processorId = 6;
     boolean hasProcessorId();
     int getProcessorId();
@@ -835,43 +831,11 @@ public final class JournalProtocol {
       return eventSerializerId_;
     }
     
-    // optional string senderMessageId = 5;
-    public static final int SENDERMESSAGEID_FIELD_NUMBER = 5;
-    private java.lang.Object senderMessageId_;
-    public boolean hasSenderMessageId() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    public String getSenderMessageId() {
-      java.lang.Object ref = senderMessageId_;
-      if (ref instanceof String) {
-        return (String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-          senderMessageId_ = s;
-        }
-        return s;
-      }
-    }
-    private com.google.protobuf.ByteString getSenderMessageIdBytes() {
-      java.lang.Object ref = senderMessageId_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-        senderMessageId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    
     // optional int32 processorId = 6;
     public static final int PROCESSORID_FIELD_NUMBER = 6;
     private int processorId_;
     public boolean hasProcessorId() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     public int getProcessorId() {
       return processorId_;
@@ -881,7 +845,7 @@ public final class JournalProtocol {
     public static final int SEQUENCENR_FIELD_NUMBER = 7;
     private long sequenceNr_;
     public boolean hasSequenceNr() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     public long getSequenceNr() {
       return sequenceNr_;
@@ -891,7 +855,6 @@ public final class JournalProtocol {
       event_ = com.google.protobuf.ByteString.EMPTY;
       eventManifest_ = com.google.protobuf.ByteString.EMPTY;
       eventSerializerId_ = 0;
-      senderMessageId_ = "";
       processorId_ = 0;
       sequenceNr_ = 0L;
     }
@@ -917,12 +880,9 @@ public final class JournalProtocol {
         output.writeInt32(4, eventSerializerId_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeBytes(5, getSenderMessageIdBytes());
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeInt32(6, processorId_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeInt64(7, sequenceNr_);
       }
       getUnknownFields().writeTo(output);
@@ -948,13 +908,9 @@ public final class JournalProtocol {
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(5, getSenderMessageIdBytes());
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(6, processorId_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(7, sequenceNr_);
       }
@@ -1068,7 +1024,7 @@ public final class JournalProtocol {
         maybeForceBuilderInitialization();
       }
       
-      private Builder(BuilderParent parent) {
+      private Builder(com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1088,12 +1044,10 @@ public final class JournalProtocol {
         bitField0_ = (bitField0_ & ~0x00000002);
         eventSerializerId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
-        senderMessageId_ = "";
-        bitField0_ = (bitField0_ & ~0x00000008);
         processorId_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000008);
         sequenceNr_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
       
@@ -1147,13 +1101,9 @@ public final class JournalProtocol {
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000008;
         }
-        result.senderMessageId_ = senderMessageId_;
+        result.processorId_ = processorId_;
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
-        }
-        result.processorId_ = processorId_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
         }
         result.sequenceNr_ = sequenceNr_;
         result.bitField0_ = to_bitField0_;
@@ -1180,9 +1130,6 @@ public final class JournalProtocol {
         }
         if (other.hasEventSerializerId()) {
           setEventSerializerId(other.getEventSerializerId());
-        }
-        if (other.hasSenderMessageId()) {
-          setSenderMessageId(other.getSenderMessageId());
         }
         if (other.hasProcessorId()) {
           setProcessorId(other.getProcessorId());
@@ -1236,18 +1183,13 @@ public final class JournalProtocol {
               eventSerializerId_ = input.readInt32();
               break;
             }
-            case 42: {
-              bitField0_ |= 0x00000008;
-              senderMessageId_ = input.readBytes();
-              break;
-            }
             case 48: {
-              bitField0_ |= 0x00000010;
+              bitField0_ |= 0x00000008;
               processorId_ = input.readInt32();
               break;
             }
             case 56: {
-              bitField0_ |= 0x00000020;
+              bitField0_ |= 0x00000010;
               sequenceNr_ = input.readInt64();
               break;
             }
@@ -1326,58 +1268,22 @@ public final class JournalProtocol {
         return this;
       }
       
-      // optional string senderMessageId = 5;
-      private java.lang.Object senderMessageId_ = "";
-      public boolean hasSenderMessageId() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      public String getSenderMessageId() {
-        java.lang.Object ref = senderMessageId_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-          senderMessageId_ = s;
-          return s;
-        } else {
-          return (String) ref;
-        }
-      }
-      public Builder setSenderMessageId(String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
-        senderMessageId_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearSenderMessageId() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        senderMessageId_ = getDefaultInstance().getSenderMessageId();
-        onChanged();
-        return this;
-      }
-      void setSenderMessageId(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000008;
-        senderMessageId_ = value;
-        onChanged();
-      }
-      
       // optional int32 processorId = 6;
       private int processorId_ ;
       public boolean hasProcessorId() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       public int getProcessorId() {
         return processorId_;
       }
       public Builder setProcessorId(int value) {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         processorId_ = value;
         onChanged();
         return this;
       }
       public Builder clearProcessorId() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000008);
         processorId_ = 0;
         onChanged();
         return this;
@@ -1386,19 +1292,19 @@ public final class JournalProtocol {
       // optional int64 sequenceNr = 7;
       private long sequenceNr_ ;
       public boolean hasSequenceNr() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       public long getSequenceNr() {
         return sequenceNr_;
       }
       public Builder setSequenceNr(long value) {
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000010;
         sequenceNr_ = value;
         onChanged();
         return this;
       }
       public Builder clearSequenceNr() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000010);
         sequenceNr_ = 0L;
         onChanged();
         return this;
@@ -1438,13 +1344,13 @@ public final class JournalProtocol {
       "col\022!\n\013commandType\030\001 \002(\0162\014.CommandType\022!" +
       "\n\007message\030\002 \001(\0132\020.MessageProtocol\022\023\n\013pro" +
       "cessorId\030\003 \001(\005\022\021\n\tchannelId\030\004 \001(\005\022\022\n\nseq" +
-      "uenceNr\030\005 \001(\003\"\224\001\n\017MessageProtocol\022\r\n\005eve" +
-      "nt\030\002 \001(\014\022\025\n\reventManifest\030\003 \001(\014\022\031\n\021event" +
-      "SerializerId\030\004 \001(\005\022\027\n\017senderMessageId\030\005 " +
-      "\001(\t\022\023\n\013processorId\030\006 \001(\005\022\022\n\nsequenceNr\030\007" +
-      " \001(\003*9\n\013CommandType\022\014\n\010WRITE_IN\020\001\022\r\n\tWRI" +
-      "TE_OUT\020\002\022\r\n\tWRITE_ACK\020\003B4\n!org.eligosour",
-      "ce.eventsourced.coreB\017JournalProtocol"
+      "uenceNr\030\005 \001(\003\"{\n\017MessageProtocol\022\r\n\005even" +
+      "t\030\002 \001(\014\022\025\n\reventManifest\030\003 \001(\014\022\031\n\021eventS" +
+      "erializerId\030\004 \001(\005\022\023\n\013processorId\030\006 \001(\005\022\022" +
+      "\n\nsequenceNr\030\007 \001(\003*9\n\013CommandType\022\014\n\010WRI" +
+      "TE_IN\020\001\022\r\n\tWRITE_OUT\020\002\022\r\n\tWRITE_ACK\020\003B4\n" +
+      "!org.eligosource.eventsourced.coreB\017Jour",
+      "nalProtocol"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1464,7 +1370,7 @@ public final class JournalProtocol {
           internal_static_MessageProtocol_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MessageProtocol_descriptor,
-              new java.lang.String[] { "Event", "EventManifest", "EventSerializerId", "SenderMessageId", "ProcessorId", "SequenceNr", },
+              new java.lang.String[] { "Event", "EventManifest", "EventSerializerId", "ProcessorId", "SequenceNr", },
               org.eligosource.eventsourced.core.JournalProtocol.MessageProtocol.class,
               org.eligosource.eventsourced.core.JournalProtocol.MessageProtocol.Builder.class);
           return null;
