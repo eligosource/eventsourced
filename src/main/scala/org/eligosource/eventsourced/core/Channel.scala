@@ -328,7 +328,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
 
     case Confirmed(snr, true) => currentDelivery match {
       case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
-        currentDelivery = None; task.cancel(); journal ! DeleteOutMsg(channelId, snr); self ! Next(0)
+        currentDelivery = None; task.cancel(); journal ! DeleteOutMsg(channelId, snr); self ! Next(0); redeliveries = 0
       }
       case None => ()
     }
