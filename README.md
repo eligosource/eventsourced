@@ -451,13 +451,13 @@ This configuration object additionally allows applications to configure a [`Rede
 
 ### Usage hints
 
-For channels to work properly, event-sourced processors must copy the `processorId` and `sequenceNr` values from a received (and journaled) input event message to output event messages. This is usually done by calling `copy()` on the received input event message and updating only those fields that are relevant for the application such as `event` or `senderMessageId`, for example: 
+For channels to work properly, event-sourced processors must copy the `processorId` and `sequenceNr` values from a received (and journaled) input event message to output event messages. This is usually done by calling `copy()` on the received input event message and updating only those fields that are relevant for the application such as `event` or `ack`, for example: 
 
     class Processor(channel: ActorRef) extends Actor {
       def receive = {
         case msg: Message => {
           // … 
-          channel ! msg.copy(event = …, senderMessageId = …)
+          channel ! msg.copy(event = …, ack = …)
         }
       }
     }

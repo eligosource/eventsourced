@@ -19,13 +19,19 @@ import akka.actor._
 
 import org.eligosource.eventsourced.core._
 
-case class GatheredSuccess(target: ActorRef, msg: Any, replyMsg: Any)
-case class GatheredFailure(target: ActorRef, msg: Any, replyMsg: Any)
-
 trait GatherResult {
   def gatheredSuccess: Seq[GatheredSuccess]
   def gatheredFailure: Seq[GatheredFailure]
 }
+
+trait Gathered {
+  def target: ActorRef
+  def msg: Any
+  def replyMsg: Any
+}
+
+case class GatheredSuccess(target: ActorRef, msg: Any, replyMsg: Any) extends Gathered
+case class GatheredFailure(target: ActorRef, msg: Any, replyMsg: Any) extends Gathered
 
 class ScatterGather(processor: Receiver, targetedMessages: Iterable[(ActorRef, Any)]) {
   import ScatterGather._
@@ -56,6 +62,10 @@ class ScatterGather(processor: Receiver, targetedMessages: Iterable[(ActorRef, A
       state = state.handle(fr)
       processor.confirm()
       if (state.isCompleted) handler(state)
+    }
+    case other => {
+      // TODO: better failure reply
+      processor.sender ! "failure: busy gathering"
     }
   }
 }
