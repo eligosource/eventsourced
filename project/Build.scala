@@ -9,8 +9,7 @@ object Settings {
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := buildOrganization,
     version      := buildVersion,
-    scalaVersion := buildScalaVersion,
-    scalaBinaryVersion <<= scalaVersion.identity
+    scalaVersion := buildScalaVersion
   )
 
   import Resolvers._
@@ -34,8 +33,8 @@ object Dependencies {
 }
 
 object Version {
-  val Scala = "2.10.0-RC5"
-  val Akka  = "2.1.0-RC5"
+  val Scala = "2.10.0"
+  val Akka  = "2.1.0"
 }
 
 object Dependency {
@@ -55,9 +54,9 @@ object Dependency {
   //  Test
   // -----------------------------------------------
 
-  val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % Akka     % "test"
-  val scalaActors = "org.scala-lang"    %  "scala-actors"              % Scala    % "test"
-  val scalaTest   = "org.scalatest"     %% "scalatest"                 % "1.8-B1" % "test"
+  val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % Akka    % "test"
+  val scalaActors = "org.scala-lang"    %  "scala-actors"              % Scala   % "test"
+  val scalaTest   = "org.scalatest"     %% "scalatest"                 % "1.9.1" % "test"
 }
 
 object Publish {
@@ -117,7 +116,7 @@ object EventsourcedBuild extends Build {
     }
   }
 
-  val testNobootcpSetting = test <<= (scalaVersion, streams, fullClasspath in Test) map { (sv, st, cp) =>
+  val testNobootcpSetting = test <<= (scalaBinaryVersion, streams, fullClasspath in Test) map { (sv, st, cp) =>
     val testCp = cp.map(_.data).mkString(pathSeparator)
     val testExec = "org.scalatest.tools.Runner"
     val testPath = "target/scala-%s/test-classes" format sv

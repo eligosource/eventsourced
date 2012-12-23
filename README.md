@@ -6,11 +6,11 @@ Eventsourced
 <table border="0">
   <tr>
     <td>Scala version: </td>
-    <td>2.10.0-RC5</td>
+    <td>2.10.0</td>
   </tr>
   <tr>
     <td>Akka version: </td>
-    <td>2.1.0-RC5</td>
+    <td>2.1.0</td>
   </tr>
 </table>
 
