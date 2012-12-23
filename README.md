@@ -45,6 +45,7 @@ Distributed journal implementations (e.g. based on [Apache BookKeeper](http://zo
 
 - [Eventsourced API](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package)
 - [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
+- [FAQ](https://github.com/eligosource/eventsourced/wiki/FAQ)
 
 ### Support
 
