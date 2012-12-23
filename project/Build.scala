@@ -4,7 +4,7 @@ import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettin
 
 object Settings {
   val buildOrganization = "org.eligosource"
-  val buildVersion      = "0.5-SNAPSHOT"
+  val buildVersion      = "0.5-M1"
   val buildScalaVersion = Version.Scala
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := buildOrganization,
