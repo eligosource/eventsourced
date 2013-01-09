@@ -53,17 +53,20 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   implicit def cmdToBytes(cmd: AnyRef): Array[Byte] = serialization.serializeCommand(cmd)
   implicit def cmdFromBytes[A](bytes: Array[Byte]): A = serialization.deserializeCommand(bytes).asInstanceOf[A]
 
-  def executeWriteInMsg(cmd: WriteInMsg) {
+  def executeWriteInMsg(cmd: WriteInMsg) = withBatch { batch =>
     val pmsg = cmd.message.clearConfirmationSettings
     val pcmd = cmdToBytes(cmd.copy(message = pmsg, target = null))
-    leveldb.put(SSKey(In, counter, 0), pcmd)
+
+    batch.put(CounterKeyBytes, counterToBytes(counter))
+    batch.put(SSKey(In, counter, 0), pcmd)
   }
 
   def executeWriteOutMsg(cmd: WriteOutMsg) = withBatch { batch =>
     val pmsg = cmd.message.clearConfirmationSettings
     val pcmd = cmdToBytes(cmd.copy(message = pmsg, target = null))
 
-    batch.put(SSKey(Out, counter, cmd.channelId), pcmd)
+    batch.put(CounterKeyBytes, counterToBytes(counter))
+    batch.put(SSKey(Out, counter, 0), pcmd)
 
     if (cmd.ackSequenceNr != SkipAck) {
       batch.put(SSKey(In, cmd.ackSequenceNr, cmd.channelId), Array.empty[Byte])
@@ -77,7 +80,9 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   }
 
   def executeDeleteOutMsg(cmd: DeleteOutMsg) {
-    writeOutMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
+    writeOutMsgCache.update(cmd).foreach { loc => {
+      leveldb.delete(SSKey(Out, loc, 0))
+    } }
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
@@ -122,7 +127,7 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   def replay[T](direction: Int, fromSequenceNr: Long, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit): Unit = {
     val iter = leveldb.iterator(levelDbReadOptions.snapshot(leveldb.getSnapshot))
     try {
-      val startKey = SSKey(In, fromSequenceNr, 0)
+      val startKey = SSKey(direction, fromSequenceNr, 0)
       iter.seek(startKey)
       replay(iter, startKey, deserializer)(p)
     } finally {
