@@ -67,8 +67,8 @@ trait Journal extends Actor {
    * Initializes the `counter` from the last stored counter value and calls `start()`.
    */
   override def preStart() {
-    _counter = storedCounter + 1L
     start()
+    _counter = storedCounter + 1L
   }
 
   /**
