@@ -80,9 +80,7 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   }
 
   def executeDeleteOutMsg(cmd: DeleteOutMsg) {
-    writeOutMsgCache.update(cmd).foreach { loc => {
-      leveldb.delete(SSKey(Out, loc, 0))
-    } }
+    writeOutMsgCache.update(cmd).foreach { loc => leveldb.delete(SSKey(Out, loc, 0)) }
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
