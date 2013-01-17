@@ -265,7 +265,7 @@ Event messages sent by an emitter to a channel are always derived from (i.e. are
 
 The `Emitter` trait can also be combined with the stackable `Eventsourced` and/or `Confirm` traits where `Emitter` must always be the first modification. For example:
 
-    new MyActor with Emitter with Receive with Eventsourced 
+    new MyActor with Emitter with Confirm with Eventsourced
 
 Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Emitter) for further details.
 
@@ -408,7 +408,7 @@ Channels
 
 A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example.  
 
-Currently, the library provides two different channel implementations: [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) which are explained in the following two subsections.
+Currently, the library provides two different channel implementations, [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel), and a pattern on top of `ReliableChannel`, a reliable request-reply channel. These are explained in the following subsections.
 
 ### `DefaultChannel`
 
@@ -444,12 +444,35 @@ A reliable channel is a persistent channel that writes event messages to a journ
 
 If a destination positively confirms the receipt of an event message, the stored message is removed from the channel and the next one is delivered. If a destination negatively confirms the receipt of an event message or if no confirmation is made (i.e. a timeout occurs), a re-delivery attempt is made after a certain *redelivery delay*. If the maximum number of re-delivery attempts have been made, the channel restarts itself after a certain *restart delay* and starts again with re-deliveries. If the maximum number of restarts has been reached, the channel stops message delivery and publishes a [`DeliveryStopped`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Channel$$DeliveryStopped) event to the event stream of the actor system this channel belongs to. Applications can then re-activate the channel by calling the `deliver(Int)` method of `EventsourcingExtension` with the channel id as argument. Refer to the [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) API docs for details.
 
-A `ReliableChannel` is created and registered in the same way as a default channel except that a [`ReliableChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core. ReliableChannelProps) configuration object is used. 
+A `ReliableChannel` is created and registered in the same way as a default channel except that a [`ReliableChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannelProps) configuration object is used. 
 
     // … 
     val channel: ActorRef = extension.channelOf(ReliableChannelProps(channelId, destination))
 
 This configuration object additionally allows applications to configure a [`RedeliveryPolicy`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.RedeliveryPolicy) for the channel.
+
+### Reliable request-reply channel
+
+![Reliable request-reply channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-3.png)
+
+A reliable request-reply channel is a pattern implemented on top of a [reliable channel](#reliablechannel). It mediates reliable request-reply interactions between a request sender (usually an `Eventsourced` processor) and a destination. This channel has the following properties in addition to a plain reliable channel. It
+
+- extracts requests from received [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s before sending them to the destination.
+- wraps replies from the destination into a `Message` before sending them back to the request sender.
+- sends a special [DestinationNotResponding](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationNotResponding) reply to the request sender if the destination doesn't reply within a configurable reply timeout.
+- sends a special [DestinationFailure](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationFailure) reply to the request sender if destination responds with `Status.Failure`.
+- guarantees at-least-once delivery of replies to the request sender (in addition to at-least-once delivery of requests to the destination).
+- requires a positive receipt confirmation for a reply to mark a request-reply interaction as successfully completed.
+- redelivers requests, and subsequently replies, on missing or negative receipt confirmations. 
+
+A reliable request-reply channel is created and registered in the same way as a reliable channel except that a [`ReliableRequestReplyChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.ReliableRequestReply$ReliableRequestReplyChannelProps) configuration object is used. 
+
+    // … 
+    import org.eligosource.eventsourced.patterns._
+
+    val channel: ActorRef = extension.channelOf(ReliableRequestReplyChannelProps(channelId, destination))
+
+This configuration object additionally allows applications to configure a `replyTimeout` for replies from the destination.
 
 ### Usage hints
 
