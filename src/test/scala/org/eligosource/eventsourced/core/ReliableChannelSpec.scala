@@ -95,7 +95,19 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       respondTo(Message("a")) must be("re: a")
       respondTo(Message("b")) must be("re: b")
     }
-    "forward the message sender to the destination before reaching maxRedelivery" in { fixture =>
+    "preserve the message sender before it is initialized" in { fixture =>
+      import scala.concurrent._
+      import akka.pattern.ask
+      import fixture._
+
+      val c = channel(successDestination)
+      val future = c ? Message("a")
+
+      c ! Deliver
+
+      Await.result(future, timeout.duration) must be("re: a")
+    }
+    "preserve the message sender before reaching maxRedelivery" in { fixture =>
       import fixture._
 
       val c = channel(failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 2))
@@ -109,62 +121,45 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       dq() must be (Left(Message("a", sequenceNr = 1L)))
       dq() must be (Right(Message("a", sequenceNr = 1L)))
     }
-    "forward deadLetters to the destination after reaching maxRedelivery" in { fixture =>
+    "preserve the message sender reaching maxRedelivery" in { fixture =>
       import fixture._
 
-      val d = failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 4)
-      val c = channel(d)
-
-      val dlq = new LinkedBlockingQueue[Either[Message, Message]]
-
-      // sender is not persisted and channel is re-started after reaching maxRertry
-      // response will go to deadLetters which is then published on event stream
-      system.eventStream.subscribe(system.actorOf(Props(new Actor {
-        def receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
-      })), classOf[DeadLetter])
+      val c = channel(failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 4))
+      val respondTo = request(c) _
 
       c ! Deliver
-      c ! Message("a")
+
+      respondTo(Message("a")) must be("re: a")
 
       dq() must be (Left(Message("a", sequenceNr = 1L)))
       dq() must be (Left(Message("a", sequenceNr = 1L)))
       dq() must be (Left(Message("a", sequenceNr = 1L)))
       dq() must be (Left(Message("a", sequenceNr = 1L)))
       dq() must be (Right(Message("a", sequenceNr = 1L)))
-
-      dq(dlq) match {
-        case Right(msg) => msg.event must be("re: a")
-        case Left(msg)  => fail("unexpected Left result")
-      }
     }
-    "forward deadLetters to the destination before it is initialized" in { fixture =>
+    "tolerate invalid actor paths" in { fixture =>
       import fixture._
 
-      val d = successDestination
-      val c = channel(d)
+      class Destination extends Actor { this: Receiver =>
+        def receive = { case event => sender ! event }
+      }
 
-      val dlq = new LinkedBlockingQueue[Either[Message, Message]]
+      val dlq = new LinkedBlockingQueue[Any]
 
-      // sender is not persisted and channel doesn't deliver before initialization
-      // response will go to deadLetters which is then published on event stream
+      writeOutMsg(Message("a", sequenceNr = 1L, senderPath = "akka://test/temp/x"))
+      writeOutMsg(Message("b", sequenceNr = 2L, senderPath = "akka://test/user/y"))
+
       system.eventStream.subscribe(system.actorOf(Props(new Actor {
-        def receive = { case DeadLetter(response, _, _) => dlq add Right(Message(response)) }
+        def receive = { case DeadLetter(response, _, _) => dlq add response }
       })), classOf[DeadLetter])
 
-      c ! Message("a")
+      val d = system.actorOf(Props(new Destination with Receiver with Confirm))
+      val c = channel(d)
+
       c ! Deliver
 
-      dq(dlq)
-
-      dq match {
-        case Right(msg) => msg.event must be("a")
-        case Left(msg)  => fail("unexpected Left result")
-      }
-
-      dq(dlq) match {
-        case Right(msg) => msg.event must be("re: a")
-        case Left(msg)  => fail("unexpected Left result")
-      }
+      dequeue(dlq) must be("a")
+      dequeue(dlq) must be("b")
     }
     "recover from destination failures and preserve message order" in { fixture =>
       import fixture._

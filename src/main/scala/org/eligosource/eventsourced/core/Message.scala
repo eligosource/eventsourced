@@ -50,6 +50,7 @@ case class Message(
   processorId: Int = 0,
   acks: Seq[Int] = Nil,
   ack: Boolean = true,
+  senderPath: String = null,
   posConfirmationTarget: ActorRef = null,
   posConfirmationMessage: Any = null,
   negConfirmationTarget: ActorRef = null,

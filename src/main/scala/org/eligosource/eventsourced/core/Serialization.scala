@@ -123,6 +123,10 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
       .setProcessorId(message.processorId)
       .setSequenceNr(message.sequenceNr)
 
+    if (message.senderPath != null) {
+      builder.setSenderPath(message.senderPath)
+    }
+
     if (serializer.includeManifest) {
       builder.setEventManifest(ByteString.copyFromUtf8(event.getClass.getName))
     }
@@ -139,10 +143,13 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
       messageProtocol.getEventSerializerId,
       eventClass).get
 
+    val senderPath = if (messageProtocol.hasSenderPath) messageProtocol.getSenderPath else null
+
     Message(
       event = event,
       processorId = messageProtocol.getProcessorId,
-      sequenceNr = messageProtocol.getSequenceNr)
+      sequenceNr = messageProtocol.getSequenceNr,
+      senderPath = senderPath)
   }
 }
 

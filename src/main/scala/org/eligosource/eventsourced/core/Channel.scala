@@ -175,7 +175,7 @@ object RedeliveryPolicy {
  * If `destination` positively confirms the receipt of an event message with `Message.confirm()`
  * the stored message is deleted from the journal. If `destination` negatively confirms the
  * receipt of an event message with `Message.confirm(false)` or no confirmation is made (i.e.
- * a timeout occurrs), a re-delivery attempt is made after a certain ''redelivery delay''
+ * a timeout occurs), a re-delivery attempt is made after a certain ''redelivery delay''
  * (specified by `policy.redeliveryDelay`).
  *
  * If the maximum number of re-delivery attempts have been made (specified by `policy.redeliveryMax`),
@@ -186,9 +186,10 @@ object RedeliveryPolicy {
  * [[akka.actor.ActorSystem]] this channel belongs to. Applications can then re-activate the channel
  * by calling `EventsourcingExtension.deliver(Int)` with the channel id as argument.
  *
- * A `ReliableChannel` preserves `sender` references (i.e. forwards them to `destination`) only
- * after initial delivery (which can be triggered, by calling `EventsourcingExtension.recover()`,
- * `EventsourcingExtension.deliver()` or `EventsourcingExtension.deliver(Int)`).
+ * A `ReliableChannel` stores `sender` references along with event messages. A destination can even
+ * reply to a sender that was sending an event message in a previous application run (e.g. before the
+ * application crashed). If that sender doesn't exist any more after recovery, the reply will go to
+ * `deadLetters`.
  *
  * @param id channel id. Must be a positive integer.
  * @param journal journal of the [[org.eligosource.eventsourced.core.EventsourcingExtension]]
@@ -213,7 +214,8 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
   def receive = {
     case msg: Message if (!msg.acks.contains(id)) => {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
-      journal forward WriteOutMsg(id, msg, msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
+      val senderPath = sender.path.toString
+      journal forward WriteOutMsg(id, msg.copy(senderPath = senderPath), msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
     }
     case Deliver => if (!buffer.isDefined) {
       buffer = Some(createBuffer())
@@ -253,14 +255,14 @@ private [core] object ReliableChannel {
 private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String]) extends Actor {
   import ReliableChannel._
 
-  var delivererQueue = Queue.empty[(Message, ActorRef)]
+  var delivererQueue = Queue.empty[Message]
   var delivererBusy = false
 
   val deliverer = createDeliverer()
 
   def receive = {
     case Written(msg) => {
-      delivererQueue = delivererQueue.enqueue(msg, sender)
+      delivererQueue = delivererQueue.enqueue(msg)
       if (!delivererBusy) {
         delivererBusy = true
         deliverer ! Trigger
@@ -287,7 +289,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
   val scheduler = context.system.scheduler
 
   var buffer: Option[ActorRef] = None
-  var queue = Queue.empty[(Message, ActorRef)]
+  var queue = Queue.empty[Message]
 
   var redeliveries = 0
   var currentDelivery: Option[(Message, ActorRef, Cancellable)] = None
@@ -296,18 +298,21 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
     case Trigger => {
       sender ! FeedMe
     }
-    case q: Queue[(Message, ActorRef)] => {
+    case q: Queue[Message] => {
       buffer = Some(sender)
       queue = q
       self ! Next(redeliveries)
     }
     case Next(r) => if (queue.size > 0) {
-      val ((msg, sdr), q) = queue.dequeue
+      val (msg, q) = queue.dequeue
       val m = msg.copy(
+        senderPath = null,
         posConfirmationTarget = self,
         negConfirmationTarget = self,
         posConfirmationMessage = Confirmed(msg.sequenceNr, true),
         negConfirmationMessage = Confirmed(msg.sequenceNr, false))
+
+      val sdr = if (msg.senderPath == null) context.system.deadLetters else context.actorFor(msg.senderPath)
 
       destination tell (m, sdr)
 
@@ -321,7 +326,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
     }
     case Retry(msg, sdr) => {
       // undo dequeue
-      queue = ((msg, sdr) +: queue)
+      queue = (msg +: queue)
       // and try again ...
       if (redeliveries < policy.redeliveryMax) self ! Next(redeliveries + 1) else buffer.foreach(b => context.stop(b))
     }

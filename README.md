@@ -340,7 +340,7 @@ Sender references
 The *Eventsourced* library preserves sender references for all
 
 - message exchanges with actors that are modified with `Eventsourced`, `Receiver`, `Emitter` and/or `Confirm` and
-- message exchanges with destination actors via channels (with some limitations for reliable channels, as described below)
+- message exchanges with destination actors via [channels](#channels)
 
 i.e. event-sourced actor applications can make use of sender references in the same way as plain actor applications. If you know how sender references work with Akka [actors](http://doc.akka.io/docs/akka/snapshot/scala/actors.html), the following will sound familiar to you.
 
@@ -367,11 +367,11 @@ Applications can now *ask* the `processor` and will get a response asynchronousl
       case response => println(response)
     }
 
-No surprise here. The sender reference in this example represents the future that is returned from the `?` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because the library doesn't store sender references in the journal. That's a sensible default because most sender references won't exist any more after application restart (and hence during a replay). This is especially true for (short-lived) futures.
+No surprise here. The sender reference in this example represents the future that is returned from the `?` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because `Eventsourced` processors don't store sender references in the journal. The main reason for this is that applications usually do not want to redundantly reply to senders during replays. 
 
 ![Destination reply](https://raw.github.com/eligosource/eventsourced/master/doc/images/senderrefs-2.png)
 
-Instead of replying to the sender, the processor can also forward the sender reference to a destination and let the destination reply to the sender. This even works if the destination is wrapped by a channel because a channel simply forwards sender references when delivering event messages to destinations.
+Instead of replying to the sender, the processor can also forward the sender reference to a destination and let the destination reply to the sender. This even works if the destination is wrapped by a channel because a channel simply forwards sender references when delivering event messages to destinations. For that reason, a [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) needs to store sender references (in contrast to processors). A reliable channel destination can even reply to a sender that was sending an event message in a previous application run (e.g. before the application crashed). If that sender doesn't exist any more after recovery, the reply will go to `deadLetters`.
 
     class Processor(destination: ActorRef) extends Actor {
       var counter = 0
@@ -385,7 +385,6 @@ Instead of replying to the sender, the processor can also forward the sender ref
       }
     }
   
-    // channel destination
     class Destination extends Actor {
       def receive = {
         case msg: Message => {
@@ -396,7 +395,9 @@ Instead of replying to the sender, the processor can also forward the sender ref
       }
     }
 
-Again, no surprise here. The situation is a bit more tricky when using reliable channels. They forward sender references only after their activation with the `recover()` method. This can be disregarded by most applications as they will anyway run recovery before using channels for event message delivery. If a reliable channel reaches the maximum number of redelivery attempts (in case of repeated destination failures), it restarts itself and drops the sender references for all queued event messages. After restart, it continues to preserve the sender references for newly enqueued event messages. This can also be disregarded by most applications because preserving sender references makes only sense for destinations that do not fail for a longer period of time, otherwise they anyway won't be able to reply within a certain timeout. More on that in the API docs of [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) and [`RedeliveryPolicy`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.RedeliveryPolicy).
+    val destination: ActorRef = system.actorOf(Props[Destination])
+    val channel: ActorRef = extension.channelOf(DefaultChannelProps(1, destination))
+    val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
 
 When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) (see also section [Emitter](#emitter)) applications can choose between methods `sendEvent` and `forwardEvent` where `sendEvent` takes an implicit sender reference as parameter and `forwardEvent` forwards the current sender reference. They work in the same way as the `!` and `forward` methods on `ActorRef`, respectively.
 
