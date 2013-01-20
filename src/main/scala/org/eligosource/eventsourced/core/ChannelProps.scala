@@ -108,6 +108,12 @@ case class ReliableChannelProps(
     copy(policy = policy.copy(restartDelay = restartDelay))
 
   /**
+   * Returns a new `ReliableChannelProps` with the specified maximum number of restarts.
+   */
+  def withRestartMax(restartMax: Int) =
+    copy(policy = policy.copy(restartMax = restartMax))
+
+  /**
    * Returns a new `ReliableChannelProps` with the specified re-delivery delay.
    */
   def withRedeliveryDelay(redeliveryDelay: FiniteDuration) =
