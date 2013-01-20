@@ -161,6 +161,62 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       dequeue(dlq) must be("a")
       dequeue(dlq) must be("b")
     }
+    "publish DeliveryStopped to event stream when reaching restartMax" in { fixture =>
+      import fixture._
+
+      class Destination extends Actor { this: Receiver =>
+        def receive = { case event => confirm(false) }
+      }
+
+      val dlq = new LinkedBlockingQueue[Int]
+
+      writeOutMsg(Message("a", sequenceNr = 1L))
+
+      system.eventStream.subscribe(system.actorOf(Props(new Actor {
+        def receive = { case DeliveryStopped(channelId) => dlq add channelId }
+      })), classOf[DeliveryStopped])
+
+      val d = system.actorOf(Props(new Destination with Receiver))
+      val c = channel(d)
+
+      c ! Deliver
+
+      dequeue(dlq) must be(1)
+    }
+    "reset restart counter after positive confirmation" in { fixture =>
+      import fixture._
+
+      class Destination extends Actor { this: Receiver =>
+        var ctr = 0
+
+        def receive = {
+          case event => {
+            ctr += 1
+            if (ctr == 6 || ctr == 14) {
+              // 6: channel has been restarted first time
+              // 14: channel has been restarted seconds time
+
+              // If restart counter wasn't reset only 8
+              // messages were delivered to destination
+              // (because restartMax of channel is set to 1)
+              confirm(true); sender ! "%s (%d)".format(event, ctr)
+            } else {
+              confirm(false)
+            }
+          }
+        }
+      }
+
+      val d = system.actorOf(Props(new Destination with Receiver))
+      val c = channel(d)
+
+      val respondTo = request(c) _
+
+      c ! Deliver
+
+      respondTo(Message("a")) must be("a (6)")
+      respondTo(Message("b")) must be("b (14)")
+    }
     "recover from destination failures and preserve message order" in { fixture =>
       import fixture._
 

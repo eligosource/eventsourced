@@ -204,7 +204,9 @@ object RedeliveryPolicy {
  * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
  */
 class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String] = None) extends Channel {
+  import ReliableChannel._
   import Channel._
+
 
   require(id > 0, "channel id must be a positive integer")
 
@@ -220,6 +222,9 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
     case Deliver => if (!buffer.isDefined) {
       buffer = Some(createBuffer())
       deliverPendingMessages(buffer.get)
+    }
+    case ResetRestartCounter => {
+      restarts = 0
     }
     case Terminated(s) => buffer foreach { b =>
       buffer = None
@@ -247,6 +252,7 @@ private [core] object ReliableChannel {
 
   case object Trigger
   case object FeedMe
+  case object ResetRestartCounter
 
   case class Confirmed(snr: Long, pos: Boolean = true)
   case class ConfirmationTimeout(snr: Long)
@@ -279,10 +285,10 @@ private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, de
   }
 
   def createDeliverer() =
-    actor(new ReliableChannelDeliverer(channelId, journal, destination, policy), dispatcherName = dispatcherName)
+    actor(new ReliableChannelDeliverer(channelId, context.parent, journal, destination, policy), dispatcherName = dispatcherName)
 }
 
-private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy) extends Actor {
+private [core] class ReliableChannelDeliverer(channelId: Int, channel: ActorRef, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy) extends Actor {
   import ReliableChannel._
 
   implicit val executionContext = context.dispatcher
@@ -291,6 +297,7 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
   var buffer: Option[ActorRef] = None
   var queue = Queue.empty[Message]
 
+  var delivered = false
   var redeliveries = 0
   var currentDelivery: Option[(Message, ActorRef, Cancellable)] = None
 
@@ -328,12 +335,15 @@ private [core] class ReliableChannelDeliverer(channelId: Int, journal: ActorRef,
       // undo dequeue
       queue = (msg +: queue)
       // and try again ...
-      if (redeliveries < policy.redeliveryMax) self ! Next(redeliveries + 1) else buffer.foreach(b => context.stop(b))
+      if (redeliveries < policy.redeliveryMax) self ! Next(redeliveries + 1) else {
+        if (delivered) channel ! ResetRestartCounter
+        buffer.foreach(b => context.stop(b))
+      }
     }
 
     case Confirmed(snr, true) => currentDelivery match {
       case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
-        currentDelivery = None; task.cancel(); journal ! DeleteOutMsg(channelId, snr); self ! Next(0); redeliveries = 0
+        currentDelivery = None; task.cancel(); journal ! DeleteOutMsg(channelId, snr); self ! Next(0); redeliveries = 0; delivered = true
       }
       case None => ()
     }
