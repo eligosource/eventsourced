@@ -457,10 +457,10 @@ This configuration object additionally allows applications to configure a [`Rede
 
 A reliable request-reply channel is a pattern implemented on top of a [reliable channel](#reliablechannel). It mediates reliable request-reply interactions between a request sender (usually an `Eventsourced` processor) and a destination. This channel has the following properties in addition to a plain reliable channel. It
 
-- extracts requests from received [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s before sending them to the destination.
+- extracts requests from received [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s before sending them to the destination.
 - wraps replies from the destination into a `Message` before sending them back to the request sender.
-- sends a special [DestinationNotResponding](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationNotResponding) reply to the request sender if the destination doesn't reply within a configurable reply timeout.
-- sends a special [DestinationFailure](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationFailure) reply to the request sender if destination responds with `Status.Failure`.
+- sends a special [`DestinationNotResponding`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationNotResponding) reply to the request sender if the destination doesn't reply within a configurable reply timeout.
+- sends a special [`DestinationFailure`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationFailure) reply to the request sender if destination responds with `Status.Failure`.
 - guarantees at-least-once delivery of replies to the request sender (in addition to at-least-once delivery of requests to the destination).
 - requires a positive receipt confirmation for a reply to mark a request-reply interaction as successfully completed.
 - redelivers requests, and subsequently replies, on missing or negative receipt confirmations. 
