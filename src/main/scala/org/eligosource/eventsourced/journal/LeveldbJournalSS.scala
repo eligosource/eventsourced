@@ -122,7 +122,7 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
     leveldb.close()
   }
 
-  def replay[T](direction: Int, fromSequenceNr: Long, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit): Unit = {
+  def replay[T](direction: Int, fromSequenceNr: Long, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit) {
     val iter = leveldb.iterator(levelDbReadOptions.snapshot(leveldb.getSnapshot))
     try {
       val startKey = SSKey(direction, fromSequenceNr, 0)
@@ -134,7 +134,7 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   }
 
   @scala.annotation.tailrec
-  private def replay[T](iter: DBIterator, key: SSKey, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit): Unit = {
+  private def replay[T](iter: DBIterator, key: SSKey, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit) {
     if (iter.hasNext) {
       val nextEntry = iter.next()
       val nextKey = keyFromBytes(nextEntry.getKey)
