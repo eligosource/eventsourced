@@ -23,7 +23,7 @@ Event-sourced actors may also send event messages to destinations. In order to a
 
 Applications may connect event-sourced actors (via channels) to arbitrary complex event-sourced actor networks that can be consistently recovered by the library. Here, channels play another important role. They ensure that the overall order of dependent messages during recovery is the same as during normal operation. Based on these mechanisms, for example, the implementation of reliable, long-running business processes using event-sourced [state machines](#state-machines) becomes almost trivial.
 
-The library itself is an [Akka etxension](http://doc.akka.io/docs/akka/2.1.0/scala/extending-akka.html) and provides [stackable traits](http://www.artima.com/scalazine/articles/stackable_trait_pattern.html) to add event-sourcing capabilities to actors. All message exchanges performed by the library are asynchronous and non-blocking. The library works with local, remote and cluster actor references (see also section [Clustering](#clustering)).
+The library itself is an [Akka extension](http://doc.akka.io/docs/akka/2.1.0/scala/extending-akka.html) and provides [stackable traits](http://www.artima.com/scalazine/articles/stackable_trait_pattern.html) to add event-sourcing capabilities to actors. All message exchanges performed by the library are asynchronous and non-blocking. The library works with local, remote and cluster actor references (see also section [Clustering](#clustering)).
 
 ### Application
 
