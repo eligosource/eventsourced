@@ -15,6 +15,8 @@
  */
 package org.eligosource.eventsourced.core
 
+import scala.language.existentials
+
 import akka.actor._
 import akka.serialization.SerializationExtension
 
