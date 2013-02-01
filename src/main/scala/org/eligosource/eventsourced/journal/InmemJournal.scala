@@ -64,14 +64,14 @@ private [eventsourced] class InmemJournal extends Journal {
 
   def storedCounter = counter
 
-  private def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
+  private def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
     val startKey = Key(processorId, channelId, fromSequenceNr, 0)
     val iter = redoMap.from(startKey).iterator.buffered
     replay(iter, startKey, p)
   }
 
   @scala.annotation.tailrec
-  private def replay(iter: BufferedIterator[(Key, Any)], key: Key, p: Message => Unit): Unit = {
+  private def replay(iter: BufferedIterator[(Key, Any)], key: Key, p: Message => Unit) {
     if (iter.hasNext) {
       val nextEntry = iter.next()
       val nextKey   = nextEntry._1

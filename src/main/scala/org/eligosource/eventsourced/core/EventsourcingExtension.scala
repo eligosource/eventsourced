@@ -16,7 +16,6 @@
 package org.eligosource.eventsourced.core
 
 import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
 import scala.concurrent._
@@ -256,28 +255,28 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   @tailrec
-  private def registerChannel(channelId: Int, channelName: Option[String], channel: ActorRef): Unit = {
+  private def registerChannel(channelId: Int, channelName: Option[String], channel: ActorRef) {
     val current = channelsRef.get()
     val updated = if (channelName.isDefined) current.add(channelId, channelName.get, channel) else current.add(channelId, channel)
     if (!channelsRef.compareAndSet(current, updated)) registerChannel(channelId, channelName, channel)
   }
 
   @tailrec
-  private def registerProcessor(processorId: Int, processor: ActorRef): Unit = {
+  private def registerProcessor(processorId: Int, processor: ActorRef) {
     val current = processorsRef.get()
     val updated = current + (processorId -> processor)
     if (!processorsRef.compareAndSet(current, updated)) registerProcessor(processorId, processor)
   }
 
   @tailrec
-  private [core] final def deregisterChannel(channelId: Int): Unit = {
+  private [core] final def deregisterChannel(channelId: Int) {
     val current = channelsRef.get()
     val updated = current.remove(channelId)
     if (!channelsRef.compareAndSet(current, updated)) deregisterChannel(channelId)
   }
 
   @tailrec
-  private [core] final def deregisterProcessor(processorId: Int): Unit = {
+  private [core] final def deregisterProcessor(processorId: Int) {
     val current = processorsRef.get()
     val updated = current - processorId
     if (!processorsRef.compareAndSet(current, updated)) deregisterProcessor(processorId)
