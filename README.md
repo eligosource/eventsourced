@@ -23,7 +23,7 @@ Event-sourced actors may also send event messages to destinations. In order to a
 
 Applications may connect event-sourced actors (via channels) to arbitrary complex event-sourced actor networks that can be consistently recovered by the library. Here, channels play another important role. They ensure that the overall order of dependent messages during recovery is the same as during normal operation. Based on these mechanisms, for example, the implementation of reliable, long-running business processes using event-sourced [state machines](#state-machines) becomes almost trivial.
 
-The library itself is an [Akka etxension](http://doc.akka.io/docs/akka/2.0.3/scala/extending-akka.html) and provides [stackable traits](http://www.artima.com/scalazine/articles/stackable_trait_pattern.html) to add event-sourcing capabilities to actors. All message exchanges performed by the library are asynchronous and non-blocking. The library works with local, remote and cluster actor references (see also section [Clustering](#clustering)).
+The library itself is an [Akka etxension](http://doc.akka.io/docs/akka/2.1.0/scala/extending-akka.html) and provides [stackable traits](http://www.artima.com/scalazine/articles/stackable_trait_pattern.html) to add event-sourcing capabilities to actors. All message exchanges performed by the library are asynchronous and non-blocking. The library works with local, remote and cluster actor references (see also section [Clustering](#clustering)).
 
 ### Application
 
@@ -345,7 +345,7 @@ The *Eventsourced* library preserves sender references for all
 - message exchanges with actors that are modified with `Eventsourced`, `Receiver`, `Emitter` and/or `Confirm` and
 - message exchanges with destination actors via [channels](#channels)
 
-i.e. event-sourced actor applications can make use of sender references in the same way as plain actor applications. If you know how sender references work with Akka [actors](http://doc.akka.io/docs/akka/snapshot/scala/actors.html), the following will sound familiar to you.
+i.e. event-sourced actor applications can make use of sender references in the same way as plain actor applications. If you know how sender references work with Akka [actors](http://doc.akka.io/docs/akka/2.1.0/scala/actors.html), the following will sound familiar to you.
 
 ![Processor reply](https://raw.github.com/eligosource/eventsourced/master/doc/images/senderrefs-1.png)
 
@@ -688,7 +688,7 @@ Consumers should then compare the sequence number - index pairs for detecting du
 Serialization
 -------------
 
-Applications can configure custom serializers for events of event `Message`s. Custom serializers are used for both, writing the event to a journal and for remote communication. They can be configured like any other [Akka serializer](http://doc.akka.io/docs/akka/2.1.0-RC2/scala/serialization.html). For example:
+Applications can configure custom serializers for events of event `Message`s. Custom serializers are used for both, writing the event to a journal and for remote communication. They can be configured like any other [Akka serializer](http://doc.akka.io/docs/akka/2.1.0/scala/serialization.html). For example:
 
     akka {
       actor {
@@ -731,7 +731,7 @@ This can be implemented with the *Eventsourced* library as shown in the followin
 ![Order management](https://raw.github.com/eligosource/eventsourced/master/doc/images/ordermgnt-1.png)
 
 - We implement the mentioned *Business Logic Processor* processor as event-sourced actor (`OrderProcessor`). It processes `OrderSubmitted` events by assigning submitted orders an id and storing them in a map (= state of `OrderProcessor`). For every submitted order it emits a `CreditCardValidationRequested` event.
-- `CreditCardValidationRequested` events are processed by a `CreditCardValidator` actor. It contacts an external credit card validation service and sends `CreditCardValidated` events back to the `OrderProcessor` for every order with a valid credit card number. In the example implementation below, we won't actually use an external service to keep the implementation simple, but for real-world implementations, [akka-camel](http://doc.akka.io/docs/akka/snapshot/scala/camel.html) would be a perfect fit here.
+- `CreditCardValidationRequested` events are processed by a `CreditCardValidator` actor. It contacts an external credit card validation service and sends `CreditCardValidated` events back to the `OrderProcessor` for every order with a valid credit card number. In the example implementation below, we won't actually use an external service to keep the implementation simple, but for real-world implementations, [akka-camel](http://doc.akka.io/docs/akka/2.1.0/scala/camel.html) would be a perfect fit here.
 - On receiving a `CreditCardValidated` event, the event-sourced `OrderProcessor` updates the status of corresponding order to `validated = true` and sends an `OrderAccepted` event, containing the updated order, to `Destination`. It also replies the updated order to the initial sender.
 
 The `Order` domain object, the domain events and the `OrderProcessor` are defined as follows:
@@ -833,7 +833,7 @@ An advanced version of this example, using a [reliable request-reply channel](#r
 
 ![State machines](https://raw.github.com/eligosource/eventsourced/master/doc/images/statemachines-1.png)
 
-With a recent [change](https://www.assembla.com/spaces/akka/tickets/2680) in Akka 2.1, event-sourcing Akka [FSM](http://doc.akka.io/docs/akka/2.0.3/scala/fsm.html)s is now pretty easy. The following state machine example is a `Door` which can be in one of two states: `Open` and `Closed`. 
+With a recent [change](https://www.assembla.com/spaces/akka/tickets/2680) in Akka 2.1, event-sourcing Akka [FSM](http://doc.akka.io/docs/akka/2.1.0/scala/fsm.html)s is now pretty easy. The following state machine example is a `Door` which can be in one of two states: `Open` and `Closed`. 
 
     sealed trait DoorState
   
@@ -926,7 +926,7 @@ The code from this section is contained in slightly modified form in [FsmExample
 
 ### Clustering
 
-This section makes the `Door` state machine from the [previous example](#state-machines) highly-available in an Akka [cluster](http://doc.akka.io/docs/akka/2.1.0-RC1/cluster/index.html). The `Door` state machine is a cluster-wide singleton that is managed by `NodeActor`s. There's one `NodeActor` per cluster node listening to cluster events. If a `NodeActor` becomes the master (= leader) it creates and recovers a `Door` instance. The other `NodeActor`s obtain a remote reference to the `Door` instance on master. 
+This section makes the `Door` state machine from the [previous example](#state-machines) highly-available in an Akka [cluster](http://doc.akka.io/docs/akka/2.1.0/cluster/index.html). The `Door` state machine is a cluster-wide singleton that is managed by `NodeActor`s. There's one `NodeActor` per cluster node listening to cluster events. If a `NodeActor` becomes the master (= leader) it creates and recovers a `Door` instance. The other `NodeActor`s obtain a remote reference to the `Door` instance on master. 
 
 ![Clustering](https://raw.github.com/eligosource/eventsourced/master/doc/images/clustering-1.png)
 
