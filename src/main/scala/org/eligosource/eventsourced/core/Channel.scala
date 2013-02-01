@@ -305,9 +305,9 @@ private [core] class ReliableChannelDeliverer(channelId: Int, channel: ActorRef,
     case Trigger => {
       sender ! FeedMe
     }
-    case q: Queue[Message] => {
+    case q: Queue[Any] => {
       buffer = Some(sender)
-      queue = q
+      queue = q.asInstanceOf[Queue[Message]]
       self ! Next(redeliveries)
     }
     case Next(r) => if (queue.size > 0) {

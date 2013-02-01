@@ -1,62 +1,15 @@
 import sbt._
 import Keys._
+
 import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettings }
 
+
 object Settings {
-  val buildOrganization = "org.eligosource"
-  val buildVersion      = "0.5-SNAPSHOT"
-  val buildScalaVersion = Version.Scala
-  val buildSettings = Defaults.defaultSettings ++ Seq(
-    organization := buildOrganization,
-    version      := buildVersion,
-    scalaVersion := buildScalaVersion
-  )
-
-  import Resolvers._
-
-  val defaultSettings = buildSettings ++ Seq(
-    resolvers ++= Seq(journalioRepo),
-    scalacOptions in Compile ++= Seq("-target:jvm-1.6", "-unchecked"),
+  val defaultSettings = Defaults.defaultSettings ++ Seq(
+    scalacOptions in Compile ++= Seq("-target:jvm-1.6", "-unchecked", "-feature", "-language:postfixOps", "-language:implicitConversions"),
     javacOptions in Compile ++= Seq("-source", "1.6", "-target", "1.6"),
     parallelExecution in Test := false
   )
-}
-
-object Resolvers {
-  val journalioRepo = "Journalio Repo" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
-}
-
-object Dependencies {
-  import Dependency._
-
-  val core = Seq(akkaActor, akkaCluster, commonsIo, journalIo, levelDbJni, protobuf, scalaTest, scalaActors)
-}
-
-object Version {
-  val Scala = "2.10.0"
-  val Akka  = "2.1.0"
-}
-
-object Dependency {
-  import Version._
-
-  // -----------------------------------------------
-  //  Compile
-  // -----------------------------------------------
-
-  val protobuf    = "com.google.protobuf"       %  "protobuf-java"  % "2.4.1" % "compile"
-  val akkaActor   = "com.typesafe.akka"         %% "akka-actor"     % Akka    % "compile"
-  val commonsIo   = "commons-io"                %  "commons-io"     % "2.3"   % "compile"
-  val journalIo   = "journalio"                 %  "journalio"      % "1.2"   % "compile"
-  val levelDbJni  = "org.fusesource.leveldbjni" %  "leveldbjni-all" % "1.4.1" % "compile"
-
-  // -----------------------------------------------
-  //  Test
-  // -----------------------------------------------
-
-  val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % Akka    % "test"
-  val scalaActors = "org.scala-lang"    %  "scala-actors"              % Scala   % "test"
-  val scalaTest   = "org.scalatest"     %% "scalatest"                 % "1.9.1" % "test"
 }
 
 object Publish {
@@ -80,7 +33,6 @@ object EventsourcedBuild extends Build {
     id = "eventsourced",
     base = file("."),
     settings = defaultSettings ++ publishSettings ++ Seq(
-      libraryDependencies ++= Dependencies.core,
       mainRunNobootcpSetting,
       testRunNobootcpSetting,
       testNobootcpSetting

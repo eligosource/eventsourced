@@ -82,7 +82,7 @@ private [journal] class DefaultReplay(val context: LeveldbReplayContext) extends
     replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, p)
   }
 
-  def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit): Unit = {
+  def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
     val iter = leveldb.iterator(levelDbReadOptions.snapshot(leveldb.getSnapshot))
     try {
       val startKey = Key(processorId, channelId, fromSequenceNr, 0)
@@ -94,7 +94,7 @@ private [journal] class DefaultReplay(val context: LeveldbReplayContext) extends
   }
 
   @scala.annotation.tailrec
-  final def replay(iter: DBIterator, key: Key, p: Message => Unit): Unit = {
+  final def replay(iter: DBIterator, key: Key, p: Message => Unit) {
     if (iter.hasNext) {
       val nextEntry = iter.next()
       val nextKey = keyFromBytes(nextEntry.getKey)

@@ -58,7 +58,7 @@ trait Confirm extends Actor {
         super.receive(msg)
         msg.confirm(true)
       } catch {
-        case e => { msg.confirm(false); throw e }
+        case e: Throwable => { msg.confirm(false); throw e }
       }
     }
     case msg => {
