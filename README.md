@@ -41,21 +41,24 @@ For persisting event messages, *Eventsourced* currently provides the following j
 
 Distributed journal implementations (e.g. based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/)) as well as event archives (for long-term event storage) will come soon.
 
-### Resources
+Resources
+---------
+
+### Project
 
 - [Eventsourced API](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package)
 - [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
+- [Installation](https://github.com/eligosource/eventsourced/wiki/Installation).
 - [FAQ](https://github.com/eligosource/eventsourced/wiki/FAQ)
+
+### Articles
+
+- [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html)
 
 ### Support
 
 - Community: [Eventsourced forum](http://groups.google.com/group/eventsourced)
 - Commercial: [Eligotech B.V.](http://www.eligotech.com/)
-
-Installation
-------------
-
-See [Installation](https://github.com/eligosource/eventsourced/wiki/Installation) Wiki page.
 
 First steps
 -----------
@@ -245,7 +248,7 @@ Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/
 
 ![Emitter](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-3.png)
 
-Where a `Receiver` modification allows actors to pattern-match against incoming events directly instead of whole event `Message`s, an [`Emitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Emitter) introduces a corresponding simplification on the sending (outgoing) side. It allows actors to send (*emit*) events to channels without having to deal with whole event `Message`s. An emitter can also lookup channels by name.
+Where a `Receiver` modification allows actors to pattern-match against incoming events directly instead of whole event `Message`s, an [`Emitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Emitter) introduces a corresponding simplification on the sending (outgoing) side. It allows actors to send (emit) events to channels without having to deal with whole event `Message`s. An emitter can also lookup channels by name.
 
     class MyActor extends Actor { this: Emitter =>
         def receive = {
@@ -408,7 +411,7 @@ Channels
 
 A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example.  
 
-Currently, the library provides two different channel implementations, [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel), and a pattern on top of `ReliableChannel`, a reliable request-reply channel. These are explained in the following subsections.
+Currently, the library provides two different channel implementations, [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel), and a pattern on top of `ReliableChannel`, a [reliable request-reply channel](#reliable-request-reply-channel). These are explained in the following subsections.
 
 ### `DefaultChannel`
 
@@ -472,7 +475,7 @@ A reliable request-reply channel is created and registered in the same way as a 
 
     val channel: ActorRef = extension.channelOf(ReliableRequestReplyChannelProps(channelId, destination))
 
-This configuration object additionally allows applications to configure a `replyTimeout` for replies from the destination.
+This configuration object additionally allows applications to configure a `replyTimeout` for replies from the destination. A detailed usage example of a reliable request-reply channel is given in [this article](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html).
 
 ### Usage hints
 
@@ -823,6 +826,8 @@ to `stdout`. You may observe a different line ordering when running the example.
     received event OrderAccepted(Order(1,jelly beans,true,1234-5678-1234-5678))
 
 The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.example.OrderExample'`. 
+
+An advanced version of this example, using a [reliable request-reply channel](#reliable-request-reply-channel), is discussed in [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html). 
 
 ### State machines
 
