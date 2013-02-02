@@ -247,6 +247,7 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
 }
 
 private [core] object ReliableChannel {
+  case class Buffered(queue: Queue[Message])
   case class Next(retries: Int)
   case class Retry(msg: Message, sdr: ActorRef)
 
@@ -278,7 +279,7 @@ private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, de
       if (delivererQueue.size == 0) {
         delivererBusy = false
       } else {
-        deliverer ! delivererQueue
+        deliverer ! Buffered(delivererQueue)
         delivererQueue = Queue.empty
       }
     }
@@ -305,9 +306,9 @@ private [core] class ReliableChannelDeliverer(channelId: Int, channel: ActorRef,
     case Trigger => {
       sender ! FeedMe
     }
-    case q: Queue[Any] => {
+    case Buffered(q) => {
       buffer = Some(sender)
-      queue = q.asInstanceOf[Queue[Message]]
+      queue = q
       self ! Next(redeliveries)
     }
     case Next(r) => if (queue.size > 0) {
