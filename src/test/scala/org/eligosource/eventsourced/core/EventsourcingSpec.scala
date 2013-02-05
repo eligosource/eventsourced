@@ -71,8 +71,8 @@ trait EventsourcingFixture[A] {
     p(dequeue())
   }
 
-  def request(actor: ActorRef)(r: Any): Any = {
-    Await.result(actor.ask(r), timeout.duration)
+  def result[A : ClassTag](actor: ActorRef)(r: Any): A = {
+    Await.result(actor.ask(r).mapTo[A], timeout.duration)
   }
 
   def shutdown() {

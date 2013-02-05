@@ -54,8 +54,8 @@ class MulticastSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val d = decorator()
-      request(d)(Message("test")) must be("re: test")
-      request(d)("blah")          must be("re: blah")
+      result[String](d)(Message("test")) must be("re: test")
+      result[String](d)("blah")          must be("re: blah")
     }
   }
 }

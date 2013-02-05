@@ -88,7 +88,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(successDestination)
-      val respondTo = request(c) _
+      val respondTo = result[String](c) _
 
       c ! Deliver
 
@@ -111,7 +111,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 2))
-      val respondTo = request(c) _
+      val respondTo = result[String](c) _
 
       c ! Deliver
 
@@ -125,7 +125,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       import fixture._
 
       val c = channel(failureDestination(failAtEvent = "a", enqueueFailures = true, failureCount = 4))
-      val respondTo = request(c) _
+      val respondTo = result[String](c) _
 
       c ! Deliver
 
@@ -210,7 +210,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       val d = system.actorOf(Props(new Destination with Receiver))
       val c = channel(d)
 
-      val respondTo = request(c) _
+      val respondTo = result[String](c) _
 
       c ! Deliver
 
@@ -298,7 +298,7 @@ object ReliableChannelSpec {
 
     def writeOutMsg(msg: Message) {
       val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
-      request(journal)(WriteOutMsg(1, msg, msg.processorId, ackSequenceNr, responder, false))
+      result[Unit](journal)(WriteOutMsg(1, msg, msg.processorId, ackSequenceNr, responder, false))
     }
   }
 
