@@ -34,6 +34,7 @@ import akka.actor.ActorRef
  * @param event Application event (or command).
  * @param sequenceNr Sequence number that is generated when messages are written
  *        to the journal. Can also be used for detecting duplicates, in special cases.
+ * @param timestamp time the input message was added to the event log.
  * @param processorId Id of the event processor that stored (and emitted) this message.
  * @param ack Whether or not an ''acknowledgement'' should be written to the journal during
  *        (or after) delivery of this message by a [[org.eligosource.eventsourced.core.Channel]].
@@ -47,6 +48,7 @@ import akka.actor.ActorRef
 case class Message(
   event: Any,
   sequenceNr: Long = 0L,
+  timestamp: Long = 0L,
   processorId: Int = 0,
   acks: Seq[Int] = Nil,
   ack: Boolean = true,
@@ -70,6 +72,7 @@ case class Message(
   private def confirmPos() = if (posConfirmationTarget ne null) posConfirmationTarget ! posConfirmationMessage
   private def confirmNeg() = if (negConfirmationTarget ne null) negConfirmationTarget ! negConfirmationMessage
 
+  private [eventsourced] def withTimestamp = copy(timestamp = System.currentTimeMillis)
   private [eventsourced] def clearConfirmationSettings = copy(
     posConfirmationTarget = null,
     posConfirmationMessage = null,

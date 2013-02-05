@@ -82,7 +82,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
   def createJournal(journalDir: File)(implicit system: ActorSystem): ActorRef
 
   "A journal" must {
-    "persist input messages" in { fixture =>
+    "persist and timestamp input messages" in { fixture =>
       import fixture._
 
       journal ! WriteInMsg(1, Message("test-1"), writeTarget)
@@ -90,8 +90,19 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 
       replayInMsgs(1, 0, replayTarget)
 
-      dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1)) }
-      dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
+      dequeue(replayQueue) { m => m must be(Message("test-1", sequenceNr = 1, timestamp = m.timestamp)); m.timestamp must be > (0L) }
+      dequeue(replayQueue) { m => m must be(Message("test-2", sequenceNr = 2, timestamp = m.timestamp)); m.timestamp must be > (0L)  }
+    }
+    "persist but not timestamp output messages" in { fixture =>
+      import fixture._
+
+      journal ! WriteOutMsg(1, Message("test-1"), 1, SkipAck, writeTarget)
+      journal ! WriteOutMsg(1, Message("test-2"), 1, SkipAck, writeTarget)
+
+      replayOutMsgs(1, 0, replayTarget)
+
+      dequeue(replayQueue) { m => m must be(Message("test-1", sequenceNr = 1, timestamp = 0L)) }
+      dequeue(replayQueue) { m => m must be(Message("test-2", sequenceNr = 2, timestamp = 0L)) }
     }
     "persist messages with client-defined sequence numbers" in { fixture =>
       import fixture._
@@ -101,8 +112,8 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 
       replayInMsgs(1, 0, replayTarget)
 
-      dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 5)) }
-      dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 6)) }
+      dequeue(replayQueue) { m => m must be(Message("test-1", sequenceNr = 5, timestamp = m.timestamp)) }
+      dequeue(replayQueue) { m => m must be(Message("test-2", sequenceNr = 6, timestamp = m.timestamp)) }
     }
     "persist input messages and acknowledgements" in { fixture =>
       import fixture._
@@ -112,7 +123,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 
       replayInMsgs(1, 0, replayTarget)
 
-      dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
+      dequeue(replayQueue) { m => m must be(Message("test-1", sequenceNr = 1, acks = List(1), timestamp = m.timestamp)) }
     }
     "persist input messages and acknowledgements along with output messages" in { fixture =>
       import fixture._
@@ -123,8 +134,8 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       replayInMsgs(1, 0, replayTarget)
       replayOutMsgs(1, 0, replayTarget)
 
-      dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
-      dequeue(replayQueue) { _ must be(Message("test-2", sequenceNr = 2)) }
+      dequeue(replayQueue) { m => m must be(Message("test-1", sequenceNr = 1, acks = List(1), timestamp = m.timestamp)) }
+      dequeue(replayQueue) { m => m must be(Message("test-2", sequenceNr = 2, timestamp = 0L)) }
     }
     "replay iput messages for n processors with a single command" in { fixture =>
       import fixture._
@@ -143,9 +154,9 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
         ReplayInMsgs(3, 6L, replayTarget)
       )), duration)
 
-      dequeue(replayQueue) { _ must be(Message("test-1a", sequenceNr = 1)) }
-      dequeue(replayQueue) { _ must be(Message("test-1b", sequenceNr = 2)) }
-      dequeue(replayQueue) { _ must be(Message("test-3b", sequenceNr = 6)) }
+      dequeue(replayQueue) { m => m must be(Message("test-1a", sequenceNr = 1, timestamp = m.timestamp)) }
+      dequeue(replayQueue) { m => m must be(Message("test-1b", sequenceNr = 2, timestamp = m.timestamp)) }
+      dequeue(replayQueue) { m => m must be(Message("test-3b", sequenceNr = 6, timestamp = m.timestamp)) }
     }
     "tolerate phantom acknowledgements" in { fixture =>
       import fixture._
@@ -156,7 +167,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 
       replayInMsgs(1, 0, replayTarget)
 
-      dequeue(replayQueue) { _ must be(Message("test-1", sequenceNr = 1, acks = List(1))) }
+      dequeue(replayQueue) { m => m must be(Message("test-1", sequenceNr = 1, acks = List(1), timestamp = m.timestamp)) }
     }
   }
 }
@@ -197,8 +208,8 @@ abstract class LeveldbJournalPSSpec extends JournalSpec {
 
     journal ! ReplayInMsgs(1, 0, replayTarget)
 
-    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-1"), sequenceNr = 1)) }
-    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-2"), sequenceNr = 2)) }
+    dequeue(replayQueue) { m => m must be(Message(CustomEvent("TEST-1"), sequenceNr = 1, timestamp = m.timestamp)) }
+    dequeue(replayQueue) { m => m must be(Message(CustomEvent("TEST-2"), sequenceNr = 2, timestamp = m.timestamp)) }
   }
   "persist output messages with a custom event serializer" in { fixture =>
     import fixture._
@@ -208,8 +219,8 @@ abstract class LeveldbJournalPSSpec extends JournalSpec {
 
     journal ! ReplayOutMsgs(1, 0, replayTarget)
 
-    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-3"), sequenceNr = 1)) }
-    dequeue(replayQueue) { _ must be(Message(CustomEvent("TEST-4"), sequenceNr = 2)) }
+    dequeue(replayQueue) { m => m must be(Message(CustomEvent("TEST-3"), sequenceNr = 1, timestamp = 0L)) }
+    dequeue(replayQueue) { m => m must be(Message(CustomEvent("TEST-4"), sequenceNr = 2, timestamp = 0L)) }
   }
 }
 

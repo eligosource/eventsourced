@@ -124,6 +124,7 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
       .setEventSerializerId(serializer.identifier)
       .setProcessorId(message.processorId)
       .setSequenceNr(message.sequenceNr)
+      .setTimestamp(message.timestamp)
 
     if (message.senderPath != null) {
       builder.setSenderPath(message.senderPath)
@@ -151,6 +152,7 @@ class Serialization(system: ExtendedActorSystem) extends Extension {
       event = event,
       processorId = messageProtocol.getProcessorId,
       sequenceNr = messageProtocol.getSequenceNr,
+      timestamp = messageProtocol.getTimestamp,
       senderPath = senderPath)
   }
 }

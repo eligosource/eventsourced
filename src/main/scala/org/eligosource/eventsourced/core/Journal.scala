@@ -22,7 +22,7 @@ trait Journal extends Actor {
   def receive = {
     case cmd: WriteInMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else { _counter = cmd.message.sequenceNr; cmd }
-      executeWriteInMsg(c)
+      executeWriteInMsg(c.withTimestamp)
       c.target forward Written(c.message)
       commandListener.foreach(_ ! cmd)
       _counter += 1L
@@ -214,6 +214,7 @@ object Journal {
    */
   case class WriteInMsg(processorId: Int, message: Message, target: ActorRef, genSequenceNr: Boolean = true) {
     def withSequenceNr(snr: Long) = copy(message = message.copy(sequenceNr = snr), genSequenceNr = false)
+    def withTimestamp = copy(message = message.withTimestamp)
   }
 
   /**
