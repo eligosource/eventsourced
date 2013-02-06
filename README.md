@@ -139,7 +139,7 @@ on `stdout` where the first `println` is triggered by a replayed event message.
 
 ![Channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/firststeps-2.png)
 
-In this step, the event-sourced `processor` is extended to send out new event messages to a `destination`. It creates a another event message (by making a copy of the received event message) with an updated `event` field and sends the updated message to `destination`.
+In this step, the event-sourced `processor` is extended to send out new event messages to a `destination`. It creates another event message (by making a copy of the received event message) with an updated `event` field and sends the updated message to `destination`.
 
     class Processor(destination: ActorRef) extends Actor {
       var counter = 0;
