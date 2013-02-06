@@ -124,7 +124,7 @@ The event-sourced `processor` can be used like any other actor. Messages of type
     // send event message to processor (will be journaled)
     processor ! Message("foo")
 
-A first application application run will create an empty journal. Hence, no event messages will be replayed and the `processor` writes
+A first application run will create an empty journal. Hence, no event messages will be replayed and the `processor` writes
 
     [processor] event = foo (1)
 
