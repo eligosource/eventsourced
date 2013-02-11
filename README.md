@@ -35,11 +35,11 @@ The *Eventsourced* library fits well into applications that implement the [CQRS]
 
 For persisting event messages, *Eventsourced* currently provides the following journal implementations:
 
-- A [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni) based journal which is currently recommended for production use (see also [`LeveldbJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.LeveldbJournalProps)). Because LevelDB is a native library, this journal requires a special [sbt](http://www.scala-sbt.org/) project [configuration](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). It will be used in the following examples.
-- A [Journal.IO](https://github.com/sbtourist/Journal.IO) based journal (see also [`JournalioJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.JournalioJournalProps)). 
-- An in-memory journal for testing purposes (see also [`InmemJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.InmemJournalProps)).
+- A [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni) based journal which is currently recommended for production use (see also [`LeveldbJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps)). Because LevelDB is a native library, this journal requires a special [sbt](http://www.scala-sbt.org/) project [configuration](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). It will be used in the following examples.
+- A [Journal.IO](https://github.com/sbtourist/Journal.IO) based journal (see also [`JournalioJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps)). 
+- An in-memory journal for testing purposes (see also [`InmemJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps)).
 
-Distributed journal implementations (e.g. based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/)) as well as event archives (for long-term event storage) will come soon.
+Distributed journal implementations (e.g. based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/) or [Amazon DynamoDB](http://aws.amazon.com/en/dynamodb/)) as well as event archives (for long-term event storage) will come soon.
 
 Resources
 ---------
@@ -63,7 +63,12 @@ Resources
 First steps
 -----------
 
-This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the usage of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.FirstSteps'` (click [here](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native) for details about the `run-nobootcp` task). The legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
+This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the usage of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed inside sbt with 
+
+    > project eventsourced-examples
+    > run-nobootcp org.eligosource.eventsourced.guide.FirstSteps
+
+Details about the `run-nobootcp` task are described [here](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). The legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
 
 ### Step 1: `EventsourcingExtension` initialization
 
@@ -78,7 +83,7 @@ An `EventsourcingExtension` is initialized with an `ActorSystem` and a journal `
     import java.io.File
     import akka.actor._
     import org.eligosource.eventsourced.core._
-    import org.eligosource.eventsourced.journal._
+    import org.eligosource.eventsourced.journal.leveldb._
 
     val system: ActorSystem = ActorSystem("example")
     val journal: ActorRef = Journal(LeveldbJournalProps(new File("target/example-1")))
@@ -299,7 +304,10 @@ This section modifies (and simplifies) the example from section [First steps](#f
 - `Processor` will be modified with `Emitter` (in addition to `Eventsourced`)
 - `Destination` will be modified with `Receiver` and `Confirm`
 
-Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.StackableTraits'`.
+Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed inside sbt with 
+
+    > project eventsourced-examples
+    > run-nobootcp org.eligosource.eventsourced.guide.StackableTraits
 
 The new definition of `Processor`
 
@@ -404,7 +412,10 @@ Instead of replying to the sender, the processor can also forward the sender ref
 
 When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) (see also section [Emitter](#emitter)) applications can choose between methods `sendEvent` and `forwardEvent` where `sendEvent` takes an implicit sender reference as parameter and `forwardEvent` forwards the current sender reference. They work in the same way as the `!` and `forward` methods on `ActorRef`, respectively.
 
-Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.guide.SenderReferences'`.
+Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed inside sbt with 
+
+    > project eventsourced-examples
+    > run-nobootcp org.eligosource.eventsourced.guide.SenderReferences
 
 Channels
 --------
@@ -572,7 +583,7 @@ The futures returned by `replay`, `deliver` and `completeProcessing` are monadic
 
 ### State dependencies
 
-The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) processors may depend on the state of other `Eventsourced` processors. For example, processor A sends a message to processor B and processor B replies with a message that includes (part of) processor B's state. Depending on the state value included in the reply, processor A may take different actions. To ensure a proper recovery of such a setup, any state-conveying or state-dependent messages exchanged between processors A and B must be of type [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) (see also [DependentStateRecoverySpec.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/core/DependentStateRecoverySpec.scala)). Exchanging state via non-journaled messages (i.e. messages of type other than `Message`) can break consistent recovery. This is also the case if an `Eventsourced` processor maintains state via an externally visible STM reference and another `Eventsourced` processor directly reads from that reference. Communication between `Eventsourced` processors is closely related to [external queries](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalQueries) and [external updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates).
+The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) processors may depend on the state of other `Eventsourced` processors. For example, processor A sends a message to processor B and processor B replies with a message that includes (part of) processor B's state. Depending on the state value included in the reply, processor A may take different actions. To ensure a proper recovery of such a setup, any state-conveying or state-dependent messages exchanged between processors A and B must be of type [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) (see also [DependentStateRecoverySpec.scala](https://github.com/eligosource/eventsourced/blob/master/es-core/src/test/scala/org/eligosource/eventsourced/core/DependentStateRecoverySpec.scala)). Exchanging state via non-journaled messages (i.e. messages of type other than `Message`) can break consistent recovery. This is also the case if an `Eventsourced` processor maintains state via an externally visible STM reference and another `Eventsourced` processor directly reads from that reference. Communication between `Eventsourced` processors is closely related to [external queries](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalQueries) and [external updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates).
 
 Behavior changes
 ----------------
@@ -825,7 +836,10 @@ to `stdout`. You may observe a different line ordering when running the example.
     received response Order(1,jelly beans,true,1234-5678-1234-5678)
     received event OrderAccepted(Order(1,jelly beans,true,1234-5678-1234-5678))
 
-The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed with `sbt 'test:run-nobootcp org.eligosource.eventsourced.example.OrderExample'`. 
+The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed with inside sbt with 
+
+    > project eventsourced-examples
+    > run-nobootcp org.eligosource.eventsourced.example.OrderExample
 
 An advanced version of this example, using a [reliable request-reply channel](#reliable-request-reply-channel), is discussed in [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html). 
 
@@ -833,7 +847,7 @@ An advanced version of this example, using a [reliable request-reply channel](#r
 
 ![State machines](https://raw.github.com/eligosource/eventsourced/master/doc/images/statemachines-1.png)
 
-With a recent [change](https://www.assembla.com/spaces/akka/tickets/2680) in Akka 2.1, event-sourcing Akka [FSM](http://doc.akka.io/docs/akka/2.1.0/scala/fsm.html)s is now pretty easy. The following state machine example is a `Door` which can be in one of two states: `Open` and `Closed`. 
+With a [change](https://www.assembla.com/spaces/akka/tickets/2680) since Akka 2.1, event-sourcing Akka [FSM](http://doc.akka.io/docs/akka/2.1.0/scala/fsm.html)s is now pretty easy. The following state machine example is a `Door` which can be in one of two states: `Open` and `Closed`. 
 
     sealed trait DoorState
   
@@ -922,7 +936,7 @@ will produce
     received event DoorMoved(Open,3)
     received event DoorMoved(Closed,4)
 
-The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/FsmExample.scala).
+The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-core/src/test/scala/org/eligosource/eventsourced/core/FsmSpec.scala).
 
 ### Clustering
 
@@ -936,21 +950,25 @@ When the master crashes, another node in the cluster becomes the master and reco
 
 ![Clustering](https://raw.github.com/eligosource/eventsourced/master/doc/images/clustering-2.png)
 
-Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/src/test/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/src/test/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/src/test/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application, first start the application that hosts the `Destination` actor and the journal:
+Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/main/test/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application inside sbt, first start the application that hosts the `Destination` actor and the journal:
 
-    sbt 'test:run-main org.eligosource.eventsourced.example.Destination'
+    > run-main org.eligosource.eventsourced.example.Destination
 
 Then start the first seed node of the cluster
 
-    sbt 'test:run-main org.eligosource.eventsourced.example.Node 2561'
+    > run-main org.eligosource.eventsourced.example.Node 2561
 
 then the second seed node
 
-    sbt 'test:run-main org.eligosource.eventsourced.example.Node 2562'
+    > run-main org.eligosource.eventsourced.example.Node 2562
 
 and finally a third cluster node
 
-    sbt 'test:run-main org.eligosource.eventsourced.example.Node'
+    > run-main org.eligosource.eventsourced.example.Node
+
+The above commands require that you're in the `eventsourced-examples` project. You can switch to it via
+
+    > project eventsourced-examples
 
 Most likely the first seed node will become the master which writes 
 
