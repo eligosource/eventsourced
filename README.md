@@ -950,7 +950,7 @@ When the master crashes, another node in the cluster becomes the master and reco
 
 ![Clustering](https://raw.github.com/eligosource/eventsourced/master/doc/images/clustering-2.png)
 
-Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/main/test/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application inside sbt, first start the application that hosts the `Destination` actor and the journal:
+Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application inside sbt, first start the application that hosts the `Destination` actor and the journal:
 
     > run-main org.eligosource.eventsourced.example.Destination
 
