@@ -20,7 +20,7 @@ import akka.actor._
 import org.eligosource.eventsourced.core._
 
 /**
- * Support trait for journal implementations with sequential, blocking writes.
+ * Support trait for journal implementations with sequential, sync writes.
  */
 trait SequentialWriteJournal extends Actor {
   import Channel.Deliver
