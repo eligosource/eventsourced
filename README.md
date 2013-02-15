@@ -482,7 +482,7 @@ A reliable request-reply channel is a pattern implemented on top of a [reliable 
 A reliable request-reply channel is created and registered in the same way as a reliable channel except that a [`ReliableRequestReplyChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.ReliableRequestReply$ReliableRequestReplyChannelProps) configuration object is used. 
 
     // … 
-    import org.eligosource.eventsourced.patterns._
+    import org.eligosource.eventsourced.patterns.reliable.requestreply._
 
     val channel: ActorRef = extension.channelOf(ReliableRequestReplyChannelProps(channelId, destination))
 

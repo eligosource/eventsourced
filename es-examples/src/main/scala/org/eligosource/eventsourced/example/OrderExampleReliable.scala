@@ -29,7 +29,7 @@ import com.typesafe.config.ConfigFactory
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Channel._
 import org.eligosource.eventsourced.journal.journalio._
-import org.eligosource.eventsourced.patterns._
+import org.eligosource.eventsourced.patterns.reliable.requestreply._
 
 // ------------------------------------
 // Domain object
@@ -75,7 +75,7 @@ case object Recovered
 // Eventsourced order processor
 // ------------------------------------
 
-class OrderProcessor(val id: Int) extends Actor with ActorLogging with ReliableRequestReply { this: Receiver =>
+class OrderProcessor(val id: Int) extends Actor with ActorLogging { this: Receiver =>
   import Validation._
 
   val ext = EventsourcingExtension(context.system)

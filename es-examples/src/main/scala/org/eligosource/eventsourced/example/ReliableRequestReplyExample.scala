@@ -24,9 +24,7 @@ import akka.actor._
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps
 
-import org.eligosource.eventsourced.patterns.DestinationFailure
-import org.eligosource.eventsourced.patterns.DestinationNotResponding
-import org.eligosource.eventsourced.patterns._
+import org.eligosource.eventsourced.patterns.reliable.requestreply._
 
 object ReliableRequestReplyExample extends App {
   /*
@@ -91,7 +89,7 @@ object ReliableRequestReplyExample extends App {
    * Eventsourced processor that communicates with `Destination` via
    * a reliable request reply channel.
    */
-  class Processor(destination: ActorRef) extends Actor with ReliableRequestReply { this: Emitter =>
+  class Processor(destination: ActorRef) extends Actor { this: Emitter =>
     val id = 1
 
     // processor state
