@@ -1,9 +1,7 @@
 import com.typesafe.sbt.osgi.SbtOsgi
 
-resolvers += "Journalio Repo" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
-
 libraryDependencies ++= Seq(
-  "journalio" % "journalio" % "1.2" % "compile"
+  "com.github.sbtourist" % "journalio" % "1.3" % "compile"
 )
 
 OsgiKeys.importPackage := Seq(
