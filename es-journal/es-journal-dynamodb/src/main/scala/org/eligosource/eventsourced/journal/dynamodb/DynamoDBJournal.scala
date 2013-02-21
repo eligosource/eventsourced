@@ -17,6 +17,7 @@ import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.core.Message
 import org.eligosource.eventsourced.core.Serialization
 import org.eligosource.eventsourced.journal.common.ConcurrentWriteJournal
+import util.{Failure, Success}
 
 
 class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJournal {
@@ -55,7 +56,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
   def storedCounter: Long = {
     val start = Long.MaxValue
     val counter = Await.result(findStoredCounter(start), props.operationTimeout.duration)
-    log.info(s"found stored counter $counter")
+    log.debug(s"found stored counter $counter")
     counter
   }
 
@@ -98,13 +99,13 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
   }
 
   ///todo all BatchGetItem need to chek and retry for unprocessed keys before mapBatch-ing
-  private def replayOut(r: ReplayOutMsgs, replayTo: Long, p: (Message) => Unit) {
+  private def replayOut(r: ReplayOutMsgs, replayTo: Long, p: (Message) => Unit):Iterator[Future[Unit]] = {
     val from = r.fromSequenceNr
     val msgs = (replayTo - r.fromSequenceNr).toInt + 1
     log.debug(s"replayingOut from ${from} for up to ${msgs}")
     val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
     Stream.iterate(r.fromSequenceNr, msgs)(_ + 1)
-      .map(l => (l -> new DynamoKey().withHashKeyElement(outKey(r.channelId, l)))).grouped(100).foreach {
+      .map(l => (l -> new DynamoKey().withHashKeyElement(outKey(r.channelId, l)))).grouped(100).map {
       keys =>
         log.debug("replayingOut")
         val ka = new KeysAndAttributes().withKeys(keys.map(_._2).asJava).withConsistentRead(true)
@@ -121,13 +122,13 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     }
   }
 
-  private def replayIn(r: ReplayInMsgs, replayTo: Long, processorId: Int, p: (Message) => Unit) {
+  private def replayIn(r: ReplayInMsgs, replayTo: Long, processorId: Int, p: (Message) => Unit):Iterator[Future[Unit]]={
     val from = r.fromSequenceNr
     val msgs = (replayTo - r.fromSequenceNr).toInt + 1
     log.debug(s"replayingIn from ${from} for up to ${msgs}")
     val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
     Stream.iterate(r.fromSequenceNr, msgs)(_ + 1)
-      .map(l => (l -> new DynamoKey().withHashKeyElement(inKey(r.processorId, l)))).grouped(100).foreach {
+      .map(l => (l -> new DynamoKey().withHashKeyElement(inKey(r.processorId, l)))).grouped(100).map {
       keys =>
         log.debug("replayingIn")
         val ka = new KeysAndAttributes().withKeys(keys.map(_._2).asJava).withConsistentRead(true)
@@ -308,17 +309,29 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
 
   class DynamoReplayer extends Replayer {
     def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sender: ActorRef, replayTo: Long) {
-      cmds.foreach(cmd => replayIn(cmd, replayTo, cmd.processorId, p(_, cmd.target)))
-      sender ! ReplayDone
+      val replayOps = cmds.map {
+        cmd =>
+          Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p(_, cmd.target)))
+      }
+      Future.sequence(replayOps).onComplete{
+        case Success(_) => sender ! ReplayDone
+        case Failure(x) => context.system.log.error(x,"Failure:executeBatchReplayInMsgs")
+      }
     }
 
     def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) {
-      replayIn(cmd, replayTo, cmd.processorId, p)
-      sender ! ReplayDone
+      val replayOps = Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p))
+      replayOps.onComplete{
+        case Success(_) => sender ! ReplayDone
+        case Failure(x) => context.system.log.error(x,"Failure:executeReplayInMsgs")
+      }
     }
 
     def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) {
-      replayOut(cmd, replayTo, p)
+      Future.sequence(replayOut(cmd, replayTo, p)).onComplete{
+        case Success(_) => context.system.log.debug("executeReplayOutMsgs")
+        case Failure(x) => context.system.log.error(x,"Failure:executeReplayOutMsgs")
+      }
     }
   }
 
