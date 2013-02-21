@@ -8,7 +8,7 @@ import com.amazonaws.services.dynamodb.AmazonDynamoDB
 import com.amazonaws.services.dynamodb.model._
 import com.amazonaws.services.dynamodb.model.{Key => DynamoKey}
 import com.sclasen.spray.dynamodb.DynamoDBClient
-import concurrent.duration.FiniteDuration
+import concurrent.duration._
 import concurrent.{Future, Await}
 import java.nio.ByteBuffer
 import java.util.Collections
@@ -55,7 +55,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
   def storedCounter: Long = {
     val start = Long.MaxValue
     val counter = Await.result(findStoredCounter(start), props.operationTimeout.duration)
-    log.debug(s"found stored counter $counter")
+    log.info(s"found stored counter $counter")
     counter
   }
 
@@ -282,7 +282,10 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       val writes = puts.map(new WriteRequest().withPutRequest(_)).asJava
       write.put(props.journalTable, writes)
       val batch = new BatchWriteItemRequest().withRequestItems(write)
-      dynamoWriter.sendBatchWriteItem(batch).map(sendUnprocessedItems).map(_ => ())
+      dynamoWriter.sendBatchWriteItem(batch).flatMap{
+         res => if(res.getUnprocessedItems.size() > 0) sendUnprocessedItems(res)
+                else Future.successful(res)
+      }
     }
 
     def sendUnprocessedItems(result: BatchWriteItemResult): Future[(BatchWriteItemResult, List[PutItemResult])] = {
