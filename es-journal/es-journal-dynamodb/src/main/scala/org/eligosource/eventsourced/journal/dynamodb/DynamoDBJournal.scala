@@ -99,7 +99,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
   }
 
   ///todo all BatchGetItem need to chek and retry for unprocessed keys before mapBatch-ing
-  private def replayOut(r: ReplayOutMsgs, replayTo: Long, p: (Message) => Unit):Iterator[Future[Unit]] = {
+  private def replayOut(r: ReplayOutMsgs, replayTo: Long, p: (Message) => Unit): Iterator[Future[Unit]] = {
     val from = r.fromSequenceNr
     val msgs = (replayTo - r.fromSequenceNr).toInt + 1
     log.debug(s"replayingOut from ${from} for up to ${msgs}")
@@ -122,7 +122,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     }
   }
 
-  private def replayIn(r: ReplayInMsgs, replayTo: Long, processorId: Int, p: (Message) => Unit):Iterator[Future[Unit]]={
+  private def replayIn(r: ReplayInMsgs, replayTo: Long, processorId: Int, p: (Message) => Unit): Iterator[Future[Unit]] = {
     val from = r.fromSequenceNr
     val msgs = (replayTo - r.fromSequenceNr).toInt + 1
     log.debug(s"replayingIn from ${from} for up to ${msgs}")
@@ -155,27 +155,32 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
           .withHashKeyElement(ackKey(processorId, message.sequenceNr)))
     }
 
-    val ka = new KeysAndAttributes().withKeys(counterOptKeys.map(_._2).flatten.asJava).withConsistentRead(true)
-    val get = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(props.journalTable, ka))
-    dynamo.sendBatchGetItem(get).map {
-      response =>
-        val batchMap = mapBatch(response.getResponses.get(props.journalTable))
-        val acks: Stream[Option[Seq[Int]]] = counterOptKeys.map {
-          counterOptKey =>
-            counterOptKey._2.flatMap {
-              key =>
-                Option(batchMap.get(key.getHashKeyElement)).map {
-                  _.keySet().asScala.filter(!DynamoKeys.contains(_)).map(_.toInt).toSeq
-                }
-            }
-        }
+    val ks = counterOptKeys.map(_._2).flatten
+    if (ks.nonEmpty) {
+      val ka = new KeysAndAttributes().withKeys(ks.asJava).withConsistentRead(true)
+      val get = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(props.journalTable, ka))
+      dynamo.sendBatchGetItem(get).map {
+        response =>
+          val batchMap = mapBatch(response.getResponses.get(props.journalTable))
+          val acks: Stream[Option[Seq[Int]]] = counterOptKeys.map {
+            counterOptKey =>
+              counterOptKey._2.flatMap {
+                key =>
+                  Option(batchMap.get(key.getHashKeyElement)).map {
+                    _.keySet().asScala.filter(!DynamoKeys.contains(_)).map(_.toInt).toSeq
+                  }
+              }
+          }
 
-        messages.zip(acks).foreach {
-          case ((counter, Some(message)), Some(chAcks)) => replayer ! (counter -> Some(message.copy(acks = chAcks.filter(_ != -1))))
-          case ((counter, Some(message)), None) => replayer ! (counter -> Some(message))
-          case ((counter, None), None) => replayer ! (counter -> None)
-          case ((counter, None), Some(_)) => context.system.log.error("ACKS Without MSG Found!")
-        }
+          messages.zip(acks).foreach {
+            case ((counter, Some(message)), Some(chAcks)) => replayer ! (counter -> Some(message.copy(acks = chAcks.filter(_ != -1))))
+            case ((counter, Some(message)), None) => replayer ! (counter -> Some(message))
+            case ((counter, None), None) => replayer ! (counter -> None)
+            case ((counter, None), Some(_)) => context.system.log.error("ACKS Without MSG Found!")
+          }
+      }
+    } else {
+      Future.successful(counterOptKeys.foreach(co => replayer ! co))
     }
   }
 
@@ -289,9 +294,9 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       val writes = puts.map(new WriteRequest().withPutRequest(_)).asJava
       write.put(props.journalTable, writes)
       val batch = new BatchWriteItemRequest().withRequestItems(write)
-      dynamoWriter.sendBatchWriteItem(batch).flatMap{
-         res => if(res.getUnprocessedItems.size() > 0) sendUnprocessedItems(res)
-                else Future.successful(res)
+      dynamoWriter.sendBatchWriteItem(batch).flatMap {
+        res => if (res.getUnprocessedItems.size() > 0) sendUnprocessedItems(res)
+        else Future.successful(res)
       }
     }
 
@@ -313,41 +318,43 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
         cmd =>
           Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p(_, cmd.target)))
       }
-      Future.sequence(replayOps).onComplete{
+      Future.sequence(replayOps).onComplete {
         case Success(_) => sender ! ReplayDone
-        case Failure(x) => context.system.log.error(x,"Failure:executeBatchReplayInMsgs")
+        case Failure(x) => context.system.log.error(x, "Failure:executeBatchReplayInMsgs")
       }
     }
 
     def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) {
       val replayOps = Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p))
-      replayOps.onComplete{
+      replayOps.onComplete {
         case Success(_) => sender ! ReplayDone
-        case Failure(x) => context.system.log.error(x,"Failure:executeReplayInMsgs")
+        case Failure(x) => context.system.log.error(x, "Failure:executeReplayInMsgs")
       }
     }
 
     def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) {
-      Future.sequence(replayOut(cmd, replayTo, p)).onComplete{
+      Future.sequence(replayOut(cmd, replayTo, p)).onComplete {
         case Success(_) => context.system.log.debug("executeReplayOutMsgs")
-        case Failure(x) => context.system.log.error(x,"Failure:executeReplayOutMsgs")
+        case Failure(x) => context.system.log.error(x, "Failure:executeReplayOutMsgs")
       }
     }
   }
 
-  class ReplayResequencer(start:Long, maxMessages:Long, p: (Message) => Unit) extends Actor{
+  class ReplayResequencer(start: Long, maxMessages: Long, p: (Message) => Unit) extends Actor {
+
     import scala.collection.mutable.Map
+
     //todo do we need to shut this down when done?
     private val delayed = Map.empty[Long, Option[Message]]
     private var delivered = start - 1
 
     def receive = {
-      case (seqnr:Long, Some(message:Message)) => resequence(seqnr, Some(message))
-      case (seqnr:Long, None) => resequence(seqnr, None)
+      case (seqnr: Long, Some(message: Message)) => resequence(seqnr, Some(message))
+      case (seqnr: Long, None) => resequence(seqnr, None)
     }
 
     @scala.annotation.tailrec
-    private def resequence(seqnr: Long, m:Option[Message]) {
+    private def resequence(seqnr: Long, m: Option[Message]) {
       if (seqnr == delivered + 1) {
         delivered = seqnr
         m.foreach(p)
@@ -358,7 +365,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       if (eo.isDefined) resequence(delivered + 1, eo.get)
     }
 
-   }
+  }
 
 
 }
