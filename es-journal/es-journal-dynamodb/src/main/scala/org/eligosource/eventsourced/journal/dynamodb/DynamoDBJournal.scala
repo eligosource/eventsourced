@@ -180,7 +180,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
           }
       }
     } else {
-      Future.successful(counterOptKeys.foreach(co => replayer ! co))
+      Future.successful(messages.foreach(co => replayer ! co))
     }
   }
 
