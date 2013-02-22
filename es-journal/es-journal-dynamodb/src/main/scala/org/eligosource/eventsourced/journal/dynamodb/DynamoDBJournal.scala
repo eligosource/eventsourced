@@ -64,7 +64,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     val ka = new KeysAndAttributes().withKeys(candidates.values.toSeq: _*).withConsistentRead(true)
     val tables = Collections.singletonMap(props.journalTable, ka)
     val get = new BatchGetItemRequest().withRequestItems(tables)
-    dynamo.sendBatchGetItem(get).flatMap {
+    dynamo.sendBatchGetItem(get).flatMap(getUnprocessedItems)flatMap {
       res =>
         val batch = mapBatch(res.getResponses.get(props.journalTable))
         val counters: List[Long] = candidates.map {
