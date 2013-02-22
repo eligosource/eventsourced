@@ -15,19 +15,23 @@
  */
 package org.eligosource.eventsourced.core
 
-import akka.actor._
-import akka.pattern.ask
-import akka.util.Timeout
 import java.io.File
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
-import org.apache.commons.io.FileUtils
-import org.eligosource.eventsourced.journal.dynamodb.DynamoDBJournalProps
-import org.scalatest.fixture._
-import org.scalatest.matchers.MustMatchers
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
+import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
+
+import org.apache.commons.io.FileUtils
+
+import org.scalatest.fixture._
+import org.scalatest.matchers.MustMatchers
+
+import org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps
 
 abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extends WordSpec with MustMatchers {
   type FixtureParam = T
@@ -47,24 +51,16 @@ abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extend
 
 trait EventsourcingFixture[A] {
   implicit val system = ActorSystem("test")
-  implicit val timeout = Timeout(10 seconds)
+  implicit val timeout = Timeout(5 seconds)
 
   val journalDir = new File("es-core-test/target/journal")
-  //val journal = Journal(LeveldbJournalProps(journalDir))
-  val journal = {
-    val key = sys.env("AWS_ACCESS_KEY_ID")
-    val secret = sys.env("AWS_SECRET_ACCESS_KEY")
-    val table = sys.env("TEST_TABLE")
-    val app = System.currentTimeMillis().toString
-    val concurrency = sys.env.get("CONCURRENCY").map(_.toInt).getOrElse(4)
-    Journal(DynamoDBJournalProps(table, app, key, secret, asyncWriterCount = concurrency, system = system))
-  }
+  val journal = Journal(LeveldbJournalProps(journalDir))
   val queue = new LinkedBlockingQueue[A]
 
   val extension = EventsourcingExtension(system, journal)
 
   def dequeue[A](queue: LinkedBlockingQueue[A]): A = {
-    queue.poll(10000, TimeUnit.MILLISECONDS)
+    queue.poll(5000, TimeUnit.MILLISECONDS)
   }
 
   def dequeue(): A = {
@@ -75,7 +71,7 @@ trait EventsourcingFixture[A] {
     p(dequeue())
   }
 
-  def result[A: ClassTag](actor: ActorRef)(r: Any): A = {
+  def result[A : ClassTag](actor: ActorRef)(r: Any): A = {
     Await.result(actor.ask(r).mapTo[A], timeout.duration)
   }
 
@@ -101,7 +97,7 @@ object CommandListener {
     val latch = new CountDownLatch(count)
     journal ! Journal.SetCommandListener(Some(system.actorOf(Props(new CommandListener(latch, predicate)))))
     new FutureCommands {
-      def await() = latch.await(10, TimeUnit.SECONDS)
+      def await() = latch.await(5, TimeUnit.SECONDS)
     }
   }
 }
