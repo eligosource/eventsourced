@@ -373,6 +373,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     //todo do we need to shut this down when done?
     private val delayed = Map.empty[Long, Option[Message]]
     private var delivered = start - 1
+    private val done = start + maxMessages - 1
 
     def receive = {
       case (seqnr: Long, Some(message: Message)) => resequence(seqnr, Some(message))
@@ -389,7 +390,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       }
       val eo = delayed.remove(delivered + 1)
       if (eo.isDefined) resequence(delivered + 1, eo.get)
-      else if (delivered == (start + maxMessages - 1) ){
+      else if (delivered == done){
         log.debug("replay resequencer finished, shutting down")
         self ! PoisonPill
       }
