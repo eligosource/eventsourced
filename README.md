@@ -39,7 +39,7 @@ For persisting event messages, *Eventsourced* currently provides the following j
 - A [Journal.IO](https://github.com/sbtourist/Journal.IO) based journal (see also [`JournalioJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps)). 
 - An in-memory journal for testing purposes (see also [`InmemJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps)).
 
-Distributed journal implementations (e.g. based on [Apache BookKeeper](http://zookeeper.apache.org/bookkeeper/) or [Amazon DynamoDB](http://aws.amazon.com/en/dynamodb/)) as well as event archives (for long-term event storage) will come soon.
+Distributed journal implementations based on [Apache HBase](http://hbase.apache.org/) and [Amazon DynamoDB](http://aws.amazon.com/en/dynamodb/) will come soon.
 
 Resources
 ---------
