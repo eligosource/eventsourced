@@ -20,7 +20,7 @@ import org.eligosource.eventsourced.journal.common.ConcurrentWriteJournal
 import util.{Failure, Success}
 
 
-class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJournal {
+class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJournal with ActorLogging {
 
 
   val serialization = Serialization(context.system)
@@ -32,7 +32,6 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
   val channelMarker = Array(1.toByte)
   val countMarker = Array(1.toByte)
 
-  val log = context.system.log
   log.debug("new Journal")
 
   def counterAtt(cntr: Long) = S(props.eventSourcedApp + Counter + cntr)
@@ -98,7 +97,6 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     }
   }
 
-  ///todo all BatchGetItem need to chek and retry for unprocessed keys before mapBatch-ing
   private def replayOut(r: ReplayOutMsgs, replayTo: Long, p: (Message) => Unit): Iterator[Future[Unit]] = {
     val from = r.fromSequenceNr
     val msgs = (replayTo - r.fromSequenceNr).toInt + 1
@@ -110,7 +108,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
         log.debug("replayingOut")
         val ka = new KeysAndAttributes().withKeys(keys.map(_._2).asJava).withConsistentRead(true)
         val get = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(props.journalTable, ka))
-        dynamo.sendBatchGetItem(get).map {
+        dynamo.sendBatchGetItem(get).flatMap(getUnprocessedItems).map {
           resp =>
             val batchMap = mapBatch(resp.getResponses.get(props.journalTable))
             keys.foreach {
@@ -133,7 +131,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
         log.debug("replayingIn")
         val ka = new KeysAndAttributes().withKeys(keys.map(_._2).asJava).withConsistentRead(true)
         val get = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(props.journalTable, ka))
-        dynamo.sendBatchGetItem(get).flatMap {
+        dynamo.sendBatchGetItem(get).flatMap(getUnprocessedItems).flatMap {
           resp =>
             val batchMap = mapBatch(resp.getResponses.get(props.journalTable))
             val messages = keys.map {
@@ -159,7 +157,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     if (ks.nonEmpty) {
       val ka = new KeysAndAttributes().withKeys(ks.asJava).withConsistentRead(true)
       val get = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(props.journalTable, ka))
-      dynamo.sendBatchGetItem(get).map {
+      dynamo.sendBatchGetItem(get).flatMap(getUnprocessedItems).map {
         response =>
           val batchMap = mapBatch(response.getResponses.get(props.journalTable))
           val acks: Stream[Option[Seq[Int]]] = counterOptKeys.map {
@@ -182,6 +180,32 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     } else {
       Future.successful(messages.foreach(co => replayer ! co))
     }
+  }
+
+  def getUnprocessedItems(result: BatchGetItemResult): Future[BatchGetItemResult] = {
+    if (result.getUnprocessedKeys.size() == 0) Future.successful(result)
+    else {
+      log.warning("UNPROCESSED ITEMS IN BATCH GET")
+      Future.sequence {
+        result.getUnprocessedKeys.get(props.journalTable).getKeys.asScala.map {
+          k =>
+            val g = new GetItemRequest().withTableName(props.journalTable).withKey(k).withConsistentRead(true)
+            getUnprocessedItem(g)
+        }
+      }.map {
+        results =>
+          val items = result.getResponses.get(props.journalTable).getItems
+          results.foreach {
+            i => items.add(i.getItem)
+          }
+          result
+      }
+    }
+  }
+
+  def getUnprocessedItem(g: GetItemRequest, retries: Int = 5): Future[GetItemResult] = {
+    if (retries == 0) throw new RuntimeException(s"couldnt get ${g.getKey} after 5 tries")
+    dynamo.sendGetItem(g).fallbackTo(getUnprocessedItem(g, retries - 1))
   }
 
 
@@ -294,23 +318,34 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       val writes = puts.map(new WriteRequest().withPutRequest(_)).asJava
       write.put(props.journalTable, writes)
       val batch = new BatchWriteItemRequest().withRequestItems(write)
-      dynamoWriter.sendBatchWriteItem(batch).flatMap {
-        res => if (res.getUnprocessedItems.size() > 0) sendUnprocessedItems(res)
-        else Future.successful(res)
+      dynamoWriter.sendBatchWriteItem(batch).flatMap(sendUnprocessedItems)
+    }
+
+    def sendUnprocessedItems(result: BatchWriteItemResult): Future[BatchWriteItemResult] = {
+      if (result.getUnprocessedItems.size() == 0) Future.successful(result)
+      else {
+        log.warning("UNPROCESSED ITEMS IN BATCH PUT")
+        Future.sequence {
+          result.getUnprocessedItems.get(props.journalTable).asScala.map {
+            w =>
+              val p = new PutItemRequest().withTableName(props.journalTable).withItem(w.getPutRequest.getItem)
+              sendUnprocessedItem(p)
+          }
+        }.map {
+          results =>
+            result.getUnprocessedItems.clear()
+            result  //just return the original result
+        }
       }
     }
 
-    def sendUnprocessedItems(result: BatchWriteItemResult): Future[(BatchWriteItemResult, List[PutItemResult])] = {
-      Future.sequence {
-        result.getUnprocessedItems.get(props.journalTable).asScala.map {
-          w =>
-            val p = new PutItemRequest().withTableName(props.journalTable).withItem(w.getPutRequest.getItem)
-            dynamoWriter.sendPutItem(p)
-        }
-      }.map(puts => result -> puts.toList)
-    }
 
+    def sendUnprocessedItem(p: PutItemRequest, retries: Int = 5): Future[PutItemResult] = {
+      if (retries == 0) throw new RuntimeException(s"couldnt put ${p.getItem.get(Id)} after 5 tries")
+      dynamo.sendPutItem(p).fallbackTo(sendUnprocessedItem(p, retries - 1))
+    }
   }
+
 
   class DynamoReplayer extends Replayer {
     def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sender: ActorRef, replayTo: Long) {
