@@ -171,7 +171,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
           }
 
           messages.zip(acks).foreach {
-            case ((counter, Some(message)), Some(chAcks)) => replayer ! (counter -> Some(message.copy(acks = chAcks.filter(_ != -1))))
+            case ((counter, Some(message)), Some(chAcks)) => replayer ! (counter -> Some(message.copy(acks = chAcks)))
             case ((counter, Some(message)), None) => replayer ! (counter -> Some(message))
             case ((counter, None), None) => replayer ! (counter -> None)
             case ((counter, None), Some(_)) => context.system.log.error("ACKS Without MSG Found!")
@@ -285,19 +285,10 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
     }
 
     def executeWriteOutMsg(cmd: WriteOutMsg) = {
-      val ack = {
-        if (cmd.ackSequenceNr != SkipAck)
-          putAck(WriteAck(cmd.ackProcessorId, cmd.channelId, cmd.ackSequenceNr))
-        else
-        //write a -1 to acks so we can be assured of non-nulls on the batch get in replay    //TODO DONT NEED
-          putAck(WriteAck(cmd.ackProcessorId, -1, cmd.ackSequenceNr))
-      }
-
-      batchWrite(cmd,
-        put(cmd, cmd.message.clearConfirmationSettings),
-        put(counterKey(cmd.message.sequenceNr), countMarker),
-        ack
-      )
+      val msg = put(cmd, cmd.message.clearConfirmationSettings)
+      val cnt = put(counterKey(cmd.message.sequenceNr), countMarker)
+      if (cmd.ackSequenceNr != SkipAck) batchWrite(cmd, msg, cnt, putAck(WriteAck(cmd.ackProcessorId, cmd.channelId, cmd.ackSequenceNr)))
+      else batchWrite(cmd, msg, cnt)
     }
 
     def executeWriteInMsg(cmd: WriteInMsg) = {
@@ -355,7 +346,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       }
       Future.sequence(replayOps).onComplete {
         case Success(_) => sender ! ReplayDone
-        case Failure(x) => context.system.log.error(x, "Failure:executeBatchReplayInMsgs")
+        case Failure(x) => log.error(x, "Failure:executeBatchReplayInMsgs")
       }
     }
 
@@ -363,14 +354,14 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       val replayOps = Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p))
       replayOps.onComplete {
         case Success(_) => sender ! ReplayDone
-        case Failure(x) => context.system.log.error(x, "Failure:executeReplayInMsgs")
+        case Failure(x) => log.error(x, "Failure:executeReplayInMsgs")
       }
     }
 
     def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) {
       Future.sequence(replayOut(cmd, replayTo, p)).onComplete {
-        case Success(_) => context.system.log.debug("executeReplayOutMsgs")
-        case Failure(x) => context.system.log.error(x, "Failure:executeReplayOutMsgs")
+        case Success(_) => log.debug("executeReplayOutMsgs")
+        case Failure(x) => log.error(x, "Failure:executeReplayOutMsgs")
       }
     }
   }
@@ -398,6 +389,10 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
       }
       val eo = delayed.remove(delivered + 1)
       if (eo.isDefined) resequence(delivered + 1, eo.get)
+      else if (delivered == (start + maxMessages - 1) ){
+        log.debug("replay resequencer finished, shutting down")
+        self ! PoisonPill
+      }
     }
 
   }
