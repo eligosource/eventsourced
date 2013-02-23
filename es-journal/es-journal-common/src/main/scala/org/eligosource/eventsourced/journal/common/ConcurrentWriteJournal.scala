@@ -35,12 +35,18 @@ trait ConcurrentWriteJournal extends Actor {
   implicit val timeout = Timeout(asyncWriteTimeout)
 
   val deadLetters = context.system.deadLetters
-  val resequencer: ActorRef = context.actorOf(Props(new ResequencerActor(replayer)))
 
-  val writers = 1 to asyncWriterCount map (id => context.actorOf(Props(new WriterActor(writer(id))))) toVector
+  val resequencer: ActorRef =
+    actor(new ResequencerActor(replayer), dispatcherName = journalProps.dispatcherName)
+
+  val writers = 1 to asyncWriterCount map  { id =>
+    actor(new WriterActor(writer(id)), dispatcherName = journalProps.dispatcherName)
+  } toVector
 
   var _counter = 0L
   var _counterResequencer = 1L
+
+  def journalProps: JournalProps
 
   def asyncWriteTimeout: FiniteDuration
   def asyncWriterCount: Int
