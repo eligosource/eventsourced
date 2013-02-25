@@ -59,6 +59,8 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
 
   def replayer = new DynamoReplayer
 
+  def journalProps = props
+
   private val countCommitter = context.actorOf(Props(new DynamoCountCommitter))
 
   resequencer ! SetDeliveryListener(Some(countCommitter))
