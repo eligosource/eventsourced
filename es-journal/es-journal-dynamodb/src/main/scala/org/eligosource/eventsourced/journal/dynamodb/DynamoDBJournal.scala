@@ -450,14 +450,14 @@ object DynamoDBJournal {
 
   val hashKey = new KeySchemaElement().withAttributeName("key").withAttributeType("S")
   val schema = new KeySchema().withHashKeyElement(hashKey)
-  lazy val dynamoSystem = ActorSystem("dynamo-util")
-  implicit lazy val dynamo = new DynamoDBClient(new DynamoDBClientProps(sys.env("AWS_ACCESS_KEY_ID"), sys.env("AWS_SECRET_ACCESS_KEY"), Timeout(10 seconds), dynamoSystem, dynamoSystem))
+  lazy val utilDynamoSystem = ActorSystem("dynamo-util")
+  implicit lazy val utilDynamo = new DynamoDBClient(new DynamoDBClientProps(sys.env("AWS_ACCESS_KEY_ID"), sys.env("AWS_SECRET_ACCESS_KEY"), Timeout(10 seconds), dynamoSystem, dynamoSystem))
 
   def createJournal(table: String, read:Long, write:Long) {
-    dynamo.sendListTables(new ListTablesRequest()).map {
+    utilDynamo.sendListTables(new ListTablesRequest()).map {
       case r if r.getTableNames.contains(table) => waitForActiveTable(table)
       case _ =>
-        dynamo.sendCreateTable(new CreateTableRequest(table, schema).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(read).withWriteCapacityUnits(write)))
+        utilDynamo.sendCreateTable(new CreateTableRequest(table, schema).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(read).withWriteCapacityUnits(write)))
         waitForActiveTable(table)
     }.map {
       _ => println(s"$table created.")
@@ -466,7 +466,7 @@ object DynamoDBJournal {
 
   def waitForActiveTable(table: String, retries: Int = 100) {
     if (retries == 0) throw new RuntimeException("Timed out waiting for creation of:" + table)
-    val desc = Await.result(dynamo.sendDescribeTable(new DescribeTableRequest().withTableName(table)), 10 seconds)
+    val desc = Await.result(utilDynamo.sendDescribeTable(new DescribeTableRequest().withTableName(table)), 10 seconds)
     if (desc.getTable.getTableStatus != "ACTIVE") {
       Thread.sleep(1000)
       println(s"waiting for $table to be ACTIVE")
@@ -475,7 +475,7 @@ object DynamoDBJournal {
   }
 
   def scaleThroughput(table: String, read: Int, write: Int):Future[Unit]= {
-    dynamo.sendDescribeTable(new DescribeTableRequest().withTableName(table)).map {
+    utilDynamo.sendDescribeTable(new DescribeTableRequest().withTableName(table)).map {
       dtr =>
         val tp = dtr.getTable.getProvisionedThroughput
         val cr = tp.getReadCapacityUnits
@@ -484,7 +484,7 @@ object DynamoDBJournal {
         println(s"$table throughput is read:${tp.getReadCapacityUnits}, write:${tp.getWriteCapacityUnits}, last-increased:${tp.getLastIncreaseDateTime}, last-dcreased:${tp.getLastDecreaseDateTime}")
         if (readInc == cr && writeInc == cw) {} else {
           println(s"$table altering read from $cr to $readInc, write $cw to $writeInc")
-          dynamo.sendUpdateTable(new UpdateTableRequest().withTableName(table).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(readInc).withWriteCapacityUnits(writeInc))).onFailure {
+          utilDynamo.sendUpdateTable(new UpdateTableRequest().withTableName(table).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(readInc).withWriteCapacityUnits(writeInc))).onFailure {
             case e: Exception => println(s"$table failed to provision throughput, read:${readInc} write:${writeInc} ${e.getClass.getSimpleName} ${e.getMessage}")
           }
           waitForActiveTable(table)
@@ -505,8 +505,8 @@ object DynamoDBJournal {
   }
 
   def stop(){
-    dynamoSystem.shutdown()
-    dynamoSystem.awaitTermination()
+    utilDynamoSystem.shutdown()
+    utilDynamoSystem.awaitTermination()
   }
 
 
