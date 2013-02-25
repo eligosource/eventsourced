@@ -125,8 +125,8 @@ object EventsourcedBuild extends Build {
   lazy val esCoreTest = Project(
     id = "eventsourced-core-test",
     base = file("es-core-test"),
-    settings = defaultSettings
-  ) dependsOn(esCore, esJournalLeveldb)
+    settings = defaultSettings ++ Seq(javaOptions in (Test,run) += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005" )
+  ) dependsOn(esCore, esJournalLeveldb, esJournalDynamodb)
 
   lazy val esExamples = Project(
     id = "eventsourced-examples",
