@@ -4,3 +4,6 @@
  jdk:
    - oraclejdk7
    - openjdk7
+ branches:
+   except:
+     - /^wip-.*$/
