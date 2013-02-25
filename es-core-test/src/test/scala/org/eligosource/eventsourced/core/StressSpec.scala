@@ -26,44 +26,32 @@ import org.eligosource.eventsourced.core.StressSpec._
 class StressSpec  extends EventsourcingSpec[Fixture] {
   "An event-sourced application" when {
     "using default channels" should {
-      "be able to deal with reasonable load" in { fixture =>
+      "be able to deal with reasonable load" ignore { fixture =>
         import fixture._
 
         val processor = configure(reliable = false)
         extension.recover()
 
-        stress(processor, throttle = 40)
-
-        queue.poll(30, TimeUnit.SECONDS) must be(cycles)
-
-        extension.recover()
-
-        //queue.poll(30, TimeUnit.SECONDS) must be(cycles)
-
+        stress(processor, throttle = 4)
+        queue.poll(100, TimeUnit.SECONDS) must be(cycles)
       }
     }
     "using reliable channels" should {
-      "be able to deal with reasonable load" in { fixture =>
+      "be able to deal with reasonable load" ignore { fixture =>
         import fixture._
 
         val processor = configure(reliable = true)
-
         extension.recover()
 
-        stress(processor, throttle = 70)
-
+        stress(processor, throttle = 7)
         queue.poll(100, TimeUnit.SECONDS) must be(cycles)
-
-        extension.recover()
-
-        //queue.poll(30, TimeUnit.SECONDS) must be(cycles)
       }
     }
   }
 }
 
 object StressSpec {
-  val cycles = 5000
+  val cycles = 100000
 
   class Fixture  extends EventsourcingFixture[Any] {
     val destination = system.actorOf(Props(new Destination(queue) with Receiver with Confirm))
@@ -82,10 +70,10 @@ object StressSpec {
 
     val start = System.nanoTime()
     1 to cycles foreach { i =>
-      if (i % 10 == 0) Thread.sleep(throttle)
+      if (i % 100 == 0) Thread.sleep(throttle)
       val nanos = System.nanoTime()
       processor ? Message(i) onSuccess {
-        case r: Int => if (r % 10 == 0) {
+        case r: Int => if (r % 5000 == 0) {
           val now = System.nanoTime()
 
           val latency = (now - nanos) / 1e6
