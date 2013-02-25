@@ -2,12 +2,12 @@ package org.eligosource.eventsourced.journal.dynamodb
 
 import DynamoDBJournal._
 import akka.actor._
+import akka.util.Timeout
 import collection.JavaConverters._
 import collection.immutable.TreeMap
-import com.amazonaws.services.dynamodb.AmazonDynamoDB
 import com.amazonaws.services.dynamodb.model._
 import com.amazonaws.services.dynamodb.model.{Key => DynamoKey}
-import com.sclasen.spray.dynamodb.DynamoDBClient
+import com.sclasen.spray.dynamodb.{DynamoDBClientProps, DynamoDBClient}
 import concurrent.duration._
 import concurrent.{Future, Await}
 import java.nio.ByteBuffer
@@ -67,7 +67,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
 
   def storedCounter: Long = {
     val max = Long.MaxValue
-    val counter = Await.result(findCommittedCounter.flatMap(min =>  findStoredCounter(min,max)), props.operationTimeout.duration)
+    val counter = Await.result(findCommittedCounter.flatMap(min => findStoredCounter(min, max)), props.operationTimeout.duration)
     log.debug(s"found stored counter $counter")
     counter
   }
@@ -75,16 +75,16 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
   private def findCommittedCounter: Future[Long] = {
     dynamo.sendGetItem(new GetItemRequest().withKey(committedCounterKey).withTableName(props.journalTable).withConsistentRead(true)).map {
       gir =>
-     Option(gir.getItem.get(Data)).map(_.getB.array()).map(counterFromBytes).getOrElse(0L)
-    }.recover{
-      case e:Exception =>
+        Option(gir.getItem.get(Data)).map(_.getB.array()).map(counterFromBytes).getOrElse(0L)
+    }.recover {
+      case e: Exception =>
         log.error("cant find committed counter starting at 0")
         0L
     }
   }
 
-  private def findStoredCounter(min:Long, max: Long): Future[Long] = {
-    val candidates = candidateKeys(min,max)
+  private def findStoredCounter(min: Long, max: Long): Future[Long] = {
+    val candidates = candidateKeys(min, max)
     val ka = new KeysAndAttributes().withKeys(candidates.values.toSeq: _*).withConsistentRead(true)
     val tables = Collections.singletonMap(props.journalTable, ka)
     val get = new BatchGetItemRequest().withRequestItems(tables)
@@ -98,7 +98,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
         if (counters.size == 0) Future(0) //no counters found
         else if (counters.size == 1 && counters(0) == 1) Future(1) //one counter found
         else if (endsSequentially(counters)) Future(counters.last) // last 2 counters found are sequential so last one is highest
-        else findStoredCounter(min,counters.last)
+        else findStoredCounter(min, counters.last)
     }
   }
 
@@ -446,25 +446,67 @@ object DynamoDBJournal {
   val CommitCounter = "COMMITCOUNTER"
   val DynamoKeys = Set(Id)
 
+  import concurrent.ExecutionContext.Implicits.global
+
   val hashKey = new KeySchemaElement().withAttributeName("key").withAttributeType("S")
   val schema = new KeySchema().withHashKeyElement(hashKey)
+  lazy val dynamoSystem = ActorSystem("dynamo-util")
+  implicit lazy val dynamo = new DynamoDBClient(new DynamoDBClientProps(sys.env("AWS_ACCESS_KEY_ID"), sys.env("AWS_SECRET_ACCESS_KEY"), Timeout(10 seconds), dynamoSystem, dynamoSystem))
 
-
-  def createJournal(table: String)(implicit dynamo: AmazonDynamoDB) {
-    if (!dynamo.listTables(new ListTablesRequest()).getTableNames.contains(table)) {
-      dynamo.createTable(new CreateTableRequest(table, schema).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(128).withWriteCapacityUnits(128)))
-      waitForActiveTable(table)
+  def createJournal(table: String, read:Long, write:Long) {
+    dynamo.sendListTables(new ListTablesRequest()).map {
+      case r if r.getTableNames.contains(table) => waitForActiveTable(table)
+      case _ =>
+        dynamo.sendCreateTable(new CreateTableRequest(table, schema).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(read).withWriteCapacityUnits(write)))
+        waitForActiveTable(table)
+    }.map {
+      _ => println(s"$table created.")
     }
   }
 
-  def waitForActiveTable(table: String, retries: Int = 100)(implicit dynamo: AmazonDynamoDB) {
+  def waitForActiveTable(table: String, retries: Int = 100) {
     if (retries == 0) throw new RuntimeException("Timed out waiting for creation of:" + table)
-    val desc = dynamo.describeTable(new DescribeTableRequest().withTableName(table))
+    val desc = Await.result(dynamo.sendDescribeTable(new DescribeTableRequest().withTableName(table)), 10 seconds)
     if (desc.getTable.getTableStatus != "ACTIVE") {
       Thread.sleep(1000)
-      println("waiting to create table")
+      println(s"waiting for $table to be ACTIVE")
       waitForActiveTable(table, retries - 1)
     }
+  }
+
+  def scaleThroughput(table: String, read: Int, write: Int):Future[Unit]= {
+    dynamo.sendDescribeTable(new DescribeTableRequest().withTableName(table)).map {
+      dtr =>
+        val tp = dtr.getTable.getProvisionedThroughput
+        val cr = tp.getReadCapacityUnits
+        val cw = tp.getWriteCapacityUnits
+        val (readInc, writeInc) = getNextIncrement(cr, read, cw, write)
+        println(s"$table throughput is read:${tp.getReadCapacityUnits}, write:${tp.getWriteCapacityUnits}, last-increased:${tp.getLastIncreaseDateTime}, last-dcreased:${tp.getLastDecreaseDateTime}")
+        if (readInc == cr && writeInc == cw) {} else {
+          println(s"$table altering read from $cr to $readInc, write $cw to $writeInc")
+          dynamo.sendUpdateTable(new UpdateTableRequest().withTableName(table).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(readInc).withWriteCapacityUnits(writeInc))).onFailure {
+            case e: Exception => println(s"$table failed to provision throughput, read:${readInc} write:${writeInc} ${e.getClass.getSimpleName} ${e.getMessage}")
+          }
+          waitForActiveTable(table)
+          scaleThroughput(table, read, write)
+        }
+    }
+
+
+  }
+
+  def getNextIncrement(cr: Long, dr: Long, cw: Long, dw: Long): (Long, Long) = {
+    (next(cr, dr), next(cw, dw))
+  }
+
+  def next(c: Long, d: Long):Long= {
+    if (c * 2 > d) d
+    else c * 2
+  }
+
+  def stop(){
+    dynamoSystem.shutdown()
+    dynamoSystem.awaitTermination()
   }
 
 
