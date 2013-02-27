@@ -588,14 +588,11 @@ The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/
 Behavior changes
 ----------------
 
-Actors modified with a stackable `Receiver`, `Emitter` and/or `Eventsourced` modification have two options to change their behavior: either with `context.become()` (and `context.unbecome()`) or with `become()` (and `unbecome()`).  
+Actors that are modified with a stackable `Receiver`, `Emitter` and/or `Eventsourced` trait can change their behavior with the methods `become()` and `unbecome()`. These are defined on the [`Behavior`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Behavior) trait from which `Receiver`, `Emitter` and `Eventsourced` inherit.
 
-1. An actor that changes its behavior with `context.become()` will loose the functionality introduced by a stackable `Receiver`, `Emitter` and/or `Eventsourced` modification.
-2. An actor that changes its behavior with `become()` will keep the functionality introduced by a stackable `Receiver`, `Emitter` and/or `Eventsourced` modification. 
+Actors that change their behavior with `become()` and `unbecome()` will keep the functionality introduced by a stackable `Receiver`, `Emitter` and/or `Eventsourced` trait. For example, an actor that is modified with the `Eventsourced` trait will continue to journal event messages after having changed its behavior with `become()`.
 
-For example, an actor that is modified with `Eventsourced` and that changes its behavior with `become()` will continue to journal event messages. An actor that changes its behavior with `context.become()` will stop journaling event messages (although a `context.unbecome()` can revert that).  
-
-The methods `become()` and `unbecome()` are defined on the [`Behavior`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Behavior) trait from which `Receiver`, `Emitter` and `Eventsourced` inherit.
+On the other hand, actors that change their behavior with `context.become()` will loose the functionality introduced by the stackable `Receiver`, `Emitter` and/or `Eventsourced` traits (although the lost behavior can be recovered with `context.unbecome()`).
 
 Event series
 ------------
@@ -724,7 +721,7 @@ Here, `example.MyEvent` is an application-specific event type and `example.MyEve
       def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = … 
     }
 
-Event [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s themselves are serialized with a [pre-configured](https://github.com/eligosource/eventsourced/blob/master/src/main/resources/reference.conf#L4), library-specific serializer. This serializer is automatically used for event `Message`s when the `eventsourced-*.jar` is on the classpath of an Akka application. 
+Event [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s themselves are serialized with a [pre-configured](https://github.com/eligosource/eventsourced/blob/master/es-core/src/main/resources/reference.conf#L4), library-specific serializer. This serializer is automatically used for event `Message`s when the `eventsourced-*.jar` is on the classpath of an Akka application. 
 
 Further examples
 ----------------
