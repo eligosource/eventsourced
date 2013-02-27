@@ -20,7 +20,7 @@ import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettin
 
 object Version {
   val Scala = "2.10.0"
-  val Akka  = "2.1.0"
+  val Akka  = "2.1.1"
 }
 
 object Compiler {
