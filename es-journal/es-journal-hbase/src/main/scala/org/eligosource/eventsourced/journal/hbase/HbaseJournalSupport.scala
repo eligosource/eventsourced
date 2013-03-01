@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.common
+package org.eligosource.eventsourced.journal.hbase
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -25,12 +25,12 @@ import akka.util.Timeout
 import org.eligosource.eventsourced.core._
 
 /**
- * Support trait for journal implementations with optionally concurrent, async writes.
+ * Not used at the moment. Will be implemented when switching to concurrent reads and writes.
  */
-trait ConcurrentWriteJournal extends Actor {
+trait HbaseJournalSupport extends Actor {
+  import HbaseJournalSupport._
   import Channel.Deliver
   import Journal._
-  import ConcurrentWriteJournal._
 
   implicit val timeout = Timeout(asyncWriteTimeout)
 
@@ -213,7 +213,7 @@ trait ConcurrentWriteJournal extends Actor {
   }
 }
 
-object ConcurrentWriteJournal {
+object HbaseJournalSupport {
   case class SnapshottedReplay(replayCmd: Any, toSequencerNr: Long)
   case class WriteFailed(cmd: Any, cause: Throwable)
 }
