@@ -39,7 +39,7 @@ import org.eligosource.eventsourced.journal.common._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extends SequentialWriteJournal {
+private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extends SynchronousWriteReplaySupport {
   import LeveldbJournalSS._
   import Journal._
 

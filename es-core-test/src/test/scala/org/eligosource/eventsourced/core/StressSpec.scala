@@ -32,8 +32,13 @@ class StressSpec  extends EventsourcingSpec[Fixture] {
         val processor = configure(reliable = false)
         extension.recover()
 
+        warmup(processor)
+        queue.poll(10, TimeUnit.SECONDS)
+        println("warmup done")
+
         stress(processor, throttle = 4)
-        queue.poll(100, TimeUnit.SECONDS) must be(cycles)
+        queue.poll(100, TimeUnit.SECONDS) must be(stressCycles)
+        println("stress done")
       }
     }
     "using reliable channels" should {
@@ -43,15 +48,21 @@ class StressSpec  extends EventsourcingSpec[Fixture] {
         val processor = configure(reliable = true)
         extension.recover()
 
+        warmup(processor)
+        queue.poll(10, TimeUnit.SECONDS)
+        println("warmup done")
+
         stress(processor, throttle = 7)
-        queue.poll(100, TimeUnit.SECONDS) must be(cycles)
+        queue.poll(100, TimeUnit.SECONDS) must be(stressCycles)
+        println("stress done")
       }
     }
   }
 }
 
 object StressSpec {
-  val cycles = 100000
+  val warmupCycles = 1000
+  val stressCycles = 100000
 
   class Fixture  extends EventsourcingFixture[Any] {
     val destination = system.actorOf(Props(new Destination(queue) with Receiver with Confirm))
@@ -65,11 +76,15 @@ object StressSpec {
     }
   }
 
+  def warmup(processor: ActorRef)(implicit timeout: Timeout, system: ActorSystem) {
+    -warmupCycles to 0 foreach { i => processor ! Message(i) }
+  }
+
   def stress(processor: ActorRef, throttle: Long)(implicit timeout: Timeout, system: ActorSystem) {
     import system.dispatcher
 
     val start = System.nanoTime()
-    1 to cycles foreach { i =>
+    1 to stressCycles foreach { i =>
       if (i % 100 == 0) Thread.sleep(throttle)
       val nanos = System.nanoTime()
       processor ? Message(i) onSuccess {
@@ -96,7 +111,7 @@ object StressSpec {
     def receive = {
       case ctr: Int => {
         sender ! ctr
-        if (ctr == cycles) queue.add(ctr)
+        if (ctr == 0 || ctr == stressCycles) queue.add(ctr)
       }
     }
   }

@@ -19,10 +19,7 @@ import akka.actor._
 
 import org.eligosource.eventsourced.core._
 
-/**
- * Support trait for journal implementations with sequential, sync writes.
- */
-trait SequentialWriteJournal extends Actor {
+trait SynchronousWriteReplaySupport extends Actor {
   import Channel.Deliver
   import Journal._
 

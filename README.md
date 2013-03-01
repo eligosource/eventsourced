@@ -35,11 +35,36 @@ The *Eventsourced* library fits well into applications that implement the [CQRS]
 
 For persisting event messages, *Eventsourced* currently provides the following journal implementations:
 
-- A [LevelDB](http://code.google.com/p/leveldb/) and [leveldbjni](https://github.com/fusesource/leveldbjni) based journal which is currently recommended for production use (see also [`LeveldbJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps)). Because LevelDB is a native library, this journal requires a special [sbt](http://www.scala-sbt.org/) project [configuration](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). It will be used in the following examples.
-- A [Journal.IO](https://github.com/sbtourist/Journal.IO) based journal (see also [`JournalioJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps)). 
-- An in-memory journal for testing purposes (see also [`InmemJournalProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps)).
-
-Distributed journal implementations based on [Apache HBase](http://hbase.apache.org/) and [Amazon DynamoDB](http://aws.amazon.com/en/dynamodb/) will come soon.
+<table>
+  <tr>
+    <th align="left">Journal</th>
+    <th align="left">Usage</th>
+  </tr>
+  <tr>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps">LevelDB journal</a>. A <a href="http://code.google.com/p/leveldb/">LevelDB</a> and <a href="https://github.com/fusesource/leveldbjni">leveldbjni</a> backed journal. Because LevelDB is a native library, this journal requires a special <a href="http://www.scala-sbt.org/">sbt</a> project <a href="https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native">configuration</a>. It is be used in the following examples.</td>
+    <td>Production</td>
+  </tr>
+  <tr>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps">HBase journal</a>. An <a href="http://hbase.apache.org/">HBase</a> backed journal supporting high-availability, horizontal read and write scalability, concurrent and non-blocking reads and writes. Details <a href="https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-hbase/readme.md#hbase-journal">here</a>.</td>
+    <td>Experimental</td>
+  </tr>
+  <tr>
+    <td>DynamoDB journal. A <a href="http://aws.amazon.com/en/dynamodb/">DynamoDB </a> backed journal. Thanks to <a href="https://github.com/sclasen">Scott Clasen</a></td>
+    <td>Coming soon</td>
+  </tr>
+  <tr>
+    <td>MongoDB journal. A <a href="http://www.mongodb.org/">MongoDB</a> backed journal. Thanks to <a href="https://github.com/ddevore">Duncan DeVore</a></td>
+    <td>Coming soon</td>
+  </tr>
+  <tr>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps">Journal.IO journal</a>. <a href="https://github.com/sbtourist/Journal.IO">Journal.IO</a> backed journal for testing purposes. Event messages are persisted.</td>
+    <td>Testing</td>
+  </tr>
+  <tr>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps">In memory journal</a>. An in-memory journal for testing purposes. Event messages are not persisted.</td>
+    <td>Testing</td>
+  </tr>
+</table>
 
 Resources
 ---------

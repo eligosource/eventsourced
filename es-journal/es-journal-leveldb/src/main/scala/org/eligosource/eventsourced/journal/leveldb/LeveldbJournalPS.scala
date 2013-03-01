@@ -41,7 +41,7 @@ import LeveldbReplay._
  *
  *  - deletion of old entries requires full scan
  */
-private [eventsourced] class LeveldbJournalPS(props: LeveldbJournalProps, strategyFactory: ReplayStrategyFactory) extends SequentialWriteJournal {
+private [eventsourced] class LeveldbJournalPS(props: LeveldbJournalProps, strategyFactory: ReplayStrategyFactory) extends SynchronousWriteReplaySupport {
   import LeveldbJournalPS._
   import Journal._
 

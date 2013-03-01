@@ -25,7 +25,7 @@ import org.eligosource.eventsourced.journal.common._
 /**
  * In-memory journal for testing purposes.
  */
-private [eventsourced] class InmemJournal extends SequentialWriteJournal {
+private [eventsourced] class InmemJournal extends SynchronousWriteReplaySupport {
   import Journal._
 
   var redoMap = SortedMap.empty[Key, Any]
