@@ -27,8 +27,8 @@ import org.eligosource.eventsourced.core._
 /**
  * Not used at the moment. Will be implemented when switching to concurrent reads and writes.
  */
-trait HbaseJournalSupport extends Actor {
-  import HbaseJournalSupport._
+trait HBaseJournalSupport extends Actor {
+  import HBaseJournalSupport._
   import Channel.Deliver
   import Journal._
 
@@ -213,7 +213,7 @@ trait HbaseJournalSupport extends Actor {
   }
 }
 
-object HbaseJournalSupport {
+object HBaseJournalSupport {
   case class SnapshottedReplay(replayCmd: Any, toSequencerNr: Long)
   case class WriteFailed(cmd: Any, cause: Throwable)
 }

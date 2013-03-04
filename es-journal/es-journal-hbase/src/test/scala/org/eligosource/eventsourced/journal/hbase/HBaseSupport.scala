@@ -18,18 +18,17 @@ package org.eligosource.eventsourced.journal.hbase
 import org.apache.hadoop.hbase._
 import org.apache.hadoop.hbase.client._
 
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+object HBaseSupport {
+  val config = HBaseConfiguration.create()
+  val client = new HTable(config, "event")
+}
 
-import org.eligosource.eventsourced.journal.common.JournalSpec
+trait HBaseSupport {
+  import HBaseSupport._
 
-class HBaseJournalSpec extends JournalSpec with BeforeAndAfterEach with BeforeAndAfterAll {
-  val journalProps = HBaseJournalProps(HBaseConfiguration.create())
+  val journalProps = HBaseJournalProps(config)
 
-  var util: HBaseTestingUtility = _
-  var admin: HBaseAdmin = _
-  var client: HTable = _
-
-  override def afterEach() {
+  def cleanup() {
     import scala.collection.mutable.Buffer
     import scala.collection.JavaConverters._
 
@@ -42,22 +41,25 @@ class HBaseJournalSpec extends JournalSpec with BeforeAndAfterEach with BeforeAn
 
     client.delete(Buffer(deletes.flatten: _*).asJava)
   }
-
-  override def beforeAll() {
-    util = new HBaseTestingUtility(journalProps.configuration)
-    util.startMiniCluster()
-
-    admin = new HBaseAdmin(journalProps.configuration)
-    admin.createTable(new HTableDescriptor(tableName))
-    admin.disableTable(tableName)
-    admin.addColumn(tableName, new HColumnDescriptor(columnFamilyName))
-    admin.enableTable(tableName)
-
-    client = new HTable(journalProps.configuration, tableName)
-  }
-
-  override def afterAll() = try {
-    util.shutdownMiniCluster()
-    util.cleanupTestDir()
-  } catch { case _: Throwable => /* ignore */ }
 }
+
+object CreateSchema extends App {
+  val config = HBaseConfiguration.create()
+  val admin = new HBaseAdmin(config)
+
+  admin.createTable(new HTableDescriptor(tableName))
+  admin.disableTable(tableName)
+  admin.addColumn(tableName, new HColumnDescriptor(columnFamilyName))
+  admin.enableTable(tableName)
+  admin.close()
+}
+
+object DropSchema extends App {
+  val config = HBaseConfiguration.create()
+  val admin = new HBaseAdmin(config)
+
+  admin.disableTable(tableName)
+  admin.deleteTable(tableName)
+  admin.close()
+}
+
