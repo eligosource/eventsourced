@@ -58,12 +58,12 @@ scala> DynamoDBJournal.utilDynamoSystem.shutdown
 
 ```
 
-The utilities also include a method to scale the throughput of your table up or down.  Since you can only increase throughput by a factor of 2 per api call
-the utility takes care of waiting for the table to be active and increasing the throughput again until the target throughputs are reached.
+The utilities also include a method to scale the throughput of your table up or down.  Since you can only increase throughput by a factor of 2 per api call,
+the utility takes care of waiting for the table to be active and increasing the throughput again until the target throughput is reached.
 
-This makes scaling up to do throughput testing straigntforward.
+This makes scaling up to do throughput testing straightforward.
 
-*NOTE* YOU CAN ONLY SCALE DOWN YOUR THROUGHPUT ONCE PER 24HRS. Please be careful when using lots of throughput for testing.
+*NOTE* AWS WILL ONLY ALLOW YOU TO SCALE DOWN YOUR THROUGHPUT ONCE PER 24HRS. Please be careful when using lots of throughput for testing.
 
 
 ## Using the DynamoDB Journal
@@ -71,7 +71,7 @@ This makes scaling up to do throughput testing straigntforward.
 Once you have DynamoDB configured properly, you can start using the journal. In addition to the table name, you will need to select
 an application name to use with the journal, since one DynamoDB table can support multiple journals concurrently.
 
-Here is a basic example of how you can set up an eventsourced actor system, using the DynamoDB jorunal.
+Here is a basic example of how you can set up an eventsourced actor system, using the DynamoDB journal.
 
 ```
 import org.eligosource.eventsourced.core._
