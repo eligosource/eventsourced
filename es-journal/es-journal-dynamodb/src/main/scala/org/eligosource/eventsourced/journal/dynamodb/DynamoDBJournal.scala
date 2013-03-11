@@ -451,7 +451,7 @@ object DynamoDBJournal {
   val hashKey = new KeySchemaElement().withAttributeName("key").withAttributeType("S")
   val schema = new KeySchema().withHashKeyElement(hashKey)
   lazy val utilDynamoSystem = ActorSystem("dynamo-util")
-  implicit lazy val utilDynamo = new DynamoDBClient(new DynamoDBClientProps(sys.env("AWS_ACCESS_KEY_ID"), sys.env("AWS_SECRET_ACCESS_KEY"), Timeout(10 seconds), dynamoSystem, dynamoSystem))
+  implicit lazy val utilDynamo = new DynamoDBClient(new DynamoDBClientProps(sys.env("AWS_ACCESS_KEY_ID"), sys.env("AWS_SECRET_ACCESS_KEY"), Timeout(10 seconds), utilDynamoSystem, utilDynamoSystem))
 
   def createJournal(table: String, read:Long, write:Long) {
     utilDynamo.sendListTables(new ListTablesRequest()).map {
