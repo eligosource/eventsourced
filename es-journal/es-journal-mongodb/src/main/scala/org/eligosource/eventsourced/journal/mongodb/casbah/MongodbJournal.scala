@@ -1,4 +1,3 @@
-package org.eligosource.eventsourced.journal.mongodb.casbah
 /*
  * Copyright 2012-2013 Eligotech BV.
  *
@@ -14,6 +13,7 @@ package org.eligosource.eventsourced.journal.mongodb.casbah
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.eligosource.eventsourced.journal.mongodb.casbah
 
 import akka.actor._
 
