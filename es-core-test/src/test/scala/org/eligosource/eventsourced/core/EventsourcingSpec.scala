@@ -28,7 +28,8 @@ import akka.util.Timeout
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
-import org.eligosource.eventsourced.journal.leveldb.LeveldbSupport
+import org.eligosource.eventsourced.journal.leveldb._
+import org.eligosource.eventsourced.journal.hbase._
 
 abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extends WordSpec with MustMatchers {
   type FixtureParam = T
@@ -53,7 +54,7 @@ trait EventsourcingFixtureOps[A] { self: EventsourcingFixture[A] =>
   def journalProps: JournalProps
 
   def dequeue[A](queue: LinkedBlockingQueue[A]): A = {
-    queue.poll(5000, TimeUnit.MILLISECONDS)
+    queue.poll(timeout.duration.toMillis, TimeUnit.MILLISECONDS)
   }
 
   def dequeue(): A = {
@@ -70,7 +71,7 @@ trait EventsourcingFixtureOps[A] { self: EventsourcingFixture[A] =>
 }
 
 class EventsourcingFixture[A] extends EventsourcingFixtureOps[A] with LeveldbSupport {
-  implicit val timeout = Timeout(5 seconds)
+  implicit val timeout = Timeout(10 seconds)
   implicit val system = ActorSystem("test")
 
   val journal = Journal(journalProps)

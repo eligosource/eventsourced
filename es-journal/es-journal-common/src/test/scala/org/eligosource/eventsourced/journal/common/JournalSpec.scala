@@ -15,7 +15,6 @@
  */
 package org.eligosource.eventsourced.journal.common
 
-import java.io.File
 import java.util.concurrent._
 
 import scala.concurrent.Await
@@ -27,8 +26,6 @@ import akka.serialization.Serializer
 import akka.util.Timeout
 
 import com.typesafe.config.ConfigFactory
-
-import org.apache.commons.io.FileUtils
 
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
@@ -43,7 +40,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
 
   class Fixture {
     implicit val system = ActorSystem("test", ConfigFactory.load("persist"))
-    implicit val duration = 5 seconds
+    implicit val duration = 10 seconds
     implicit val timeout = Timeout(duration)
 
     val journal = Journal(journalProps)
@@ -55,7 +52,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
     val replayTarget = system.actorOf(Props(new CommandTarget(replayQueue)))
 
     def dequeue(queue: LinkedBlockingQueue[Message])(p: Message => Unit) {
-      p(queue.poll(5000, TimeUnit.MILLISECONDS))
+      p(queue.poll(duration.toMillis, TimeUnit.MILLISECONDS))
     }
 
     def replayInMsgs(processorId: Int, fromSequenceNr: Long, target: ActorRef) {
@@ -89,7 +86,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
       replayInMsgs(1, 0, replayTarget)
 
       dequeue(replayQueue) { m => m must be(Message("test-1", sequenceNr = 1, timestamp = m.timestamp)); m.timestamp must be > (0L) }
-      dequeue(replayQueue) { m => m must be(Message("test-2", sequenceNr = 2, timestamp = m.timestamp)); m.timestamp must be > (0L)  }
+      dequeue(replayQueue) { m => m must be(Message("test-2", sequenceNr = 2, timestamp = m.timestamp)); m.timestamp must be > (0L) }
     }
     "persist but not timestamp output messages" in { fixture =>
       import fixture._
@@ -152,9 +149,15 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
         ReplayInMsgs(3, 6L, replayTarget)
       )), duration)
 
-      dequeue(replayQueue) { m => m must be(Message("test-1a", sequenceNr = 1, timestamp = m.timestamp)) }
-      dequeue(replayQueue) { m => m must be(Message("test-1b", sequenceNr = 2, timestamp = m.timestamp)) }
-      dequeue(replayQueue) { m => m must be(Message("test-3b", sequenceNr = 6, timestamp = m.timestamp)) }
+      // A journal may concurrently replay messages to different
+      // processors ...
+
+      def poll() = replayQueue.poll(10000, TimeUnit.MILLISECONDS)
+      val msgs = List.fill(3)(poll()).map(_.copy(timestamp = 0L))
+
+      msgs must contain(Message("test-1a", sequenceNr = 1))
+      msgs must contain(Message("test-1b", sequenceNr = 2))
+      msgs must contain(Message("test-3b", sequenceNr = 6))
     }
     "tolerate phantom acknowledgements" in { fixture =>
       import fixture._

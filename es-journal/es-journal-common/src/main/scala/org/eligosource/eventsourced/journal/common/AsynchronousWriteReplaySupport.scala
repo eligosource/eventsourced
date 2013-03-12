@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.hbase
+package org.eligosource.eventsourced.journal.common
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -25,17 +25,14 @@ import akka.util.Timeout
 import org.eligosource.eventsourced.core._
 
 /**
- * Not used at the moment. Will be implemented when switching to concurrent reads and writes.
+ * <strong>EXPERIMENTAL</strong>
  */
-trait HBaseJournalSupport extends Actor {
-  import HBaseJournalSupport._
+trait AsynchronousWriteReplaySupport extends Actor {
+  import AsynchronousWriteReplaySupport._
   import Channel.Deliver
   import Journal._
 
-  implicit val timeout = Timeout(asyncWriteTimeout)
-
   val deadLetters = context.system.deadLetters
-
   val resequencer: ActorRef =
     actor(new ResequencerActor(replayer), dispatcherName = journalProps.dispatcherName)
 
@@ -48,6 +45,7 @@ trait HBaseJournalSupport extends Actor {
 
   def journalProps: JournalProps
 
+  val asyncWriteTimeoutObj = Timeout(asyncWriteTimeout)
   def asyncWriteTimeout: FiniteDuration
   def asyncWriterCount: Int
 
@@ -63,15 +61,15 @@ trait HBaseJournalSupport extends Actor {
     val ctr = counterResequencer
     val sdr = sender
     val idx = counterResequencer % asyncWriterCount
-    val write = writers(idx.toInt) ?  cmd
+    val write = writers(idx.toInt).ask(cmd)(asyncWriteTimeoutObj)
     write onSuccess { case _ => resequencer tell ((ctr, cmd), sdr) }
     write onFailure { case t => resequencer tell ((ctr, WriteFailed(cmd, t)), sdr) }
     _counterResequencer += 1L
   }
 
-  def asyncResequence(cmd: Any) {
+  def asyncResequence(cmd: Any, inc: Long = 1L) {
     resequencer forward (counterResequencer, cmd)
-    _counterResequencer += 1L
+    _counterResequencer += inc
   }
 
   def receive = {
@@ -95,13 +93,13 @@ trait HBaseJournalSupport extends Actor {
       asyncResequence(cmd)
     }
     case cmd: BatchReplayInMsgs => {
-      asyncResequence(SnapshottedReplay(cmd, counter - 1L))
+      asyncResequence(SnapshottedReplay(cmd, counter - 1L), 2L)
     }
     case cmd: ReplayInMsgs => {
-      asyncResequence(SnapshottedReplay(cmd, counter - 1L))
+      asyncResequence(SnapshottedReplay(cmd, counter - 1L), 2L)
     }
     case cmd: ReplayOutMsgs => {
-      asyncResequence(SnapshottedReplay(cmd, counter - 1L))
+      asyncResequence(SnapshottedReplay(cmd, counter - 1L), 2L)
     }
     case cmd: BatchDeliverOutMsgs => {
       asyncResequence(cmd)
@@ -133,9 +131,9 @@ trait HBaseJournalSupport extends Actor {
   }
 
   trait Replayer {
-    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef, toSequenceNr: Long)
-    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long)
-    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long)
+    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any]
+    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any]
+    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any]
   }
 
   class WriterActor(writer: Writer) extends Actor {
@@ -163,7 +161,7 @@ trait HBaseJournalSupport extends Actor {
       case SetCommandListener(cl) => commandListener = cl
     }
 
-    def execute(cmd: Any, sdr: ActorRef) = cmd match {
+    def execute(cmd: Any, sdr: ActorRef, seqnr: Long) = cmd match {
       case c: WriteInMsg => {
         c.target tell (Written(c.message), sdr)
         commandListener.foreach(_ ! cmd)
@@ -182,13 +180,22 @@ trait HBaseJournalSupport extends Actor {
         target tell (Looped(msg), sdr)
       }
       case SnapshottedReplay(BatchReplayInMsgs(replays), toSequenceNr) => {
-        replayer.executeBatchReplayInMsgs(replays, (msg, target) => target tell (Written(msg), deadLetters), sdr, toSequenceNr)
+        replayer.executeBatchReplayInMsgs(replays, (msg, target) => target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
+          case _ => self ! (seqnr + 1L, SnapshottedReplayDone) // TODO: error handling
+        }
       }
       case SnapshottedReplay(cmd: ReplayInMsgs, toSequenceNr) => {
-        replayer.executeReplayInMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr)
+        replayer.executeReplayInMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
+          case _ => self ! (seqnr + 1L, SnapshottedReplayDone) // TODO: error handling
+        }
       }
       case SnapshottedReplay(cmd: ReplayOutMsgs, toSequenceNr) => {
-        replayer.executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr)
+        replayer.executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
+          case _ => self ! (seqnr + 1L, SnapshottedReplayDone) // TODO: error handling
+        }
+      }
+      case SnapshottedReplayDone => {
+        // nothing to do ...
       }
       case BatchDeliverOutMsgs(channels) => {
         channels.foreach(_ ! Deliver)
@@ -203,7 +210,7 @@ trait HBaseJournalSupport extends Actor {
     private def resequence(seqnr: Long, cmd: Any, sdr: ActorRef) {
       if (seqnr == delivered + 1) {
         delivered = seqnr
-        execute(cmd, sdr)
+        execute(cmd, sdr, seqnr)
       } else {
         delayed += (seqnr -> (cmd, sender))
       }
@@ -213,7 +220,8 @@ trait HBaseJournalSupport extends Actor {
   }
 }
 
-object HBaseJournalSupport {
-  case class SnapshottedReplay(replayCmd: Any, toSequencerNr: Long)
+object AsynchronousWriteReplaySupport {
   case class WriteFailed(cmd: Any, cause: Throwable)
+  case class SnapshottedReplay(replayCmd: Any, toSequencerNr: Long)
+  case object SnapshottedReplayDone
 }

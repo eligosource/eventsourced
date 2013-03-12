@@ -22,12 +22,14 @@ import org.apache.hadoop.hbase.util.Bytes
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common.SequentialWriteJournal
+import org.eligosource.eventsourced.journal.common.SynchronousWriteReplaySupport
 
 /**
- * Initial hack. Will become a concurrent event message writer/reader later.
+ * HBase journal with synchronous IO.
+ *
+ * <strong>EXPERIMENTAL</strong>.
  */
-class HBaseJournal(props: HBaseJournalProps) extends SequentialWriteJournal {
+private [hbase] class SyncHBaseJournal(props: SyncHBaseJournalProps) extends SynchronousWriteReplaySupport {
   import scala.collection.JavaConverters._
 
   val serialization = Serialization(context.system)
@@ -37,7 +39,7 @@ class HBaseJournal(props: HBaseJournalProps) extends SequentialWriteJournal {
   def executeWriteInMsg(cmd: WriteInMsg) {
     //println("writing in  key " + bitString(InMsgKey(0, cmd.processorId, cmd.message.sequenceNr)))
     val put = new Put(InMsgKey(0, cmd.processorId, cmd.message.sequenceNr))
-    put.add(columnFamilyNameBytes, eventColumnNameBytes, serialization.serializeMessage(cmd.message.clearConfirmationSettings))
+    put.add(ColumnFamilyNameBytes, MsgColumnNameBytes, serialization.serializeMessage(cmd.message.clearConfirmationSettings))
     client.put(put)
   }
 
@@ -45,13 +47,13 @@ class HBaseJournal(props: HBaseJournalProps) extends SequentialWriteJournal {
     //println("writing out key " + bitString(OutMsgKey(0, cmd.channelId, cmd.message.sequenceNr)))
     val puts = new java.util.ArrayList[Put](2)
     val putOut = new Put(OutMsgKey(0, cmd.channelId, cmd.message.sequenceNr))
-    putOut.add(columnFamilyNameBytes, eventColumnNameBytes, serialization.serializeMessage(cmd.message.clearConfirmationSettings))
+    putOut.add(ColumnFamilyNameBytes, MsgColumnNameBytes, serialization.serializeMessage(cmd.message.clearConfirmationSettings))
     puts.add(putOut)
 
     if (cmd.ackSequenceNr != SkipAck) {
       //println("writing ack key " + byteString(InMsgKey(0, cmd.ackProcessorId, cmd.ackSequenceNr)))
       val putAck = new Put(InMsgKey(0, cmd.ackProcessorId, cmd.ackSequenceNr))
-      putAck.add(columnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
+      putAck.add(ColumnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
       puts.add(putAck)
     }
     client.put(puts)
@@ -59,7 +61,7 @@ class HBaseJournal(props: HBaseJournalProps) extends SequentialWriteJournal {
 
   def executeWriteAck(cmd: WriteAck) {
     val put = new Put(InMsgKey(0, cmd.processorId, cmd.ackSequenceNr))
-    put.add(columnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
+    put.add(ColumnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
     client.put(put)
   }
 
@@ -93,18 +95,18 @@ class HBaseJournal(props: HBaseJournalProps) extends SequentialWriteJournal {
     //println("replay to   key " + bitString(stopKey))
 
     val scan = new Scan()
-    scan.addFamily(columnFamilyNameBytes)
+    scan.addFamily(ColumnFamilyNameBytes)
     scan.setStartRow(startKey)
     scan.setStopRow(stopKey)
 
     val scanner = client.getScanner(scan)
     scanner.asScala foreach { r =>
-      val msgBytes = r.getValue(columnFamilyNameBytes, eventColumnNameBytes)
+      val msgBytes = r.getValue(ColumnFamilyNameBytes, MsgColumnNameBytes)
       if (msgBytes ne null) {
         val msg = serialization.deserializeMessage(msgBytes)
         val acks = r.list.asScala
           .map(kv => new String(kv.getQualifier)).filter(_.startsWith("a"))
-          .map(aq => aq.substring(ackColumnPrefix.length).toInt)
+          .map(aq => aq.substring(AckColumnPrefix.length).toInt)
         p(msg.copy(acks = acks))
       } else { /* phantom ack, ignore */ }
     }
@@ -115,7 +117,7 @@ class HBaseJournal(props: HBaseJournalProps) extends SequentialWriteJournal {
   def storedCounter = 0L
 
   override def start() {
-    client = new HTable(props.configuration, tableName)
+    client = new HTable(props.configuration, TableName)
   }
 
   override def stop() {

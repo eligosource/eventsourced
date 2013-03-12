@@ -15,29 +15,34 @@
  */
 package org.eligosource.eventsourced.journal
 
+import scala.concurrent._
+
 import java.nio.ByteBuffer
+
+import com.stumbleupon.async.{Callback, Deferred}
 
 import org.apache.hadoop.hbase.util.Bytes
 
 package object hbase {
-  val tableName = "event"
+  val TableName = "event"
+  val TableNameBytes = Bytes.toBytes(TableName)
 
-  val columnFamilyName = "ef"
-  val columnFamilyNameBytes = Bytes.toBytes(columnFamilyName)
+  val ColumnFamilyName = "ef"
+  val ColumnFamilyNameBytes = Bytes.toBytes(ColumnFamilyName)
 
-  val eventColumnName = "evt"
-  val eventColumnNameBytes = Bytes.toBytes(eventColumnName)
+  val MsgColumnName = "msg"
+  val MsgColumnNameBytes = Bytes.toBytes(MsgColumnName)
 
-  val timestampColumnName = "tms"
-  val timestampColumnNameBytes = Bytes.toBytes(timestampColumnName)
+  val TimestampColumnName = "tms"
+  val TimestampColumnNameBytes = Bytes.toBytes(TimestampColumnName)
 
-  val ackColumnPrefix = "ack"
-  def ackColumnBytes(channelId: Int) = Bytes.toBytes(ackColumnPrefix + channelId)
+  val AckColumnPrefix = "ack"
+  def ackColumnBytes(channelId: Int) = Bytes.toBytes(AckColumnPrefix + channelId)
 
-  case class InMsgKey(partition: Int, processorId: Int, sequenceNumber: Long)
-  case class OutMsgKey(partition: Int, channelId: Int, sequenceNumber: Long)
+  private [hbase] case class InMsgKey(partition: Int, processorId: Int, sequenceNumber: Long)
+  private [hbase] case class OutMsgKey(partition: Int, channelId: Int, sequenceNumber: Long)
 
-  trait KeyRepresentation[T] {
+  private [hbase] trait KeyRepresentation[T] {
     def partition(key: T): Int
     def source(key: T): Int
     def sequenceNr(key: T): Long
@@ -61,7 +66,7 @@ package object hbase {
     bb.array
   }
 
-  implicit object InMsgKeyRepresentation extends KeyRepresentation[InMsgKey] {
+  private [hbase] implicit object InMsgKeyRepresentation extends KeyRepresentation[InMsgKey] {
     def partition(key: InMsgKey) = key.partition
     def source(key: InMsgKey) = key.processorId
     def sequenceNr(key: InMsgKey) = key.sequenceNumber
@@ -69,12 +74,23 @@ package object hbase {
       InMsgKey(partition, source, sequenceNr)
   }
 
-  implicit object OutMsgKeyRepresentation extends KeyRepresentation[OutMsgKey] {
+  private [hbase] implicit object OutMsgKeyRepresentation extends KeyRepresentation[OutMsgKey] {
     def partition(key: OutMsgKey) = key.partition
     def source(key: OutMsgKey) = - key.channelId
     def sequenceNr(key: OutMsgKey) = key.sequenceNumber
     def create(partition: Int, source: Int, sequenceNr: Long) =
       OutMsgKey(partition, -source, sequenceNr)
+  }
+
+  implicit def deferredToFuture[A](d: Deferred[A]): Future[A] = {
+    val promise = Promise[A]()
+    d.addCallback(new Callback[Unit, A] {
+      def call(a: A) = promise.success(a)
+    })
+    d.addErrback(new Callback[Unit, Throwable] {
+      def call(t: Throwable) = promise.failure(t)
+    })
+    promise.future
   }
 
   // -------------------------

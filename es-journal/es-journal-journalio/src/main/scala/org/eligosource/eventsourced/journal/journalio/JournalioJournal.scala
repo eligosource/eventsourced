@@ -39,7 +39,7 @@ import org.eligosource.eventsourced.journal.common._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class JournalioJournal(props: JournalioJournalProps) extends SequentialWriteJournal {
+private [eventsourced] class JournalioJournal(props: JournalioJournalProps) extends SynchronousWriteReplaySupport {
   import Journal._
 
   val writeInMsgQueue = new WriteInMsgQueue

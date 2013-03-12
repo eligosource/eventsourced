@@ -22,41 +22,31 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import org.eligosource.eventsourced.journal.common.JournalSpec
 
-class HBaseJournalSpec extends JournalSpec with BeforeAndAfterEach with BeforeAndAfterAll {
-  val journalProps = HBaseJournalProps(HBaseConfiguration.create())
+class AsyncHBaseJournalSpec extends JournalSpec with HBaseCleanup with BeforeAndAfterEach with BeforeAndAfterAll {
 
+  def journalProps = AsyncHBaseJournalProps("localhost:%d" format port)
+
+  var port: Int = _
   var util: HBaseTestingUtility = _
   var admin: HBaseAdmin = _
   var client: HTable = _
 
   override def afterEach() {
-    import scala.collection.mutable.Buffer
-    import scala.collection.JavaConverters._
-
-    val deletes = for {
-      i <- 1 to 10
-      j <- 1 to 100
-    } yield Seq(
-        new Delete(InMsgKey(0, i, j)),
-        new Delete(OutMsgKey(0, i, j)))
-
-    client.delete(Buffer(deletes.flatten: _*).asJava)
+    cleanup()
   }
 
   override def beforeAll() {
-    util = new HBaseTestingUtility(journalProps.configuration)
+    util = new HBaseTestingUtility()
     util.startMiniCluster()
+    port = util.getZkCluster.getClientPort
 
-    admin = new HBaseAdmin(journalProps.configuration)
-    admin.createTable(new HTableDescriptor(tableName))
-    admin.disableTable(tableName)
-    admin.addColumn(tableName, new HColumnDescriptor(columnFamilyName))
-    admin.enableTable(tableName)
+    CreateSchema(util.getConfiguration)
 
-    client = new HTable(journalProps.configuration, tableName)
+    client = new HTable(util.getConfiguration, TableName)
   }
 
   override def afterAll() = try {
+    client.close()
     util.shutdownMiniCluster()
     util.cleanupTestDir()
   } catch { case _: Throwable => /* ignore */ }

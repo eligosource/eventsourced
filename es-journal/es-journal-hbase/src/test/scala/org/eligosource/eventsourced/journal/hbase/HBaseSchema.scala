@@ -15,51 +15,30 @@
  */
 package org.eligosource.eventsourced.journal.hbase
 
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase._
 import org.apache.hadoop.hbase.client._
 
-object HBaseSupport {
-  val config = HBaseConfiguration.create()
-  val client = new HTable(config, "event")
-}
-
-trait HBaseSupport {
-  import HBaseSupport._
-
-  val journalProps = HBaseJournalProps(config)
-
-  def cleanup() {
-    import scala.collection.mutable.Buffer
-    import scala.collection.JavaConverters._
-
-    val deletes = for {
-      i <- 1 to 10
-      j <- 1 to 100
-    } yield Seq(
-        new Delete(InMsgKey(0, i, j)),
-        new Delete(OutMsgKey(0, i, j)))
-
-    client.delete(Buffer(deletes.flatten: _*).asJava)
-  }
-}
-
 object CreateSchema extends App {
-  val config = HBaseConfiguration.create()
-  val admin = new HBaseAdmin(config)
+  apply(HBaseConfiguration.create())
 
-  admin.createTable(new HTableDescriptor(tableName))
-  admin.disableTable(tableName)
-  admin.addColumn(tableName, new HColumnDescriptor(columnFamilyName))
-  admin.enableTable(tableName)
-  admin.close()
+  def apply(c: Configuration) {
+    val admin = new HBaseAdmin(c)
+
+    admin.createTable(new HTableDescriptor(TableName))
+    admin.disableTable(TableName)
+    admin.addColumn(TableName, new HColumnDescriptor(ColumnFamilyName))
+    admin.enableTable(TableName)
+    admin.close()
+  }
 }
 
 object DropSchema extends App {
   val config = HBaseConfiguration.create()
   val admin = new HBaseAdmin(config)
 
-  admin.disableTable(tableName)
-  admin.deleteTable(tableName)
+  admin.disableTable(TableName)
+  admin.deleteTable(TableName)
   admin.close()
 }
 

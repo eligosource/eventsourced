@@ -15,23 +15,16 @@
  */
 package org.eligosource.eventsourced.journal.hbase
 
-import akka.actor.Actor
+import org.apache.hadoop.hbase._
+import org.apache.hadoop.hbase.client._
 
-import org.apache.hadoop.conf.Configuration
-
-import org.eligosource.eventsourced.core.JournalProps
-
-case class HBaseJournalProps(
-  configuration: Configuration,
-  name: Option[String] = None,
-  dispatcherName: Option[String] = None) extends JournalProps {
-
-  def withName(name: String) =
-    copy(name = Some(name))
-
-  def withDispatcherName(dispatcherName: String) =
-    copy(dispatcherName = Some(dispatcherName))
-
-  def journal: Actor =
-    new HBaseJournal(this)
+object SyncHBaseSupport {
+  val config = HBaseConfiguration.create()
+  val client = new HTable(config, "event")
 }
+
+trait SyncHBaseSupport extends HBaseCleanup {
+  val client = SyncHBaseSupport.client
+  val journalProps = SyncHBaseJournalProps(SyncHBaseSupport.config)
+}
+
