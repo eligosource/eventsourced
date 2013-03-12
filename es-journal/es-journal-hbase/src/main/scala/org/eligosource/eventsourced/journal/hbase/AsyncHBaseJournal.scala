@@ -94,19 +94,19 @@ private [hbase] class AsyncHBaseJournal(props: AsyncHBaseJournalProps) extends A
     def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
       Future.sequence(cmds.map(cmd => replay(
         InMsgKey(0, cmd.processorId, cmd.fromSequenceNr),
-        InMsgKey(0, cmd.processorId, Long.MaxValue), msg => p(msg, cmd.target)))) andThen { case _ => sdr ! ReplayDone }
+        InMsgKey(0, cmd.processorId, toSequenceNr + 1), msg => p(msg, cmd.target)))) andThen { case _ => sdr ! ReplayDone }
     }
 
     def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
       replay(
         InMsgKey(0, cmd.processorId, cmd.fromSequenceNr),
-        InMsgKey(0, cmd.processorId, Long.MaxValue), p) andThen { case _ => sdr ! ReplayDone }
+        InMsgKey(0, cmd.processorId, toSequenceNr + 1), p) andThen { case _ => sdr ! ReplayDone }
     }
 
     def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
       replay(
         OutMsgKey(0, cmd.channelId, cmd.fromSequenceNr),
-        OutMsgKey(0, cmd.channelId, Long.MaxValue), p)
+        OutMsgKey(0, cmd.channelId, toSequenceNr + 1), p)
     }
 
     def replay[T : KeyRepresentation](startKey: T, stopKey: T, p: (Message) => Unit): Future[Any] = {
