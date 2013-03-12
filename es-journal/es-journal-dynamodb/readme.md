@@ -6,10 +6,19 @@ This is the DynamoDB backed Eventsourced Journal implementation.
 To use this journal, you will need to create a DynamoDB table in your AWS account. This can be done manually, or with the
 table creation utility included in this implementation.
 
+## Throughput
+
 *Note* please take care to provision ample write throughput for your application.
 
 A good rule of thumb is to provision one write unit per eventsourced message per second in your app when using processors and default channels,
 and two write units per eventsourced message per second in your app when using processors and reliable channels.
+
+### EC2 Instance sizing
+
+Note that for best throughput you should run the journal on an EC2 instance in the same region as your table.
+
+If you plan on writing more than 1000 messages per second or so, you should use a Cluster Compute instance that has 10 Gig networking,
+as this journal implementation is network bound.
 
 ## Configure DynamoDB
 
