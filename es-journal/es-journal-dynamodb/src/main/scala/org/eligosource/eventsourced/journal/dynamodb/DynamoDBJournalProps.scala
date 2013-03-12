@@ -2,7 +2,7 @@ package org.eligosource.eventsourced.journal.dynamodb
 
 import akka.actor.{ActorRefFactory, ActorSystem}
 import akka.util.Timeout
-import com.sclasen.spray.dynamodb.DynamoDBClientProps
+import com.sclasen.spray.aws.dynamodb.DynamoDBClientProps
 import concurrent.duration._
 import org.eligosource.eventsourced.core.JournalProps
 

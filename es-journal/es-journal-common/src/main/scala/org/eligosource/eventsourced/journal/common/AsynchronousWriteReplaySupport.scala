@@ -155,10 +155,12 @@ trait AsynchronousWriteReplaySupport extends Actor {
     private val delayed = Map.empty[Long, (Any, ActorRef)]
     private var delivered = 0L
     private var commandListener: Option[ActorRef] = None
+    private var deliveryListener: Option[ActorRef] = None
 
     def receive = {
       case (seqnr: Long, cmd) => resequence(seqnr, cmd, sender)
       case SetCommandListener(cl) => commandListener = cl
+      case SetDeliveryListener(dl) => deliveryListener = dl
     }
 
     def execute(cmd: Any, sdr: ActorRef, seqnr: Long) = cmd match {
@@ -210,6 +212,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
     private def resequence(seqnr: Long, cmd: Any, sdr: ActorRef) {
       if (seqnr == delivered + 1) {
         delivered = seqnr
+        deliveryListener.foreach(_ ! seqnr)
         execute(cmd, sdr, seqnr)
       } else {
         delayed += (seqnr -> (cmd, sender))
@@ -224,4 +227,5 @@ object AsynchronousWriteReplaySupport {
   case class WriteFailed(cmd: Any, cause: Throwable)
   case class SnapshottedReplay(replayCmd: Any, toSequencerNr: Long)
   case object SnapshottedReplayDone
+  case class SetDeliveryListener(ref:Option[ActorRef])
 }

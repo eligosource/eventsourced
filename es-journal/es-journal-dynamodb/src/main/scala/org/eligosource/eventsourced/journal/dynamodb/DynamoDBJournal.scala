@@ -7,7 +7,7 @@ import collection.JavaConverters._
 import collection.immutable.TreeMap
 import com.amazonaws.services.dynamodb.model._
 import com.amazonaws.services.dynamodb.model.{Key => DynamoKey}
-import com.sclasen.spray.dynamodb.{DynamoDBClientProps, DynamoDBClient}
+import com.sclasen.spray.aws.dynamodb.{DynamoDBClientProps, DynamoDBClient}
 import concurrent.duration._
 import concurrent.{Future, Await}
 import java.nio.ByteBuffer
@@ -18,10 +18,9 @@ import org.eligosource.eventsourced.core.Message
 import org.eligosource.eventsourced.core.Serialization
 import org.eligosource.eventsourced.journal.common._
 import org.eligosource.eventsourced.journal.dynamodb.ConcurrentWriteJournal.SetDeliveryListener
-import util.{Failure, Success}
 
 
-class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJournal with ActorLogging {
+class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
 
 
   val serialization = Serialization(context.system)
@@ -362,30 +361,20 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends ConcurrentWriteJourna
 
 
   class DynamoReplayer extends Replayer {
-    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sender: ActorRef, replayTo: Long) {
+    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sender: ActorRef, replayTo: Long) = {
       val replayOps = cmds.map {
         cmd =>
           Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p(_, cmd.target)))
       }
-      Future.sequence(replayOps).onComplete {
-        case Success(_) => sender ! ReplayDone
-        case Failure(x) => log.error(x, "Failure:executeBatchReplayInMsgs")
-      }
+      Future.sequence(replayOps)
     }
 
-    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) {
-      val replayOps = Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p))
-      replayOps.onComplete {
-        case Success(_) => sender ! ReplayDone
-        case Failure(x) => log.error(x, "Failure:executeReplayInMsgs")
-      }
+    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long)= {
+      Future.sequence(replayIn(cmd, replayTo, cmd.processorId, p))
     }
 
-    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) {
-      Future.sequence(replayOut(cmd, replayTo, p)).onComplete {
-        case Success(_) => log.debug("executeReplayOutMsgs")
-        case Failure(x) => log.error(x, "Failure:executeReplayOutMsgs")
-      }
+    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long)= {
+      Future.sequence(replayOut(cmd, replayTo, p))
     }
   }
 
