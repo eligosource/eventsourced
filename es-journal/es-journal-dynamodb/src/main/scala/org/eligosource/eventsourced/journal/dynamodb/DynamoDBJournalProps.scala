@@ -24,9 +24,11 @@ import org.eligosource.eventsourced.core.JournalProps
 
 case class DynamoDBJournalProps(journalTable: String, eventSourcedApp: String,
                                 key: String, secret: String,
-                                operationTimeout: Timeout = Timeout(10 seconds), asyncWriterCount: Int = 16,
+                                operationTimeout: Timeout = Timeout(10 seconds),
+                                replayOperationTimeout: Timeout = Timeout(1 minute),
+                                asyncWriterCount: Int = 16,
                                 system: ActorSystem, factory: Option[ActorRefFactory] = None,
-                                val name:Option[String]=None,  val dispatcherName:Option[String]=None) extends JournalProps {
+                                val name: Option[String] = None, val dispatcherName: Option[String] = None) extends JournalProps {
 
   /**
    * Creates a [[org.eligosource.eventsourced.core.Journal]] actor instance.
