@@ -17,6 +17,7 @@ package org.eligosource.eventsourced.journal.dynamodb
 
 import DynamoDBJournal._
 import akka.actor._
+import akka.pattern._
 import akka.util.Timeout
 import collection.JavaConverters._
 import collection.immutable.TreeMap
@@ -24,15 +25,15 @@ import com.amazonaws.services.dynamodb.model._
 import com.amazonaws.services.dynamodb.model.{Key => DynamoKey}
 import com.sclasen.spray.aws.dynamodb.{DynamoDBClientProps, DynamoDBClient}
 import concurrent.duration._
-import concurrent.{Promise, Future, Await, promise}
+import concurrent.{Future, Await}
 import java.nio.ByteBuffer
 import java.util.Collections
 import java.util.{List => JList, Map => JMap, HashMap => JHMap}
 import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.core.Message
 import org.eligosource.eventsourced.core.Serialization
-import org.eligosource.eventsourced.journal.common._
 import org.eligosource.eventsourced.journal.common.AsynchronousWriteReplaySupport._
+import org.eligosource.eventsourced.journal.common._
 
 
 class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
@@ -135,14 +136,10 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
     }
   }
 
-  private def replayOut(r: ReplayOutMsgs, replayTo: Long, p: (Message) => Unit): Future[Unit] = {
-    val from = r.fromSequenceNr
-    val msgs = (replayTo - r.fromSequenceNr).toInt + 1
-    log.debug(s"replayingOut from ${from} for up to ${msgs}")
-    val done = promise[Unit]
-    val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p, done)))
-    Stream.iterate(r.fromSequenceNr, msgs)(_ + 1)
-      .map(l => (l -> new DynamoKey().withHashKeyElement(outKey(r.channelId, l)))).grouped(100).map {
+  private def replayOut(from: Long, msgs: Int, channelId: Int, replayer: ActorRef): Iterator[Future[Unit]] = {
+    log.debug("replayingOut!")
+    Stream.iterate(from, msgs)(_ + 1)
+      .map(l => (l -> new DynamoKey().withHashKeyElement(outKey(channelId, l)))).grouped(100).map {
       keys =>
         log.debug("replayingOut")
         val ka = new KeysAndAttributes().withKeys(keys.map(_._2).asJava).withConsistentRead(true)
@@ -157,17 +154,11 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
             }
         }
     }
-    done.future
   }
 
-  private def replayIn(r: ReplayInMsgs, replayTo: Long, processorId: Int, p: (Message) => Unit): Future[Unit] = {
-    val from = r.fromSequenceNr
-    val msgs = (replayTo - r.fromSequenceNr).toInt + 1
-    val done = promise[Unit]
-    log.debug(s"replayingIn from ${from} for up to ${msgs}")
-    val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p, done)))
-    Stream.iterate(r.fromSequenceNr, msgs)(_ + 1)
-      .map(l => (l -> new DynamoKey().withHashKeyElement(inKey(r.processorId, l)))).grouped(100).map {
+  private def replayIn(from: Long, msgs: Int, processorId: Int, replayer: ActorRef): Iterator[Future[Unit]] = {
+    Stream.iterate(from, msgs)(_ + 1)
+      .map(l => (l -> new DynamoKey().withHashKeyElement(inKey(processorId, l)))).grouped(100).map {
       keys =>
         log.debug("replayingIn")
         val ka = new KeysAndAttributes().withKeys(keys.map(_._2).asJava).withConsistentRead(true)
@@ -184,7 +175,6 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
             confirmingChannels(processorId, messages, replayer)
         }
     }
-    done.future
   }
 
   def confirmingChannels(processorId: Int, messages: Stream[(Long, Option[Message])], replayer: ActorRef): Future[Unit] = {
@@ -380,34 +370,58 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
 
 
   class DynamoReplayer extends Replayer {
+
+    implicit val timeout = props.replayOperationTimeout
+
     def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sender: ActorRef, replayTo: Long) = {
       val replayOps = cmds.map {
         cmd =>
-         replayIn(cmd, replayTo, cmd.processorId, p(_, cmd.target))
+          val from = cmd.fromSequenceNr
+          val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
+          log.debug(s"replayingIn from ${from} for up to ${msgs}")
+          val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p(_, cmd.target))))
+          replayIn(from, msgs, cmd.processorId, replayer).size
+          replayer ? ReplayDone
       }
-      Future.sequence(replayOps)
+      Future.sequence(replayOps) andThen {
+        case _ => sender ! ReplayDone
+      }
     }
 
-    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long)= {
-     replayIn(cmd, replayTo, cmd.processorId, p)
+    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) = {
+      val from = cmd.fromSequenceNr
+      val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
+      log.debug(s"replayingIn from ${from} for up to ${msgs}")
+      val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
+      replayIn(from, msgs, cmd.processorId, replayer).size
+      replayer ? ReplayDone andThen {
+        case _ => sender ! ReplayDone
+      }
     }
 
-    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long)= {
-      replayOut(cmd, replayTo, p)
+    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) = {
+      val from = cmd.fromSequenceNr
+      val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
+      log.debug(s"replayingOut from ${from} for up to ${msgs}")
+      val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
+      replayOut(from, msgs, cmd.channelId, replayer).size
+      replayer ? ReplayDone
     }
   }
 
-  class ReplayResequencer(start: Long, maxMessages: Long, p: (Message) => Unit, donePromise:Promise[Unit]) extends Actor {
+  class ReplayResequencer(start: Long, maxMessages: Long, p: (Message) => Unit) extends Actor {
 
     import scala.collection.mutable.Map
 
     private val delayed = Map.empty[Long, Option[Message]]
     private var delivered = start - 1
     private val done = start + maxMessages - 1
+    private var replayDone: Option[ActorRef] = None
 
     def receive = {
       case (seqnr: Long, Some(message: Message)) => resequence(seqnr, Some(message))
       case (seqnr: Long, None) => resequence(seqnr, None)
+      case ReplayDone => replayDone = Some(sender)
     }
 
     @scala.annotation.tailrec
@@ -422,7 +436,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
       if (eo.isDefined) resequence(delivered + 1, eo.get)
       else if (delivered == done) {
         log.debug("replay resequencer finished, shutting down")
-        donePromise.success(())
+        replayDone.foreach(_ ! ReplayDone)
         self ! PoisonPill
       }
     }
@@ -462,7 +476,7 @@ object DynamoDBJournal {
   lazy val utilDynamoSystem = ActorSystem("dynamo-util")
   implicit lazy val utilDynamo = new DynamoDBClient(new DynamoDBClientProps(sys.env("AWS_ACCESS_KEY_ID"), sys.env("AWS_SECRET_ACCESS_KEY"), Timeout(10 seconds), utilDynamoSystem, utilDynamoSystem))
 
-  def createJournal(table: String, read:Long, write:Long) {
+  def createJournal(table: String, read: Long, write: Long) {
     utilDynamo.sendListTables(new ListTablesRequest()).map {
       case r if r.getTableNames.contains(table) => waitForActiveTable(table)
       case _ =>
@@ -483,7 +497,7 @@ object DynamoDBJournal {
     }
   }
 
-  def scaleThroughput(table: String, read: Int, write: Int):Future[Unit]= {
+  def scaleThroughput(table: String, read: Int, write: Int): Future[Unit] = {
     utilDynamo.sendDescribeTable(new DescribeTableRequest().withTableName(table)).map {
       dtr =>
         val tp = dtr.getTable.getProvisionedThroughput
@@ -508,12 +522,12 @@ object DynamoDBJournal {
     (next(cr, dr), next(cw, dw))
   }
 
-  def next(c: Long, d: Long):Long= {
+  def next(c: Long, d: Long): Long = {
     if (c * 2 > d) d
     else c * 2
   }
 
-  def stop(){
+  def stop() {
     utilDynamoSystem.shutdown()
     utilDynamoSystem.awaitTermination()
   }
