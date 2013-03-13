@@ -15,17 +15,42 @@
  */
 package org.eligosource.eventsourced.journal.mongodb.casbah
 
-import org.scalatest.BeforeAndAfter
+import org.scalatest.BeforeAndAfterEach
 import com.mongodb.casbah.Imports._
 import org.eligosource.eventsourced.journal.common.JournalSpec
+import de.flapdoodle.embed.mongo.config.MongodConfig
+import de.flapdoodle.embed.mongo.distribution._
+import de.flapdoodle.embed.process.runtime.Network
+import de.flapdoodle.embed.mongo.{MongodProcess, MongodExecutable, MongodStarter}
 
-class MongodbJournalSpec extends JournalSpec with BeforeAndAfter {
+class MongodbJournalSpec extends JournalSpec with BeforeAndAfterEach {
 
-  val mongoConn = MongoConnection()
-  val journalColl = mongoConn("testdb")("journal")
+  val embedMongoDBName = "casbah"
+  val embedMongoDBColl = "journal"
+  val embedMongoDBConnPort = 12345
+  val embedMongoDBVer = Version.V2_2_1
+
+  var runtime: MongodStarter = null
+  var mongodExe: MongodExecutable = null
+  var mongod: MongodProcess = null
+  var mongoConn: MongoConnection = null
+
   def journalProps = MongodbJournalProps(journalColl)
 
-  after {
-    journalColl.remove(MongoDBObject.empty)
+  def journalColl: MongoCollection = mongoConn(embedMongoDBName)(embedMongoDBColl)
+
+  override def beforeEach() {
+    runtime = MongodStarter.getDefaultInstance
+    mongodExe = runtime.prepare(new MongodConfig(embedMongoDBVer, embedMongoDBConnPort, Network.localhostIsIPv6()))
+    mongod = mongodExe.start()
+    mongoConn = MongoConnection(Network.getLocalHost.getCanonicalHostName, embedMongoDBConnPort)
+  }
+
+  override def afterEach() {
+    journalColl.dropCollection()
+    mongoConn.dropDatabase(embedMongoDBName)
+    mongoConn.close()
+    mongod.stop()
+    mongodExe.stop()
   }
 }
