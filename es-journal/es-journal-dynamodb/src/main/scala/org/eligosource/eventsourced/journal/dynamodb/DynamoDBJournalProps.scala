@@ -28,6 +28,7 @@ case class DynamoDBJournalProps(journalTable: String, eventSourcedApp: String,
                                 replayOperationTimeout: Timeout = Timeout(1 minute),
                                 asyncWriterCount: Int = 16,
                                 system: ActorSystem, factory: Option[ActorRefFactory] = None,
+                                dynamoEndpoint:String = "dynamodb.us-east-1.amazonaws.com",
                                 val name: Option[String] = None, val dispatcherName: Option[String] = None) extends JournalProps {
 
   /**
@@ -35,6 +36,6 @@ case class DynamoDBJournalProps(journalTable: String, eventSourcedApp: String,
    */
   def journal = new DynamoDBJournal(this)
 
-  def clientProps = DynamoDBClientProps(key, secret, operationTimeout, system, factory.getOrElse(system))
+  def clientProps = DynamoDBClientProps(key, secret, operationTimeout, system, factory.getOrElse(system), dynamoEndpoint)
 
 }
