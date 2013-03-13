@@ -380,8 +380,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
           val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
           log.debug(s"replayingIn from ${from} for up to ${msgs}")
           val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p(_, cmd.target))))
-          replayIn(from, msgs, cmd.processorId, replayer).size
-          replayer ? ReplayDone
+          Future.sequence(replayer ? ReplayDone :: replayIn(from, msgs, cmd.processorId, replayer).toList)
       }
       Future.sequence(replayOps) andThen {
         case _ => sender ! ReplayDone
@@ -393,8 +392,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
       val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
       log.debug(s"replayingIn from ${from} for up to ${msgs}")
       val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
-      replayIn(from, msgs, cmd.processorId, replayer).size
-      replayer ? ReplayDone andThen {
+      Future.sequence(replayer ? ReplayDone ::replayIn(from, msgs, cmd.processorId, replayer).toList) andThen {
         case _ => sender ! ReplayDone
       }
     }
@@ -404,8 +402,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
       val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
       log.debug(s"replayingOut from ${from} for up to ${msgs}")
       val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
-      replayOut(from, msgs, cmd.channelId, replayer).size
-      replayer ? ReplayDone
+      Future.sequence(replayer ? ReplayDone ::replayOut(from, msgs, cmd.channelId, replayer).toList)
     }
   }
 
