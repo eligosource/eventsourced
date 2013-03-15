@@ -1,7 +1,7 @@
 HBase Journal
 =============
 
-[Eventsourced](https://github.com/eligosource/eventsourced) applications can create an [HBase](http://hbase.apache.org/book/quickstart.html) backed journal using the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) configuration object.
+[Eventsourced](https://github.com/eligosource/eventsourced) applications can create an [HBase](http://hbase.apache.org) backed journal using the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) configuration object.
 
 Properties
 ----------
