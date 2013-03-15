@@ -19,8 +19,8 @@ import Keys._
 import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettings }
 
 object Version {
-  val Scala = "2.10.0"
-  val Akka = "2.1.1"
+  val Scala = "2.10.1"
+  val Akka = "2.1.2"
   val ScalaTest = "1.9.1"
 }
 
