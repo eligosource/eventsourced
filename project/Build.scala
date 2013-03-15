@@ -19,8 +19,9 @@ import Keys._
 import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettings }
 
 object Version {
-  val Scala = "2.10.0"
-  val Akka  = "2.1.1"
+  val Scala = "2.10.1"
+  val Akka = "2.1.2"
+  val ScalaTest = "1.9.1"
 }
 
 object Compiler {
@@ -126,19 +127,22 @@ object EventsourcedBuild extends Build {
     id = "eventsourced-core-test",
     base = file("es-core-test"),
     settings = defaultSettings
-  ) dependsOn(esCore, esJournalLeveldb)
+  ) dependsOn(esCore,
+    esJournalLeveldb % "test->test;compile->compile",
+    esJournalHbase % "test->test;compile->compile"
+  )
 
   lazy val esExamples = Project(
     id = "eventsourced-examples",
     base = file("es-examples"),
     settings = defaultSettings
-  ) dependsOn(esCore, esCoreTest % "compile->test", esJournalLeveldb, esJournalJournalio)
+  ) dependsOn(esCore, esCoreTest % "compile->test", esJournalLeveldb, esJournalJournalio, esJournalHbase)
 
   lazy val esJournal = Project(
     id = "eventsourced-journal",
     base = file("es-journal"),
     settings = defaultSettings ++ Publish.parentSettings
-  ) aggregate(esJournalCommon, esJournalInmem, esJournalLeveldb, esJournalJournalio, esJournalMongodb)
+  ) aggregate(esJournalCommon, esJournalInmem, esJournalHbase, esJournalLeveldb, esJournalJournalio, esJournalMongodb)
 
   lazy val esJournalCommon = Project(
     id = "eventsourced-journal-common",
@@ -151,6 +155,12 @@ object EventsourcedBuild extends Build {
     base = file("es-journal/es-journal-inmem"),
     settings = defaultSettings
   ) dependsOn(esJournalCommon % "test->test;compile->compile")
+
+  lazy val esJournalHbase = Project(
+    id = "eventsourced-journal-hbase",
+    base = file("es-journal/es-journal-hbase"),
+    settings = defaultSettings ++ Defaults.itSettings
+  ) dependsOn(esJournalCommon % "it->test;compile->compile") configs( IntegrationTest )
 
   lazy val esJournalLeveldb = Project(
     id = "eventsourced-journal-leveldb",

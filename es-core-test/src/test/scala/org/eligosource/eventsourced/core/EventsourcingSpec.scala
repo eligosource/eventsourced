@@ -15,7 +15,6 @@
  */
 package org.eligosource.eventsourced.core
 
-import java.io.File
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
 
 import scala.concurrent.Await
@@ -26,12 +25,11 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
-import org.apache.commons.io.FileUtils
-
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
-import org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps
+import org.eligosource.eventsourced.journal.leveldb._
+import org.eligosource.eventsourced.journal.hbase._
 
 abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extends WordSpec with MustMatchers {
   type FixtureParam = T
@@ -49,18 +47,14 @@ abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extend
   }
 }
 
-trait EventsourcingFixture[A] {
-  implicit val system = ActorSystem("test")
-  implicit val timeout = Timeout(5 seconds)
-
-  val journalDir = new File("es-core-test/target/journal")
-  val journal = Journal(LeveldbJournalProps(journalDir))
+trait EventsourcingFixtureOps[A] { self: EventsourcingFixture[A] =>
   val queue = new LinkedBlockingQueue[A]
 
-  val extension = EventsourcingExtension(system, journal)
+  def cleanup()
+  def journalProps: JournalProps
 
   def dequeue[A](queue: LinkedBlockingQueue[A]): A = {
-    queue.poll(5000, TimeUnit.MILLISECONDS)
+    queue.poll(timeout.duration.toMillis, TimeUnit.MILLISECONDS)
   }
 
   def dequeue(): A = {
@@ -72,13 +66,21 @@ trait EventsourcingFixture[A] {
   }
 
   def result[A : ClassTag](actor: ActorRef)(r: Any): A = {
-    Await.result(actor.ask(r).mapTo[A], timeout.duration)
+    Await.result(actor.ask(r)(timeout).mapTo[A], timeout.duration)
   }
+}
+
+class EventsourcingFixture[A] extends EventsourcingFixtureOps[A] with LeveldbSupport {
+  implicit val timeout = Timeout(10 seconds)
+  implicit val system = ActorSystem("test")
+
+  val journal = Journal(journalProps)
+  val extension = EventsourcingExtension(system, journal)
 
   def shutdown() {
     system.shutdown()
-    system.awaitTermination(5 seconds)
-    FileUtils.deleteDirectory(journalDir)
+    system.awaitTermination(timeout.duration)
+    cleanup()
   }
 }
 

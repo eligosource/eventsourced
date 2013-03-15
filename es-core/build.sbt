@@ -1,7 +1,7 @@
 import com.typesafe.sbt.osgi.SbtOsgi.OsgiKeys
 
 libraryDependencies in ThisBuild ++= Seq(
-  "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+  "org.scalatest" %% "scalatest" % Version.ScalaTest % "test"
 )
 
 libraryDependencies ++= Seq(
