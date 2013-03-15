@@ -20,7 +20,8 @@ import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettin
 
 object Version {
   val Scala = "2.10.0"
-  val Akka  = "2.1.1"
+  val Akka = "2.1.1"
+  val ScalaTest = "1.9.1"
 }
 
 object Compiler {
@@ -158,8 +159,8 @@ object EventsourcedBuild extends Build {
   lazy val esJournalHbase = Project(
     id = "eventsourced-journal-hbase",
     base = file("es-journal/es-journal-hbase"),
-    settings = defaultSettings
-  ) dependsOn(esJournalCommon % "test->test;compile->compile")
+    settings = defaultSettings ++ Defaults.itSettings
+  ) dependsOn(esJournalCommon % "it->test;compile->compile") configs( IntegrationTest )
 
   lazy val esJournalLeveldb = Project(
     id = "eventsourced-journal-leveldb",
