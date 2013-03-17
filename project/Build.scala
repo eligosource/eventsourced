@@ -129,7 +129,8 @@ object EventsourcedBuild extends Build {
     settings = defaultSettings
   ) dependsOn(esCore,
     esJournalLeveldb % "test->test;compile->compile",
-    esJournalHbase % "test->test;compile->compile"
+    esJournalHbase % "test->test;compile->compile",
+    esJournalMongodb % "test->test;compile->compile"
   )
 
   lazy val esExamples = Project(
