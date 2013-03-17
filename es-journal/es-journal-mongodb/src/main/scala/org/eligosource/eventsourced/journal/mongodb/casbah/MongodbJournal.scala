@@ -21,8 +21,9 @@ import com.mongodb.casbah.Imports._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
+import java.util.Calendar
 
-private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends SequentialWriteJournal {
+private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends SynchronousWriteReplaySupport {
   import Journal._
 
   val serialization = Serialization(context.system)
@@ -31,27 +32,33 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
 
   def executeWriteInMsg(cmd: WriteInMsg) {
-    val built = createBuilder(cmd.processorId, 0, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
-    props.journalColl.insert(built)
+    val built = createMessageCollection(cmd.processorId, 0, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
+    props.journalColl.insert(built, WriteConcern.JournalSafe)
   }
 
   def executeWriteOutMsg(cmd: WriteOutMsg) {
-    val built = createBuilder(Int.MaxValue, cmd.channelId, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
+
+    val built = createMessageCollection(Int.MaxValue, cmd.channelId, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
+
     props.journalColl.insert(built)
+
     if (cmd.ackSequenceNr != SkipAck) {
-      val built = createBuilder(cmd.ackProcessorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
+      val built = createMessageCollection(cmd.ackProcessorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
       props.journalColl.insert(built)
     }
   }
 
   def executeWriteAck(cmd: WriteAck) {
-    val built = createBuilder(cmd.processorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
+    val built = createMessageCollection(cmd.processorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
     props.journalColl.insert(built)
   }
 
-  // TODO: THIS NEEDS FIXED
   def executeDeleteOutMsg(cmd: DeleteOutMsg) {
-    //    redoMap = redoMap - Key(Int.MaxValue, cmd.channelId, cmd.msgSequenceNr, 0)
+    props.journalColl.remove(MongoDBObject(
+      "processorId"         -> Int.MaxValue,
+      "initiatingChannelId" -> cmd.channelId,
+      "sequenceNr"          -> cmd.msgSequenceNr,
+      "confirmingChannelId" -> 0))
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
@@ -68,17 +75,26 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
     replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, p)
   }
 
-  def storedCounter = counter
+  def storedCounter = {
+    val cursor = props.journalColl.find().sort(MongoDBObject("sequenceNr" -> -1)).limit(1)
+    if (cursor.hasNext) cursor.next().getAs[Long]("sequenceNr").get else 0L
+  }
 
   private def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
 
-    val query =
-      MongoDBObject("processorId" -> processorId) ++
-        MongoDBObject("initiatingChannelId" -> channelId) ++
-        MongoDBObject("sequenceNr" -> MongoDBObject("$gte" -> fromSequenceNr))
+    val query = MongoDBObject(
+      "processorId"         -> processorId,
+      "initiatingChannelId" -> channelId,
+      "sequenceNr"          -> MongoDBObject("$gte" -> fromSequenceNr))
+
+    val sortKey = MongoDBObject(
+      "processorId"         -> 1,
+      "initiatingChannelId" -> 1,
+      "sequenceNr"          -> 1,
+      "confirmingChannelId" -> 1)
 
     val startKey = Key(processorId, channelId, fromSequenceNr, 0)
-    val cursor = props.journalColl.find(query)
+    val cursor = props.journalColl.find(query).sort(sortKey)
     val iter = cursor.toIterator.buffered
 
     replay(iter, startKey, p)
@@ -92,7 +108,8 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
       if (nextKey.confirmingChannelId != 0) {
         // phantom ack (just advance iterator)
         replay(iter, nextKey, p)
-      } else if (key.processorId  == nextKey.processorId && key.initiatingChannelId == nextKey.initiatingChannelId) {
+      } else if (key.processorId         == nextKey.processorId &&
+                 key.initiatingChannelId == nextKey.initiatingChannelId) {
         val msg = msgFromBytes(nextEntry.getAs[Array[Byte]]("message").get)
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(msg.copy(acks = channelIds))
@@ -107,26 +124,30 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
       val nextEntry = iter.head
       val nextKey = createKey(nextEntry)
       if (key.processorId         == nextKey.processorId &&
-        key.initiatingChannelId == nextKey.initiatingChannelId &&
-        key.sequenceNr          == nextKey.sequenceNr) {
+          key.initiatingChannelId == nextKey.initiatingChannelId &&
+          key.sequenceNr          == nextKey.sequenceNr) {
         iter.next()
         confirmingChannelIds(iter, nextKey, nextKey.confirmingChannelId :: channelIds)
       } else channelIds
     } else channelIds
   }
 
-  private def createBuilder(processorId: Int, initiatingChannelId: Int, sequenceNr: Long, confirmingChannelId: Int,
-                            msgAsBytes: Array[Byte]) = {
+  private def createMessageCollection(processorId: Int, initiatingChannelId: Int, sequenceNr: Long,
+                                      confirmingChannelId: Int, msgAsBytes: Array[Byte]) = {
     val builder = MongoDBObject.newBuilder
-    builder += "processorId" -> processorId
+    builder += "processorId"         -> processorId
     builder += "initiatingChannelId" -> initiatingChannelId
-    builder += "sequenceNr" -> sequenceNr
+    builder += "sequenceNr"          -> sequenceNr
     builder += "confirmingChannelId" -> confirmingChannelId
-    builder += "message" -> msgAsBytes
+    builder += "message"             -> msgAsBytes
     builder.result
   }
+
   private def createKey(dbObject: DBObject) = {
-    Key(dbObject.getAs[Int]("processorId").get, dbObject.getAs[Int]("initiatingChannelId").get,
-      dbObject.getAs[Long]("sequenceNr").get, dbObject.getAs[Int]("confirmingChannelId").get)
+    Key(
+      dbObject.getAs[Int]("processorId").get,
+      dbObject.getAs[Int]("initiatingChannelId").get,
+      dbObject.getAs[Long]("sequenceNr").get,
+      dbObject.getAs[Int]("confirmingChannelId").get)
   }
 }

@@ -30,7 +30,7 @@ import org.eligosource.eventsourced.core._
  *  import akka.actor._
  *
  *  import org.eligosource.eventsourced.core.Journal
- *  import org.eligosource.eventsourced.journal.mongodb.MongodbJournalProps
+ *  import org.eligosource.eventsourced.journal.mongodb.casbah.MongodbJournalProps
  *
  *  implicit val system: ActorSystem = ...
  *
@@ -45,26 +45,35 @@ case class MongodbJournalProps(journalColl: MongoCollection, name: Option[String
   dispatcherName: Option[String] = None) extends JournalProps {
 
   /**
-   * Create unique index as ObjectId is used as "_id".
+   * Create index as ObjectId is used as "_id". This is required because the mongoDB journal uses this as a unique
+   * index that is lexicographically sorted order by (processorId, initiatingChannelId, sequenceNr,
+   * confirmingChannelId).
    */
-  val indexes = MongoDBObject("processorId" -> 1, "initiatingChannelId" -> 1, "sequenceNr" -> 1,
+  val indexes = MongoDBObject(
+    "processorId"         -> 1,
+    "initiatingChannelId" -> 1,
+    "sequenceNr"          -> 1,
     "confirmingChannelId" -> 1)
 
+  /**
+   * Create index option for uniqueness. Required so we do not get duplicates.
+   */
   val options = MongoDBObject("unique" -> true)
+
+  /**
+   * Enforce unique index on collection.
+   */
   journalColl.ensureIndex(indexes, options)
 
   /**
    * Returns a new `MongodbJournalProps` with specified journal actor name.
    */
-  def withName(name: String) =
-    copy(name = Some(name))
+  def withName(name: String) = copy(name = Some(name))
 
   /**
    * Returns a new `MongodbJournalProps` with specified journal actor dispatcher name.
    */
-  def withDispatcherName(dispatcherName: String) =
-    copy(dispatcherName = Some(dispatcherName))
+  def withDispatcherName(dispatcherName: String) = copy(dispatcherName = Some(dispatcherName))
 
-  def journal: Actor =
-    new MongodbJournal(this)
+  def journal: Actor = new MongodbJournal(this)
 }
