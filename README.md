@@ -49,11 +49,11 @@ For persisting event messages, *Eventsourced* currently provides the following j
     <td>Experimental</td>
   </tr>
   <tr>
-    <td>DynamoDB journal. A <a href="http://aws.amazon.com/en/dynamodb/">DynamoDB </a> backed journal. Thanks to <a href="https://github.com/sclasen">Scott Clasen</a></td>
-    <td>Coming soon</td>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbJournalProps">MongoDB journal</a>. A <a href="http://www.mongodb.org/">MongoDB</a> backed journal. Details <a href="https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-mongodb/readme.md#mongodb-journal">here</a>. Thanks to <a href="https://github.com/ddevore">Duncan DeVore</a>.</td>
+    <td>Experimental</td>
   </tr>
   <tr>
-    <td>MongoDB journal. A <a href="http://www.mongodb.org/">MongoDB</a> backed journal. Thanks to <a href="https://github.com/ddevore">Duncan DeVore</a></td>
+    <td>DynamoDB journal. A <a href="http://aws.amazon.com/en/dynamodb/">DynamoDB </a> backed journal. Thanks to <a href="https://github.com/sclasen">Scott Clasen</a>.</td>
     <td>Coming soon</td>
   </tr>
   <tr>
