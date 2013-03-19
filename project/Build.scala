@@ -129,7 +129,7 @@ object EventsourcedBuild extends Build {
     settings = defaultSettings
   ) dependsOn(esCore,
     esJournalLeveldb % "test->test;compile->compile",
-    esJournalHbase % "test->test;compile->compile",
+    esJournalHbase % "test->it;compile->compile",
     esJournalMongodb % "test->test;compile->compile"
   )
 

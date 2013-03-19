@@ -30,8 +30,6 @@ import org.eligosource.eventsourced.journal.common.AsynchronousWriteReplaySuppor
 
 /**
  * HBase journal with asynchronous, non-blocking IO and concurrent reads/writes.
- *
- * <strong>EXPERIMENTAL AND NOT OPTIMIZED</strong>.
  */
 private [hbase] class HBaseJournal(props: HBaseJournalProps) extends AsynchronousWriteReplaySupport {
   import context.dispatcher
@@ -44,44 +42,48 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
   def asyncWriterCount = props.writerCount
   def partition(snr: Long) = snr % props.partitionCount toInt
 
+
   def writer(id: Int) = new Writer {
     def executeWriteInMsg(cmd: WriteInMsg): Future[Any] = {
       val snr = cmd.message.sequenceNr
-      val key = InMsgKey(partition(snr), cmd.processorId, snr).toBytes
+      val prt = partition(snr)
+      val key = InMsgKey(prt, cmd.processorId, snr).toBytes
       val msg = serialization.serializeMessage(cmd.message.clearConfirmationSettings)
-      val putMsg = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, MsgColumnNameBytes, msg)
-      val putCtr = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
-      val putMsgFuture: Future[Any] = client.put(putMsg)
-      val putCtrFuture: Future[Any] = client.put(putCtr)
+      val ftr = executeWriteMsg(prt, snr, key, msg).map(_ => ())
       client.flush()
-      val wrt = for {
-        _ <- putMsgFuture
-        a <- putCtrFuture
-      } yield a
-      wrt.map(_ => ())
+      ftr
     }
 
     def executeWriteOutMsg(cmd: WriteOutMsg): Future[Any] = {
       val snr = cmd.message.sequenceNr
-      val key = OutMsgKey(partition(snr), cmd.channelId, snr).toBytes
+      val prt = partition(snr)
+      val key = OutMsgKey(prt, cmd.channelId, snr).toBytes
       val msg = serialization.serializeMessage(cmd.message.clearConfirmationSettings)
-      val putMsg = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, MsgColumnNameBytes, msg)
-      val putCtr = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
-      val putMsgFuture: Future[Any] = client.put(putMsg)
-      val putCtrFuture: Future[Any] = client.put(putCtr)
+      val putMsgFuture = executeWriteMsg(prt, snr, key, msg)
       val putAckFuture: Future[Any] = if (cmd.ackSequenceNr != SkipAck) {
         val snr = cmd.ackSequenceNr
         val key = InMsgKey(partition(snr), cmd.ackProcessorId, snr).toBytes
         val putAck = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
-        client.put(putAck)
-      } else Future.successful(())
-      client.flush()
+        val putFtr = client.put(putAck)
+        putMsgFuture.flatMap(_ => putFtr)
+      } else putMsgFuture
       val wrt = for {
         _ <- putMsgFuture
-        _ <- putCtrFuture
         a <- putAckFuture
       } yield a
+      client.flush()
       wrt.map(_ => ())
+    }
+
+    def executeWriteMsg(prt: Int, snr: Long, key: Array[Byte], msg: Array[Byte]): Future[Any] = {
+      val putMsg = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, MsgColumnNameBytes, msg)
+      val putCtr = new PutRequest(TableNameBytes, CounterKey(prt).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
+      val putMsgFuture: Future[Any] = client.put(putMsg)
+      val putCtrFuture: Future[Any] = client.put(putCtr)
+      for {
+        _ <- putMsgFuture
+        a <- putCtrFuture
+      } yield a
     }
 
     def executeWriteAck(cmd: WriteAck): Future[Any] = {
@@ -199,41 +201,30 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
   def storedCounter = {
     import scala.concurrent.duration._
 
-    // TODO: start scanning from stored counter
-    // TODO: abstract over maxSequenceNr and replayer#scanLow
-
-    def maxSequenceNr(bucket: Int): Future[Long] = {
+    def storedCounter(partition: Int): Future[Long] = {
       val scanner = client.newScanner(TableNameBytes)
 
       scanner.setFamily(ColumnFamilyNameBytes)
       scanner.setQualifier(SequenceNrColumnNameBytes)
-      scanner.setStartKey(InMsgKey(bucket, 0, 0).toBytes)
-      scanner.setStopKey(InMsgKey(bucket + 1 , 0, 0).toBytes)
+      scanner.setStartKey(CounterKey.lower(partition).toBytes)
+      scanner.setStopKey(CounterKey.upper(partition).toBytes)
 
-      def go(): Future[Long] = {
-        deferredToFuture(scanner.nextRows(1024)).flatMap { rows =>
-          rows match {
-            case null => {
-              scanner.close()
-              Future.successful(0)
-            }
-            case _ => {
-              val vals: Seq[Long] = for {
-                a <- rows.asScala
-                b <- a.asScala
-              } yield longFromBytes(b.value())
-              go().map(_ max vals.max)
-            }
+      deferredToFuture(scanner.nextRows(1)).map {
+        _ match {
+          case null => 0L
+          case rows => {
+            val vals: Seq[Long] = for {
+              a <- rows.asScala
+              b <- a.asScala
+            } yield longFromBytes(b.value())
+            vals.headOption.getOrElse(0L)
           }
         }
       }
-      go()
     }
 
-    // TODO: make timeout configurable
-    Await.result(Future.sequence(0 until props.partitionCount map (maxSequenceNr)).map(_.max), 1 minute)
+    Await.result(Future.sequence(0 until props.partitionCount map(storedCounter)).map(_.max), 10 seconds)
   }
-
 
   override def start() {
     client = new HBaseClient(props.zookeeperQuorum)

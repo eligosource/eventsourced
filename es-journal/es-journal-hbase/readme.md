@@ -29,7 +29,7 @@ This section shows how to initialize an HBase journal that connects to a local, 
 First, download, install and start a standalone HBase instance by following the instructions in the HBase [quick start guide](http://hbase.apache.org/book/quickstart.html). Then, under sbt (started from the `eventsourced` project root) run:
 
     > project eventsourced-journal-hbase
-    > test:run-main org.eligosource.eventsourced.journal.hbase.CreateSchema
+    > run-main org.eligosource.eventsourced.journal.hbase.CreateSchema
 
 Add the required depedencies to your project's `build.sbt` file:
 
