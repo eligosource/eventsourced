@@ -58,7 +58,7 @@ Initialize the HBase journal in your application:
 Cluster setup
 -------------
 
-For storing event messages to a real HBase cluster, a table must be initially created with the [CreateSchema](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.CreateSchema) utility as shown in the following example:
+For storing event messages to a real HBase cluster, a table must be initially created with the [CreateSchema](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.CreateSchema$) utility as shown in the following example:
 
     import org.apache.hadoop.conf.Configuration
     import org.eligosource.eventsourced.journal.hbase.CreateSchema
