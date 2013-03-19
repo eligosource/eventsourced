@@ -17,6 +17,7 @@ package org.eligosource.eventsourced.journal.common
 
 import scala.concurrent._
 import scala.concurrent.duration._
+import scala.util._
 
 import akka.actor._
 import akka.pattern.{ask, pipe}
@@ -179,27 +180,33 @@ trait AsynchronousWriteReplaySupport extends Actor {
       case Loop(msg, target) => {
         target tell (Looped(msg), sdr)
       }
-      case SnapshottedReplay(BatchReplayInMsgs(replays), toSequenceNr) => {
+      case SnapshottedReplay(cmd @ BatchReplayInMsgs(replays), toSequenceNr) => {
         replayer.executeBatchReplayInMsgs(replays, (msg, target) => target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
-          case _ => self ! (seqnr + 1L, SnapshottedReplayDone) // TODO: error handling
+          case Success(_) => self ! (seqnr + 1L, SnapshottedReplayDone)
+          case Failure(e) => self ! (seqnr + 1L, SnapshottedReplayFailed(cmd, e))
         }
       }
       case SnapshottedReplay(cmd: ReplayInMsgs, toSequenceNr) => {
         replayer.executeReplayInMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
-          case _ => self ! (seqnr + 1L, SnapshottedReplayDone) // TODO: error handling
+          case Success(_) => self ! (seqnr + 1L, SnapshottedReplayDone)
+          case Failure(e) => self ! (seqnr + 1L, SnapshottedReplayFailed(cmd, e))
         }
       }
       case SnapshottedReplay(cmd: ReplayOutMsgs, toSequenceNr) => {
         replayer.executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
-          case _ => self ! (seqnr + 1L, SnapshottedReplayDone) // TODO: error handling
+          case Success(_) => self ! (seqnr + 1L, SnapshottedReplayDone)
+          case Failure(e) => self ! (seqnr + 1L, SnapshottedReplayFailed(cmd, e))
         }
-      }
-      case SnapshottedReplayDone => {
-        // nothing to do ...
       }
       case BatchDeliverOutMsgs(channels) => {
         channels.foreach(_ ! Deliver)
         sdr ! DeliveryDone
+      }
+      case SnapshottedReplayDone => {
+        // nothing to do ...
+      }
+      case e: SnapshottedReplayFailed => {
+        context.system.eventStream.publish(e)
       }
       case e: WriteFailed => {
         context.system.eventStream.publish(e)
@@ -223,5 +230,6 @@ trait AsynchronousWriteReplaySupport extends Actor {
 object AsynchronousWriteReplaySupport {
   case class WriteFailed(cmd: Any, cause: Throwable)
   case class SnapshottedReplay(replayCmd: Any, toSequencerNr: Long)
+  case class SnapshottedReplayFailed(replayCmd: Any, cause: Throwable)
   case object SnapshottedReplayDone
 }
