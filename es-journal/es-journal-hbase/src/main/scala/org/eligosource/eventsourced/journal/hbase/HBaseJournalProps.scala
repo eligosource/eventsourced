@@ -37,6 +37,27 @@ import org.eligosource.eventsourced.core.JournalProps
  *  val journal: ActorRef = Journal(HBaseJournalProps(zookeeperQuorum))
  * }}}
  *
+ * For storing event messages to HBase, an HBase table must be initially created. The following
+ * example application creates a table that is pre-split into 16 regions. The HBase configuration
+ * is specified with a [[org.apache.hadoop.conf.Configuration]] object.
+ *
+ * {{{
+ *  import org.apache.hadoop.conf.Configuration
+ *  import org.eligosource.eventsourced.journal.hbase.CreateSchema
+ *
+ *  class Temp {
+ *    val config: Configuration = ... // HBase/Hadoop configuration
+ *    val regions = 16                // number of predefined regions
+ *
+ *    CreateSchema(config, regions)
+ *  }
+ * }}}
+ *
+ * Event messages will be evenly distributed (partitioned) across regions. This requires the
+ * `partitionCount` of this configuration object to match the number of `regions` used for table
+ * creation. An initially defined `partitionCount` must not be changed later for an existing
+ * event message table.
+ *
  * @param zookeeperQuorum Comma separated list of servers in the ZooKeeper quorum.
  *        See also the `hbase.zookeeper.quorum`
  *        [[http://hbase.apache.org/book/config.files.html configuration]] property.
@@ -44,7 +65,7 @@ import org.eligosource.eventsourced.core.JournalProps
  * @param dispatcherName Optional journal actor dispatcher name.
  * @param partitionCount Number of HBase regions to use for distributing event messages
  *        across region servers. '''Do not change this setting once used with an existing
- *        HBase instance'''.
+ *        event message table'''.
  * @param writerCount Number of concurrent writers.
  * @param writeTimeout Timeout for asynchronous writes.
  * @param replayChunkSize Maximum number of event messages to keep in memory during replay.

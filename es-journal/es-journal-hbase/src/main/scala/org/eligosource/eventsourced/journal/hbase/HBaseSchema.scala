@@ -19,9 +19,18 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase._
 import org.apache.hadoop.hbase.client._
 
+/**
+ * Creates an HBase event message table.
+ */
 object CreateSchema extends App {
   apply(HBaseConfiguration.create(), 4)
 
+  /**
+   * Creates an HBase event message table.
+   *
+   * @param c HBase configuration object.
+   * @param numPartitions number of partitions to create.
+   */
   def apply(c: Configuration, numPartitions: Int) {
     val admin = new HBaseAdmin(c)
 
@@ -33,6 +42,9 @@ object CreateSchema extends App {
   }
 }
 
+/**
+ * Drops an existing HBase event message table.
+ */
 object DropSchema extends App {
   val config = HBaseConfiguration.create()
   val admin = new HBaseAdmin(config)
@@ -42,7 +54,7 @@ object DropSchema extends App {
   admin.close()
 }
 
-object Keysplit {
+private [hbase] object Keysplit {
   val bo = Ordering.by((x: Array[Byte]) => x.toIterable)
 
   def apply(numPartitions: Int): Array[Array[Byte]] =
