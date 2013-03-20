@@ -21,40 +21,38 @@ import com.mongodb.casbah.Imports._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
-import java.util.Calendar
 
 private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends SynchronousWriteReplaySupport {
   import Journal._
 
   val serialization = Serialization(context.system)
+  var client: MongoClient = _
+  var collection: MongoCollection = _
 
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
 
   def executeWriteInMsg(cmd: WriteInMsg) {
-    val built = createMessageCollection(cmd.processorId, 0, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
-    props.journalColl.insert(built, WriteConcern.JournalSafe)
+    val msgJSON = createMessageJSON(cmd.processorId, 0, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
+    collection.insert(msgJSON, WriteConcern.Normal)
   }
 
   def executeWriteOutMsg(cmd: WriteOutMsg) {
-
-    val built = createMessageCollection(Int.MaxValue, cmd.channelId, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
-
-    props.journalColl.insert(built)
-
+    val msgJSON = createMessageJSON(Int.MaxValue, cmd.channelId, counter, 0, msgToBytes(cmd.message.clearConfirmationSettings))
+    collection.insert(msgJSON, WriteConcern.Normal)
     if (cmd.ackSequenceNr != SkipAck) {
-      val built = createMessageCollection(cmd.ackProcessorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
-      props.journalColl.insert(built)
+      val msgJSON = createMessageJSON(cmd.ackProcessorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
+      collection.insert(msgJSON, WriteConcern.Normal)
     }
   }
 
   def executeWriteAck(cmd: WriteAck) {
-    val built = createMessageCollection(cmd.processorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
-    props.journalColl.insert(built)
+    val msgJSON = createMessageJSON(cmd.processorId, 0, cmd.ackSequenceNr, cmd.channelId, Array.empty[Byte])
+    collection.insert(msgJSON, WriteConcern.Normal)
   }
 
   def executeDeleteOutMsg(cmd: DeleteOutMsg) {
-    props.journalColl.remove(MongoDBObject(
+    collection.remove(MongoDBObject(
       "processorId"         -> Int.MaxValue,
       "initiatingChannelId" -> cmd.channelId,
       "sequenceNr"          -> cmd.msgSequenceNr,
@@ -76,7 +74,7 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
   }
 
   def storedCounter = {
-    val cursor = props.journalColl.find().sort(MongoDBObject("sequenceNr" -> -1)).limit(1)
+    val cursor = collection.find().sort(MongoDBObject("sequenceNr" -> -1)).limit(1)
     if (cursor.hasNext) cursor.next().getAs[Long]("sequenceNr").get else 0L
   }
 
@@ -94,7 +92,7 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
       "confirmingChannelId" -> 1)
 
     val startKey = Key(processorId, channelId, fromSequenceNr, 0)
-    val cursor = props.journalColl.find(query).sort(sortKey)
+    val cursor = collection.find(query).sort(sortKey)
     val iter = cursor.toIterator.buffered
 
     replay(iter, startKey, p)
@@ -132,15 +130,20 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
     } else channelIds
   }
 
-  private def createMessageCollection(processorId: Int, initiatingChannelId: Int, sequenceNr: Long,
-                                      confirmingChannelId: Int, msgAsBytes: Array[Byte]) = {
+  private def createMessageJSON(
+    processorId: Int,
+    initiatingChannelId: Int,
+    sequenceNr: Long,
+    confirmingChannelId: Int,
+    msgAsBytes: Array[Byte]) = {
+
     val builder = MongoDBObject.newBuilder
     builder += "processorId"         -> processorId
     builder += "initiatingChannelId" -> initiatingChannelId
     builder += "sequenceNr"          -> sequenceNr
     builder += "confirmingChannelId" -> confirmingChannelId
     builder += "message"             -> msgAsBytes
-    builder.result
+    builder.result()
   }
 
   private def createKey(dbObject: DBObject) = {
@@ -149,5 +152,29 @@ private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends 
       dbObject.getAs[Int]("initiatingChannelId").get,
       dbObject.getAs[Long]("sequenceNr").get,
       dbObject.getAs[Int]("confirmingChannelId").get)
+  }
+
+  override def start() {
+
+    client = props.mongoClient
+    collection = client(props.dbName)(props.collName)
+
+     // The mongoDB journal requires a unique index that is an ascending sort on (processorId, initiatingChannelId,
+     // sequenceNr, confirmingChannelId).
+    val indexes = MongoDBObject(
+      "processorId"         -> 1,
+      "initiatingChannelId" -> 1,
+      "sequenceNr"          -> 1,
+      "confirmingChannelId" -> 1)
+
+    // Create index option for uniqueness. Required so we do not get duplicates.
+    val options = MongoDBObject("unique" -> true)
+
+     // Enforce unique index on collection.
+    collection.ensureIndex(indexes, options)
+  }
+
+  override def stop() {
+    client.close()
   }
 }
