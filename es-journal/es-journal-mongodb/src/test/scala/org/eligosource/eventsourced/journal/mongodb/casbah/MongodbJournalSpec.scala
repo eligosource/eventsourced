@@ -21,15 +21,15 @@ import org.eligosource.eventsourced.journal.common.JournalSpec
 
 class MongodbJournalSpec extends JournalSpec with MongodbSpecSupport with BeforeAndAfterEach {
 
+  val dbName = "es2"
+  val collName = "event"
+
   // Since multiple embedded instances will run, each one must have a different port.
-  override def mongoDBConnPort = 12345
+  override def mongoPort = 54321
 
-  def journalProps = MongodbJournalProps(journalColl)
-
-  def journalColl: MongoCollection = mongoConn(mongoDBName)(mongoDBColl)
+  def journalProps = MongodbJournalProps(MongoClient(mongoLocalHostName, mongoPort), dbName, collName)
 
   override def afterEach() {
-    journalColl.dropCollection()
-    mongoConn.dropDatabase(mongoDBName)
+    MongoClient(mongoLocalHostName, mongoPort)(dbName)(collName).dropCollection()
   }
 }
