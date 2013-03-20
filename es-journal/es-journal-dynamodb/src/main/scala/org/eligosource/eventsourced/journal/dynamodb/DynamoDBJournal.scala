@@ -49,13 +49,16 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
 
   log.debug("new Journal")
 
-  val counterKeys:Int = 1000 //write counters over this many dynamo items
 
-  def counterAtt(cntr: Long) = S(props.eventSourcedApp + Counter + (cntr % counterKeys))
+  def counterAtt(cntr: Long) = S(props.eventSourcedApp + Counter + (cntr % maxCounterShards))
 
   def counterKey(cntr: Long) =
     new DynamoKey()
       .withHashKeyElement(counterAtt(cntr))
+
+  val maxCounterShardsAtt = S(props.eventSourcedApp + MaxCounterShards)
+
+  val maxCounterShardsKey = new DynamoKey().withHashKeyElement(maxCounterShardsAtt)
 
   implicit val ctx = context.system.dispatcher
 
@@ -71,6 +74,19 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
 
   def journalProps = props
 
+  lazy val maxCounterShards:Int = findMaxCounterShards
+
+  def findMaxCounterShards:Int = {
+    val storedMax = dynamo.sendGetItem(new GetItemRequest().withTableName(props.journalTable).withKey(maxCounterShardsKey).withConsistentRead(true)).map{
+      result =>
+        Option(result.getItem).flatMap(i => Option(i.get(Data))).map(a => counterFromBytes(a.getB.array()).toInt).getOrElse(0)
+    }
+    val max = math.max(props.counterShards, Await.result(storedMax, props.operationTimeout.duration))
+    if(max == props.counterShards) dynamo.sendPutItem(putMaxCounterShards(max))
+    else log.warning(s"counterShards set in journalProps will be ignored since a larger value of $max has previously been used in this journal")
+    log.debug(s"maxShards:$max")
+    max
+  }
 
   def storedCounter: Long = {
     val counter = Await.result(findStoredCounter, props.operationTimeout.duration)
@@ -81,7 +97,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
   private def findStoredCounter: Future[Long] = {
     log.debug("findStoredCounter")
     Future.sequence {
-      Stream.iterate(0L, counterKeys)(_ + 1).map(l => counterKey(l)).grouped(100).map {
+      Stream.iterate(0L, maxCounterShards)(_ + 1).map(l => counterKey(l)).grouped(100).map {
         keys =>
           val ka = new KeysAndAttributes().withKeys(keys.asJava).withConsistentRead(true)
           val get = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(props.journalTable, ka))
@@ -225,6 +241,13 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
     item.put(Id, ack.getHashKeyElement)
     item.put(ack.channelId.toString, B(channelMarker))
     new PutRequest().withItem(item)
+  }
+
+  def putMaxCounterShards(shards:Int):PutItemRequest = {
+    val item = new JHMap[String, AttributeValue]
+    item.put(Id, maxCounterShardsAtt)
+    item.put(Data, B(counterToBytes(shards.toLong)))
+    new PutItemRequest().withItem(item).withTableName(props.journalTable)
   }
 
 
@@ -410,7 +433,7 @@ object DynamoDBJournal {
   val Id = "key"
   val Data = "data"
   val Counter = "COUNTER"
-  val CommitCounter = "COMMITCOUNTER"
+  val MaxCounterShards = "MAXCOUNTERSHARDS"
   val DynamoKeys = Set(Id)
 
   import concurrent.ExecutionContext.Implicits.global
