@@ -68,6 +68,8 @@ import org.eligosource.eventsourced.core.JournalProps
  *        event message table'''.
  * @param writerCount Number of concurrent writers.
  * @param writeTimeout Timeout for asynchronous writes.
+ * @param initTimeout Timeout for journal initialization. During initialization
+ *        the highest stored sequence number is loaded from the event message table.
  * @param replayChunkSize Maximum number of event messages to keep in memory during replay.
  */
 case class HBaseJournalProps(
@@ -77,6 +79,7 @@ case class HBaseJournalProps(
   partitionCount: Int = 16,
   writerCount: Int = 16,
   writeTimeout: FiniteDuration = 10 seconds,
+  initTimeout: FiniteDuration = 30 seconds,
   replayChunkSize: Int = 16 * 100) extends JournalProps {
 
   def withName(name: String) =
@@ -93,6 +96,9 @@ case class HBaseJournalProps(
 
   def withWriteTimeout(writeTimeout: FiniteDuration) =
     copy(writeTimeout = writeTimeout)
+
+  def withInitTimeout(initTimeout: FiniteDuration) =
+    copy(initTimeout = initTimeout)
 
   def withReplayChunkSize(replayChunkSize: Int) =
     copy(replayChunkSize = replayChunkSize)

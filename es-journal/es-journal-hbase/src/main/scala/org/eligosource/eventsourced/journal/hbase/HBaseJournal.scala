@@ -77,7 +77,7 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
 
     def executeWriteMsg(prt: Int, snr: Long, key: Array[Byte], msg: Array[Byte]): Future[Any] = {
       val putMsg = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, MsgColumnNameBytes, msg)
-      val putCtr = new PutRequest(TableNameBytes, CounterKey(prt).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
+      val putCtr = new PutRequest(TableNameBytes, CounterKey(prt, id).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
       val putMsgFuture: Future[Any] = client.put(putMsg)
       val putCtrFuture: Future[Any] = client.put(putCtr)
       for {
@@ -199,31 +199,35 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
   }
 
   def storedCounter = {
-    import scala.concurrent.duration._
-
     def storedCounter(partition: Int): Future[Long] = {
       val scanner = client.newScanner(TableNameBytes)
 
       scanner.setFamily(ColumnFamilyNameBytes)
       scanner.setQualifier(SequenceNrColumnNameBytes)
-      scanner.setStartKey(CounterKey.lower(partition).toBytes)
-      scanner.setStopKey(CounterKey.upper(partition).toBytes)
+      scanner.setStartKey(CounterKey(partition, 0).toBytes)
+      scanner.setStopKey(CounterKey(partition, Int.MaxValue).toBytes)
 
-      deferredToFuture(scanner.nextRows(1)).map {
-        _ match {
-          case null => 0L
-          case rows => {
-            val vals: Seq[Long] = for {
-              a <- rows.asScala
-              b <- a.asScala
-            } yield longFromBytes(b.value())
-            vals.headOption.getOrElse(0L)
+      def go(): Future[Long] = {
+        deferredToFuture(scanner.nextRows()).flatMap { rows =>
+          rows match {
+            case null => {
+              scanner.close()
+              Future.successful(0L)
+            }
+            case _ => {
+              val vals = for {
+                a <- rows.asScala
+                b <- a.asScala
+              } yield longFromBytes(b.value())
+              go().map(_ max vals.max)
+            }
           }
         }
       }
+      go()
     }
 
-    Await.result(Future.sequence(0 until props.partitionCount map(storedCounter)).map(_.max), 10 seconds)
+    Await.result(Future.sequence(0 until props.partitionCount map(storedCounter)).map(_.max), props.initTimeout)
   }
 
   override def start() {

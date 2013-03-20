@@ -69,17 +69,12 @@ package object hbase {
     def withPartition(p: Int) = copy(partition = p)
   }
 
-  private [hbase] case class CounterKey(partition: Int, sequenceNumber: Long) extends Key {
+  private [hbase] case class CounterKey(partition: Int, writerId: Int) extends Key {
     require(sequenceNumber == 0 || sequenceNumber == 1)
     val source = 0
-    def withSequenceNumber(f: (Long) => Long) = copy(sequenceNumber = f(sequenceNumber))
+    val sequenceNumber = writerId.toLong
+    def withSequenceNumber(f: (Long) => Long) = copy(writerId = f(writerId).toInt)
     def withPartition(p: Int) = copy(partition = p)
-  }
-
-  private [hbase] object CounterKey {
-    def apply(partition: Int): CounterKey = lower(partition)
-    def lower(partition: Int): CounterKey = CounterKey(partition, 0L)
-    def upper(partition: Int): CounterKey = CounterKey(partition, 1L)
   }
 
   implicit def deferredToFuture[A](d: Deferred[A]): Future[A] = {

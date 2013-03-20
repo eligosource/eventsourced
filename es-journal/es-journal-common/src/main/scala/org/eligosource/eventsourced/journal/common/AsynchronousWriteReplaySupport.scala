@@ -25,9 +25,6 @@ import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
 
-/**
- * <strong>EXPERIMENTAL</strong>
- */
 trait AsynchronousWriteReplaySupport extends Actor {
   import AsynchronousWriteReplaySupport._
   import Channel.Deliver
@@ -37,7 +34,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
   val resequencer: ActorRef =
     actor(new ResequencerActor(replayer), dispatcherName = journalProps.dispatcherName)
 
-  val writers = 1 to asyncWriterCount map  { id =>
+  val writers = 0 until asyncWriterCount map { id =>
     actor(new WriterActor(writer(id)), dispatcherName = journalProps.dispatcherName)
   } toVector
 
@@ -61,7 +58,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
   def asyncWriteAndResequence(cmd: Any) {
     val ctr = counterResequencer
     val sdr = sender
-    val idx = counterResequencer % asyncWriterCount
+    val idx = counter % asyncWriterCount
     val write = writers(idx.toInt).ask(cmd)(asyncWriteTimeoutObj)
     write onSuccess { case _ => resequencer tell ((ctr, cmd), sdr) }
     write onFailure { case t => resequencer tell ((ctr, WriteFailed(cmd, t)), sdr) }
