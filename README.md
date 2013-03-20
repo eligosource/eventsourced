@@ -82,8 +82,9 @@ Resources
 
 ### Support
 
-- Community: [Eventsourced forum](http://groups.google.com/group/eventsourced)
-- Commercial: [Eligotech B.V.](http://www.eligotech.com/)
+- [Eventsourced user forum](http://groups.google.com/group/eventsourced)
+- [Eventsourced developer forum](http://groups.google.com/group/eventsourced-dev)
+- Commercial support by [Eligotech B.V.](http://www.eligotech.com/)
 
 First steps
 -----------
