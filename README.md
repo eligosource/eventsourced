@@ -75,7 +75,7 @@ Eventsourced channels are not meant to replace any existing messaging system but
 
 #### Journal
 
-A journal is an actor that is used by processors and channels to log messages and receipt confirmations. The quality of service (availability, scalability, ...) provided by a journal depends on the used storage technology. The [Journals](#journal) section below gives an overview of existing journal implementations and their development status.
+A journal is an actor that is used by processors and channels to log messages and receipt confirmations. The quality of service (availability, scalability, ...) provided by a journal depends on the used storage technology. The [Journals](#journals) section below gives an overview of existing journal implementations and their development status.
 
 ### Application
 
