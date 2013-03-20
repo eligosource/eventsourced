@@ -146,7 +146,7 @@ Resources
 First steps
 -----------
 
-This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the usage of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed inside sbt with 
+This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the usage of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed from the sbt prompt with 
 
     > project eventsourced-examples
     > run-nobootcp org.eligosource.eventsourced.guide.FirstSteps
@@ -387,7 +387,7 @@ This section modifies (and simplifies) the example from section [First steps](#f
 - `Processor` will be modified with `Emitter` (in addition to `Eventsourced`)
 - `Destination` will be modified with `Receiver` and `Confirm`
 
-Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed inside sbt with 
+Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed from the sbt prompt with 
 
     > project eventsourced-examples
     > run-nobootcp org.eligosource.eventsourced.guide.StackableTraits
@@ -495,7 +495,7 @@ Instead of replying to the sender, the processor can also forward the sender ref
 
 When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) (see also section [Emitter](#emitter)) applications can choose between methods `sendEvent` and `forwardEvent` where `sendEvent` takes an implicit sender reference as parameter and `forwardEvent` forwards the current sender reference. They work in the same way as the `!` and `forward` methods on `ActorRef`, respectively.
 
-Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed inside sbt with 
+Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed from the sbt prompt with 
 
     > project eventsourced-examples
     > run-nobootcp org.eligosource.eventsourced.guide.SenderReferences
@@ -916,7 +916,7 @@ to `stdout`. You may observe a different line ordering when running the example.
     received response Order(1,jelly beans,true,1234-5678-1234-5678)
     received event OrderAccepted(Order(1,jelly beans,true,1234-5678-1234-5678))
 
-The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed with inside sbt with 
+The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed from the sbt prompt with
 
     > project eventsourced-examples
     > run-nobootcp org.eligosource.eventsourced.example.OrderExample
@@ -1030,7 +1030,7 @@ When the master crashes, another node in the cluster becomes the master and reco
 
 ![Clustering](https://raw.github.com/eligosource/eventsourced/master/doc/images/clustering-2.png)
 
-Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application inside sbt, first start the application that hosts the `Destination` actor and the journal:
+Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application from sbt, first start the application that hosts the `Destination` actor and the journal:
 
     > run-main org.eligosource.eventsourced.example.Destination
 
