@@ -46,17 +46,12 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
 
   val channelMarker = Array(1.toByte)
-  val countMarker = Array(1.toByte)
 
   log.debug("new Journal")
 
-  val committedCounterAtt = S(props.eventSourcedApp + CommitCounter)
+  val counterKeys:Int = 1000 //write counters over this many dynamo items
 
-  val committedCounterKey =
-    new DynamoKey()
-      .withHashKeyElement(committedCounterAtt)
-
-  def counterAtt(cntr: Long) = S(props.eventSourcedApp + Counter + cntr)
+  def counterAtt(cntr: Long) = S(props.eventSourcedApp + Counter + (cntr % counterKeys))
 
   def counterKey(cntr: Long) =
     new DynamoKey()
@@ -76,65 +71,32 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
 
   def journalProps = props
 
-  private val countCommitter = context.actorOf(Props(new DynamoCountCommitter))
-
-  resequencer ! SetDeliveryListener(Some(countCommitter))
 
   def storedCounter: Long = {
-    val max = Long.MaxValue
-    val counter = Await.result(findCommittedCounter.flatMap(min => findStoredCounter(min, max)), props.operationTimeout.duration)
+    val counter = Await.result(findStoredCounter, props.operationTimeout.duration)
     log.debug(s"found stored counter $counter")
     counter
   }
 
-  private def findCommittedCounter: Future[Long] = {
-    dynamo.sendGetItem(new GetItemRequest().withKey(committedCounterKey).withTableName(props.journalTable).withConsistentRead(true)).map {
-      gir =>
-        Option(gir.getItem.get(Data)).map(_.getB.array()).map(counterFromBytes).getOrElse(0L)
-    }.recover {
-      case e: Exception =>
-        log.error("cant find committed counter starting at 0")
-        0L
-    }
+  private def findStoredCounter: Future[Long] = {
+    log.debug("findStoredCounter")
+    Future.sequence {
+      Stream.iterate(0L, counterKeys)(_ + 1).map(l => counterKey(l)).grouped(100).map {
+        keys =>
+          val ka = new KeysAndAttributes().withKeys(keys.asJava).withConsistentRead(true)
+          val get = new BatchGetItemRequest().withRequestItems(Collections.singletonMap(props.journalTable, ka))
+          dynamo.sendBatchGetItem(get).flatMap(getUnprocessedItems).map {
+            resp =>
+              val batchMap = mapBatch(resp.getResponses.get(props.journalTable))
+              keys.map {
+                key =>
+                  Option(batchMap.get(key.getHashKeyElement)).map(item => counterFromBytes(item.get(Data).getB.array()))
+              }.flatten.append(Stream(0L)).max
+          }
+      }
+    }.map(_.max)
   }
 
-  private def findStoredCounter(min: Long, max: Long): Future[Long] = {
-    val candidates = candidateKeys(min, max)
-    val ka = new KeysAndAttributes().withKeys(candidates.values.toSeq: _*).withConsistentRead(true)
-    val tables = Collections.singletonMap(props.journalTable, ka)
-    val get = new BatchGetItemRequest().withRequestItems(tables)
-    dynamo.sendBatchGetItem(get).flatMap(getUnprocessedItems) flatMap {
-      res =>
-        val batch = mapBatch(res.getResponses.get(props.journalTable))
-        val counters: List[Long] = candidates.map {
-          ///find the counters associated with any found keys
-          case (cnt, key) => Option(batch.get(key.getHashKeyElement)).map(_ => cnt)
-        }.flatten.toList
-        if (counters.size == 0) Future(0) //no counters found
-        else if (counters.size == 1 && counters(0) == 1) Future(1) //one counter found
-        else if (endsSequentially(counters)) Future(counters.last) // last 2 counters found are sequential so last one is highest
-        else findStoredCounter(min, counters.last)
-    }
-  }
-
-  def endsSequentially(counters: List[Long]): Boolean = {
-    val two = counters.takeRight(2)
-    two match {
-      case a :: b :: Nil if a + 1 == b => true
-      case _ => false
-    }
-  }
-
-
-  def candidateKeys(min: Long, max: Long): TreeMap[Long, DynamoKey] = {
-    val increment: Long = max / 100
-    (Stream.iterate(min, 100)(i => i + increment)).map {
-      i =>
-        i -> counterKey(i)
-    }.foldLeft(TreeMap.empty[Long, DynamoKey]) {
-      case (tm, (cnt, key)) => tm + (cnt -> key)
-    }
-  }
 
   private def replayOut(from: Long, msgs: Int, channelId: Int, replayer: ActorRef): Iterator[Future[Unit]] = {
     log.debug("replayingOut!")
@@ -318,7 +280,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
 
     def executeWriteOutMsg(cmd: WriteOutMsg) = {
       val msg = put(cmd, cmd.message.clearConfirmationSettings)
-      val cnt = put(counterKey(cmd.message.sequenceNr), countMarker)
+      val cnt = put(counterKey(cmd.message.sequenceNr), counterToBytes(cmd.message.sequenceNr))
       if (cmd.ackSequenceNr != SkipAck) batchWrite(msg, cnt, putAck(WriteAck(cmd.ackProcessorId, cmd.channelId, cmd.ackSequenceNr)))
       else batchWrite(msg, cnt)
     }
@@ -326,7 +288,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
     def executeWriteInMsg(cmd: WriteInMsg) = {
       log.debug(s"batch in with counter ${cmd.message.sequenceNr}")
       batchWrite(put(cmd, cmd.message.clearConfirmationSettings),
-        put(counterKey(cmd.message.sequenceNr), countMarker)
+        put(counterKey(cmd.message.sequenceNr), counterToBytes(cmd.message.sequenceNr))
       )
     }
 
@@ -436,21 +398,6 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
         replayDone.foreach(_ ! ReplayDone)
         self ! PoisonPill
       }
-    }
-
-  }
-
-  class DynamoCountCommitter extends Actor {
-
-    val writer = new DynamoWriter
-
-    def receive = {
-      case count: Long if count % 100 == 0 => writeCommittedCounter(committedCounterKey, count)
-      case count: Long => ()
-    }
-
-    private def writeCommittedCounter(key: DynamoKey, count: Long): Future[BatchWriteItemResult] = {
-      writer.batchWrite(put(key, count))
     }
 
   }
