@@ -14,6 +14,11 @@ Eventsourced
   </tr>
 </table>
 
+Overview
+--------
+
+If you're new to Eventsourced, read this [high-level technical overview](http://krasserm.blogspot.de/2013/03/eventsourced-for-akka-high-level.html) first.
+
 Introduction
 ------------
 
@@ -78,6 +83,7 @@ Resources
 
 ### Articles
 
+- [Eventsourced for Akka - A high-level technical overview](http://krasserm.blogspot.de/2013/03/eventsourced-for-akka-high-level.html)
 - [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html)
 
 ### Support
