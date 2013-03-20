@@ -17,28 +17,75 @@ Eventsourced
 Overview
 --------
 
-If you're new to Eventsourced, read this [high-level technical overview](http://krasserm.blogspot.de/2013/03/eventsourced-for-akka-high-level.html) first.
+The Eventsourced library adds scalable actor state persistence and at-least-once message delivery guarantees to [Akka](http://akka.io/). With Eventsourced, stateful actors
 
-Introduction
-------------
+- persist received messages by appending them to a log (journal)
+- project received messages to derive current state
+- usually hold current state in memory (memory image)
+- recover current (or past) state by replaying received messages (during normal application start or after crashes)
+- never persist current state directly (except optional state snapshots for recovery time optimization)
 
-*Eventsourced* is a library that adds [event-sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) to [Akka](http://akka.io/) actors. It appends event messages to a [journal](#journals) before they are processed by an actor and [recovers](#recovery) actor state by replaying them. Appending event messages to a journal, instead of persisting actor state directly, allows for actor state persistence at very high transaction rates. An actor is turned into an event-sourced actor by modifying it with the [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) trait. Find out more at [*How does Eventsourced persist actor state and how is this related to event sourcing*](https://github.com/eligosource/eventsourced/wiki/FAQ#wiki-event-sourcing-comparison).
+In other words, Eventsourced implements a write-ahead log (WAL) that is used to keep track of messages an actor receives and to recover its state by replaying logged messages. Appending messages to a log instead of persisting actor state directly allows for actor state persistence at very high transaction rates and supports efficient replication. In contrast to other WAL-based systems, Eventsourced usually keeps the whole message history in the log and makes usage of state snapshots optional.
 
-Event-sourced actors may also send event messages to destinations. In order to avoid that these messages are redundantly delivered to destinations during state recovery (i.e. during replay), event message delivery is usually done via one or more [channels](#channels). Channels do not re-deliver already successfully delivered event messages and guarantee *at-least-once* delivery. Channels connect an event-sourced actor to other application parts such as external web services, internal domain services, messaging systems, event archives or other (local or remote) event-sourced actors, to mention only a few examples.
+Logged messages represent intended changes to an actor's state. Logging changes instead of updating current state is one of the core concept of [event sourcing](http://martinfowler.com/eaaDev/EventSourcing.html). Eventsourced can be used to implement event sourcing concepts but it is not limited to that. More details about Eventsourced and its relation to event sourcing can be found at [*How does Eventsourced persist actor state and how is this related to event sourcing*](https://github.com/eligosource/eventsourced/wiki/FAQ#wiki-event-sourcing-comparison).
 
-Applications may connect event-sourced actors (via channels) to arbitrary complex event-sourced actor networks that can be consistently recovered by the library. Here, channels play another important role. They ensure that the overall order of dependent messages during recovery is the same as during normal operation. Based on these mechanisms, for example, the implementation of reliable, long-running business processes using event-sourced [state machines](#state-machines) becomes almost trivial.
+Eventsourced can also be used to make message exchanges between actors reliable so that they can be resumed after crashes, for example. For that purpose, channels with at-least-once message delivery guarantees are provided. Channels also prevent that output messages, sent by persistent actors, are redundantly delivered during replays which is relevant for message exchanges between these actors and other services.
 
-The library itself is an [Akka extension](http://doc.akka.io/docs/akka/2.1.0/scala/extending-akka.html) and provides [stackable traits](http://www.artima.com/scalazine/articles/stackable_trait_pattern.html) to add event-sourcing capabilities to actors. All message exchanges performed by the library are asynchronous and non-blocking. The library works with local, remote and cluster actor references (see also section [Clustering](#clustering)).
+### Building blocks
+
+The core building blocks provided by Eventsourced are processors, channels and journals. These are managed by an Akka extension, the [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension).
+
+#### Processor
+
+A processor is a stateful actor that logs (persists) messages it receives. A stateful actor is turned into a processor by modifying it with the stackable [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) trait during construction. A processor can be used like any other actor.
+
+Messages of type [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) are logged by a processor, messages of any other type are not logged. Logging behavior is implemented by the `Eventsourced` trait, a processor's receive method doesn't need to care about that. Acknowledging a successful write to a sender can be done by sending a reply. A processor can also hot-swap its behavior by still keeping its logging functionality.
+
+Processors are registered at an `EventsourcingExtension`. This extension provides methods to recover processor state by replaying logged messages. Processors can be registered and recovered at any time during an application run.
+
+Eventsourced doesn't impose any restrictions how processors maintain state. A processor can use vars, mutable data structures or STM references, for example.
+
+#### Channel
+
+[Channels](#channels) are used by processors for sending messages to other actors (channel destinations) and receiving replies from them. Channels
+
+- require their destinations to confirm the receipt of messages for providing at-least-once delivery guarantees (explicit ack-retry protocol). Receipt confirmations are written to a log.
+- prevent redundant delivery of messages to destinations during processor recovery (replay of messages). Replayed messages with matching receipt confirmations are dropped by the corresponding channels.
+
+A channel itself is an actor that decorates a destination with the aforementioned functionality. Processors usually create channels as child actors for decorating destination actor references.
+
+A processor may also sent messages directly to another actor without using a channel. In this case that actor will redundantly receives messages during processor recovery.
+
+Eventsourced provides three different channel types (more are planned).
+
+- Default channel
+    - Does not store received messages.
+    - Re-delivers uncomfirmed messages only during recovery of the sending processor.
+    - Order of messages as sent by a processor is not preserved in failure cases.
+- Reliable channel
+    - Stores received messages.
+    - Re-delivers unconfirmed messages based on a configurable re-delivery policy.
+    - Order of messages as sent by a processor is preserved, even in failure cases.
+    - Often used to deal with unreliable remote destinations.
+- Reliable request-reply channel
+    - Same as reliable channel but additionally guarantees at-least-once delivery of replies.
+    - Order of replies not guaranteed to correspond to the order of sent request messages.
+
+Eventsourced channels are not meant to replace any existing messaging system but can be used, for example, to reliably connect processors to such a system, if needed. More generally, they are useful to integrate processors with other services, as described in [this article](http://krasserm.blogspot.de/2013/01/event-sourcing-and-external-service.html).
+
+#### Journal
+
+A journal is an actor that is used by processors and channels to log messages and receipt confirmations. The quality of service (availability, scalability, ...) provided by a journal depends on the used storage technology. The [Journals](#journal) section below gives an overview of existing journal implementations and their development status.
 
 ### Application
 
-The library doesn't impose any restrictions on the structure and semantics of application-level events. Hence, applications may use the library for command-sourcing as well. Messages processed by an `Eventsourced` actor can therefore be event messages as well as command messages. The [Eventsourced reference application](https://github.com/eligosource/eventsourced-example) demonstrates how both approaches can be combined.
+The Eventsourced library doesn't impose any restrictions on the structure and semantics of [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) payloads. Hence, persistent messages processed by an `Eventsourced` actor can therefore be event messages as well as command messages. The [Eventsourced reference application](https://github.com/eligosource/eventsourced-example) demonstrates how both approaches can be combined.
 
-The *Eventsourced* library fits well into applications that implement the [CQRS](http://martinfowler.com/bliki/CQRS.html) pattern and follow a [domain-driven design](http://domaindrivendesign.org/resources/what_is_ddd) (DDD). On the other hand, the library doesn't force applications to do so and allows them to implement event-sourcing (or command-sourcing) without CQRS and/or DDD. Its primary focus is actor state persistence and recovery.
+Eventsourced fits well into applications that implement the [CQRS](http://martinfowler.com/bliki/CQRS.html) pattern and follow a [domain-driven design](http://domaindrivendesign.org/resources/what_is_ddd) (DDD). On the other hand, the library doesn't force applications to do so and allows them to implement event-sourcing (or command-sourcing) without CQRS and/or DDD. Its primary focus is actor state persistence and recovery.
 
 ### Journals
 
-For persisting event messages, *Eventsourced* currently provides the following journal implementations:
+For persisting messages, Eventsourced currently provides the following journal implementations:
 
 <table>
   <tr>
@@ -62,14 +109,19 @@ For persisting event messages, *Eventsourced* currently provides the following j
     <td>Coming soon</td>
   </tr>
   <tr>
-    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps">Journal.IO journal</a>. <a href="https://github.com/sbtourist/Journal.IO">Journal.IO</a> backed journal for testing purposes. Event messages are persisted.</td>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps">Journal.IO journal</a>. <a href="https://github.com/sbtourist/Journal.IO">Journal.IO</a> backed journal for testing purposes. Messages are persisted.</td>
     <td>Testing</td>
   </tr>
   <tr>
-    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps">In memory journal</a>. An in-memory journal for testing purposes. Event messages are not persisted.</td>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps">In memory journal</a>. An in-memory journal for testing purposes. Messages are not persisted.</td>
     <td>Testing</td>
   </tr>
 </table>
+
+Terminology
+-----------
+
+In the following, the terms, *persistent actor*, *event-sourced actor*, *event-sourced processor* and *processor* are used interchangeably. Furthermore, to refer to a persistent `Message`, the term *event message* is often used.
 
 Resources
 ---------
@@ -83,7 +135,6 @@ Resources
 
 ### Articles
 
-- [Eventsourced for Akka - A high-level technical overview](http://krasserm.blogspot.de/2013/03/eventsourced-for-akka-high-level.html)
 - [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html)
 
 ### Support
@@ -104,7 +155,7 @@ Details about the `run-nobootcp` task are described [here](https://github.com/el
 
 ### Step 1: `EventsourcingExtension` initialization
 
-[`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension) is an Akka extension provided by the *Eventsourced* library. It is used by applications to
+[`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension) is an Akka extension provided by the Eventsourced library. It is used by applications to
 
 - create and register event-sourced actors (called *processors* or *event processors*)
 - create and register channels
@@ -138,7 +189,7 @@ Event-sourced actors can be defined as 'plain' actors i.e. they don't need to ca
       }
     }
 
-is an actor that counts the number of received event [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s. In *Eventsourced* applications, events are always communicated (transported) via event `Message`s.
+is an actor that counts the number of received event [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s. In Eventsourced applications, events are always communicated (transported) via event `Message`s.
 
 ### Step 3: Event-sourced actor creation and recovery
 
@@ -233,7 +284,7 @@ on `stdout` during a first application run. When running the application again, 
 
 When receiving event messages from a channel, destinations must confirm the receipt of that message by calling `Message.confirm()` which asynchronously writes a confirmation (an *acknowledgement*) to the journal that the message has been successfully delivered. Later, you'll also see how confirmation functionality can be added to destinations with the stackable [`Confirm`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Confirm) trait.
 
-This [First steps](#first-steps) guide is a rather low-level introduction to the *Eventsourced* library. More advanced library features are covered in the following sections.
+This [First steps](#first-steps) guide is a rather low-level introduction to the Eventsourced library. More advanced library features are covered in the following sections.
 
 Stackable traits
 ----------------
@@ -380,7 +431,7 @@ pattern-matches against events directly and leaves event message receipt confirm
 Sender references
 -----------------
 
-The *Eventsourced* library preserves sender references for all
+The Eventsourced library preserves sender references for all
 
 - message exchanges with actors that are modified with `Eventsourced`, `Receiver`, `Emitter` and/or `Confirm` and
 - message exchanges with destination actors via [channels](#channels)
@@ -766,7 +817,7 @@ The order management example in this section is taken from [Martin Fowler](http:
 >
 > In the LMAX architecture, you would split this operation into two. The first operation would capture the order information and finish by outputting an event (credit card validation requested) to the credit card company. The Business Logic Processor would then carry on processing events for other customers until it received a credit-card-validated event in its input event stream. On processing that event it would carry out the confirmation tasks for that order.
 
-This can be implemented with the *Eventsourced* library as shown in the following diagram (legend is in [Appendix A](#appendix-a-legend)).
+This can be implemented with the Eventsourced library as shown in the following diagram (legend is in [Appendix A](#appendix-a-legend)).
 
 ![Order management](https://raw.github.com/eligosource/eventsourced/master/doc/images/ordermgnt-1.png)
 
