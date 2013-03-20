@@ -16,7 +16,6 @@
 package org.eligosource.eventsourced.journal.mongodb.casbah
 
 import org.scalatest.{Suite, BeforeAndAfterAll}
-import com.mongodb.casbah.MongoConnection
 import de.flapdoodle.embed.mongo.{Command, MongodStarter}
 import de.flapdoodle.embed.mongo.config.{RuntimeConfigBuilder, MongodConfig}
 import de.flapdoodle.embed.process.io.{NullProcessor, Processors}
@@ -27,7 +26,7 @@ import de.flapdoodle.embed.process.config.io.ProcessOutput
  */
 trait MongodbSpecSupport extends BeforeAndAfterAll { this: Suite =>
 
-  def mongoDBConnPort = 14445
+  def mongoPort = mongoDefaultPort
 
   override def beforeAll() {
 
@@ -40,15 +39,14 @@ trait MongodbSpecSupport extends BeforeAndAfterAll { this: Suite =>
       .processOutput(processOutput)
       .build()
 
-    runtime = MongodStarter.getInstance(runtimeConfig)
-
-    mongodExe = runtime.prepare(new MongodConfig(mongoDBVer, mongoDBConnPort, mongoLocalHostIPV6))
-    mongod = mongodExe.start()
-    mongoConn = MongoConnection(mongoLocalHostName, mongoDBConnPort)
+    // Startup embedded mongodb.
+    mongoStarter = MongodStarter.getInstance(runtimeConfig)
+    mongoExe = mongoStarter.prepare(new MongodConfig(mongoVer, mongoPort, mongoLocalHostIPV6))
+    mongod = mongoExe.start()
   }
 
   override def afterAll() {
     mongod.stop()
-    mongodExe.stop()
+    mongoExe.stop()
   }
 }
