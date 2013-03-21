@@ -39,7 +39,9 @@ The core building blocks provided by Eventsourced are processors, channels and j
 
 A processor is a stateful actor that logs (persists) messages it receives. A stateful actor is turned into a processor by modifying it with the stackable [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) trait during construction. A processor can be used like any other actor.
 
-Messages of type [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) are logged by a processor, messages of any other type are not logged. Logging behavior is implemented by the `Eventsourced` trait, a processor's receive method doesn't need to care about that. Acknowledging a successful write to a sender can be done by sending a reply. A processor can also hot-swap its behavior by still keeping its logging functionality.
+Messages wrapped inside [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) are logged by a processor, unwrapped messages are not logged. Wrapped messages are often referred to as *events* in this user guide. Wrapped messages can also be *commands*, as explained in section [Application](#application).
+
+Logging behavior is implemented by the `Eventsourced` trait, a processor's `receive` method doesn't need to care about that. Acknowledging a successful write to a sender can be done by sending a reply. A processor can also hot-swap its behavior by still keeping its logging functionality.
 
 Processors are registered at an `EventsourcingExtension`. This extension provides methods to recover processor state by replaying logged messages. Processors can be registered and recovered at any time during an application run.
 
@@ -54,7 +56,7 @@ Eventsourced doesn't impose any restrictions how processors maintain state. A pr
 
 A channel itself is an actor that decorates a destination with the aforementioned functionality. Processors usually create channels as child actors for decorating destination actor references.
 
-A processor may also sent messages directly to another actor without using a channel. In this case that actor will redundantly receives messages during processor recovery.
+A processor may also sent messages directly to another actor without using a channel. In this case that actor will redundantly receive messages during processor recovery.
 
 Eventsourced provides three different channel types (more are planned).
 
@@ -79,9 +81,9 @@ A journal is an actor that is used by processors and channels to log messages an
 
 ### Application
 
-The Eventsourced library doesn't impose any restrictions on the structure and semantics of [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) payloads. Hence, persistent messages processed by an `Eventsourced` actor can therefore be event messages as well as command messages. The [Eventsourced reference application](https://github.com/eligosource/eventsourced-example) demonstrates how both approaches can be combined.
+The Eventsourced library doesn't impose any restrictions on the structure and semantics of [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) payloads. Hence, persistent messages can therefore be events as well as commands. The Eventsourced [reference application](https://github.com/eligosource/eventsourced-example) uses both, for example.
 
-Eventsourced fits well into applications that implement the [CQRS](http://martinfowler.com/bliki/CQRS.html) pattern and follow a [domain-driven design](http://domaindrivendesign.org/resources/what_is_ddd) (DDD). On the other hand, the library doesn't force applications to do so and allows them to implement event-sourcing (or command-sourcing) without CQRS and/or DDD. Its primary focus is actor state persistence and recovery.
+Eventsourced fits well into applications that implement the [CQRS](http://martinfowler.com/bliki/CQRS.html) pattern and follow a [domain-driven design](http://domaindrivendesign.org/resources/what_is_ddd) (DDD) (see [reference application](https://github.com/eligosource/eventsourced-example)). On the other hand, the library doesn't force applications to do so and allows them to implement event-sourcing (and/or command-sourcing) without CQRS and/or DDD.
 
 ### Journals
 
@@ -121,7 +123,7 @@ For persisting messages, Eventsourced currently provides the following journal i
 Terminology
 -----------
 
-In the following, the terms, *persistent actor*, *event-sourced actor*, *event-sourced processor* and *processor* are used interchangeably. Furthermore, to refer to a persistent `Message`, the term *event message* is often used.
+In the following, the terms *persistent actor*, *event-sourced actor*, *event-sourced processor* and *processor* are used interchangeably. Furthermore, a [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) is often referred to as *event message*.
 
 Resources
 ---------
