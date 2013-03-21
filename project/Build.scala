@@ -184,6 +184,7 @@ object EventsourcedBuild extends Build {
   lazy val esJournalDynamodb = Project(
     id = "eventsourced-journal-dynamodb",
     base = file("es-journal/es-journal-dynamodb"),
-    settings = defaultSettings
-  ) dependsOn(esJournalCommon % "test->test;compile->compile")
+    settings = defaultSettings ++ Defaults.itSettings
+  ) dependsOn(esJournalCommon % "it->test;compile->compile") configs( IntegrationTest )
+
 }
