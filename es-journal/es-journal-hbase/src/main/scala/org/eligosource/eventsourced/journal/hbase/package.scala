@@ -24,8 +24,8 @@ import com.stumbleupon.async.{Callback, Deferred}
 import org.apache.hadoop.hbase.util.Bytes
 
 package object hbase {
-  val TableName = "event"
-  val TableNameBytes = Bytes.toBytes(TableName)
+  val DefaultTableName = "event"
+  val DefaultPartitionCount = 4
 
   val ColumnFamilyName = "ef"
   val ColumnFamilyNameBytes = Bytes.toBytes(ColumnFamilyName)
@@ -36,11 +36,18 @@ package object hbase {
   val SequenceNrColumnName = "snr"
   val SequenceNrColumnNameBytes = Bytes.toBytes(SequenceNrColumnName)
 
+  val PartitionCountColumnName = "pct"
+  val PartitionCountColumnNameBytes = Bytes.toBytes(PartitionCountColumnName)
+
   val TimestampColumnName = "tms"
   val TimestampColumnNameBytes = Bytes.toBytes(TimestampColumnName)
 
   val AckColumnPrefix = "ack"
   def ackColumnBytes(channelId: Int) = Bytes.toBytes(AckColumnPrefix + channelId)
+
+  class PartitionCountNotFoundException(table: String) extends Exception(
+    s"Partition count not stored in table ${table}"
+  )
 
   private [hbase] sealed trait Key {
     def partition: Int
@@ -75,6 +82,18 @@ package object hbase {
     val sequenceNumber = writerId.toLong
     def withSequenceNumber(f: (Long) => Long) = copy(writerId = f(writerId).toInt)
     def withPartition(p: Int) = copy(partition = p)
+  }
+
+  private [hbase] case class PartitionCountKey(upper: Boolean = false) extends Key {
+    val partition = -1
+    val source = 0
+    def sequenceNumber = if (upper) 1L else 0L
+
+    def withPartition(p: Int) =
+      throw new UnsupportedOperationException("withPartition on PartitionCountKey")
+
+    def withSequenceNumber(f: (Long) => Long) =
+      throw new UnsupportedOperationException("withSequenceNumber on PartitionCountKey")
   }
 
   implicit def deferredToFuture[A](d: Deferred[A]): Future[A] = {

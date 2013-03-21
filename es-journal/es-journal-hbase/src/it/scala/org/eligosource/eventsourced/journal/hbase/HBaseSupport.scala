@@ -26,7 +26,6 @@ object HBaseSupport {
 trait HBaseSupport extends HBaseCleanup {
   val client = HBaseSupport.client
   val journalProps = HBaseJournalProps("localhost")
-    .withPartitionCount(4)
     .withWriterCount(4)
     .withReplayChunkSize(8)
 }

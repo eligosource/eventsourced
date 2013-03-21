@@ -23,17 +23,17 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.eligosource.eventsourced.journal.common.JournalSpec
 
 class HBaseJournalSpec extends JournalSpec with HBaseCleanup with BeforeAndAfterEach with BeforeAndAfterAll {
-  val partitionCount = 4
-
-  def journalProps = HBaseJournalProps("localhost:%d" format port)
-    .withPartitionCount(partitionCount)
-    .withWriterCount(2)
-    .withReplayChunkSize(8)
-
-  var port: Int = _
+  var port: Int = 0
   var util: HBaseTestingUtility = _
   var admin: HBaseAdmin = _
   var client: HTable = _
+
+  def zookeeperQuorum = "localhost:%d" format port
+  def journalProps = {
+    HBaseJournalProps(zookeeperQuorum)
+      .withWriterCount(4)
+      .withReplayChunkSize(8)
+  }
 
   override def afterEach() {
     cleanup()
@@ -44,9 +44,8 @@ class HBaseJournalSpec extends JournalSpec with HBaseCleanup with BeforeAndAfter
     util.startMiniCluster()
     port = util.getZkCluster.getClientPort
 
-    CreateSchema(util.getConfiguration, partitionCount)
-
-    client = new HTable(util.getConfiguration, TableName)
+    CreateTable(util.getConfiguration, DefaultTableName, DefaultPartitionCount)
+    client = new HTable(util.getConfiguration, DefaultTableName)
   }
 
   override def afterAll() = try {

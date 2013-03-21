@@ -35,12 +35,15 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
   import context.dispatcher
 
   val serialization = Serialization(context.system)
+  val tableNameBytes = Bytes.toBytes(props.tableName)
+
   var client: HBaseClient = _
+  var partitionCount: Int = _
 
   def journalProps = props
   def asyncWriteTimeout = props.writeTimeout
   def asyncWriterCount = props.writerCount
-  def partition(snr: Long) = snr % props.partitionCount toInt
+  def partition(snr: Long) = snr % partitionCount toInt
 
 
   def writer(id: Int) = new Writer {
@@ -63,7 +66,7 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
       val putAckFuture: Future[Any] = if (cmd.ackSequenceNr != SkipAck) {
         val snr = cmd.ackSequenceNr
         val key = InMsgKey(partition(snr), cmd.ackProcessorId, snr).toBytes
-        val putAck = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
+        val putAck = new PutRequest(tableNameBytes, key, ColumnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
         val putFtr = client.put(putAck)
         putMsgFuture.flatMap(_ => putFtr)
       } else putMsgFuture
@@ -76,8 +79,8 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
     }
 
     def executeWriteMsg(prt: Int, snr: Long, key: Array[Byte], msg: Array[Byte]): Future[Any] = {
-      val putMsg = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, MsgColumnNameBytes, msg)
-      val putCtr = new PutRequest(TableNameBytes, CounterKey(prt, id).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
+      val putMsg = new PutRequest(tableNameBytes, key, ColumnFamilyNameBytes, MsgColumnNameBytes, msg)
+      val putCtr = new PutRequest(tableNameBytes, CounterKey(prt, id).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
       val putMsgFuture: Future[Any] = client.put(putMsg)
       val putCtrFuture: Future[Any] = client.put(putCtr)
       for {
@@ -89,7 +92,7 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
     def executeWriteAck(cmd: WriteAck): Future[Any] = {
       val snr = cmd.ackSequenceNr
       val key = InMsgKey(partition(snr), cmd.processorId, snr).toBytes
-      val put = new PutRequest(TableNameBytes, key, ColumnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
+      val put = new PutRequest(tableNameBytes, key, ColumnFamilyNameBytes, ackColumnBytes(cmd.channelId), Bytes.toBytes(cmd.channelId))
       val wrt = client.put(put); client.flush()
       wrt.map(_ => ())
     }
@@ -97,7 +100,7 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
     def executeDeleteOutMsg(cmd: DeleteOutMsg): Future[Any] = {
       val snr = cmd.msgSequenceNr
       val key = OutMsgKey(partition(snr), cmd.channelId, snr).toBytes
-      val del = new DeleteRequest(TableNameBytes, key)
+      val del = new DeleteRequest(tableNameBytes, key)
       val wrt = client.delete(del); client.flush()
       wrt.map(_ => ())
     }
@@ -130,7 +133,7 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
         def scanPartition(partition: Int) = scanLow(
           startKey.withPartition(partition),
           stopKey.withPartition(partition), p)
-        Future.sequence(0 until props.partitionCount map(scanPartition)).map(_.flatten.sortBy(_.sequenceNr))
+        Future.sequence(0 until partitionCount map(scanPartition)).map(_.flatten.sortBy(_.sequenceNr))
       }
 
       def go(startKey: Key, stopKey: Key) {
@@ -152,7 +155,7 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
     }
 
     def scanLow(startKey: Key, stopKey: Key, p: (Message) => Unit): Future[Seq[Message]] = {
-      val scanner = client.newScanner(TableNameBytes)
+      val scanner = client.newScanner(tableNameBytes)
 
       scanner.setFamily(ColumnFamilyNameBytes)
       scanner.setStartKey(startKey.toBytes)
@@ -200,7 +203,7 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
 
   def storedCounter = {
     def storedCounter(partition: Int): Future[Long] = {
-      val scanner = client.newScanner(TableNameBytes)
+      val scanner = client.newScanner(tableNameBytes)
 
       scanner.setFamily(ColumnFamilyNameBytes)
       scanner.setQualifier(SequenceNrColumnNameBytes)
@@ -227,11 +230,37 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
       go()
     }
 
-    Await.result(Future.sequence(0 until props.partitionCount map(storedCounter)).map(_.max), props.initTimeout)
+    Await.result(Future.sequence(0 until partitionCount map(storedCounter)).map(_.max), props.initTimeout)
   }
 
   override def start() {
     client = new HBaseClient(props.zookeeperQuorum)
+
+    val invalid = -1
+    val scanner = client.newScanner(tableNameBytes)
+
+    scanner.setFamily(ColumnFamilyNameBytes)
+    scanner.setQualifier(PartitionCountColumnNameBytes)
+    scanner.setStartKey(PartitionCountKey(false).toBytes)
+    scanner.setStopKey(PartitionCountKey(true).toBytes)
+
+    val pcf = deferredToFuture(scanner.nextRows(1)).map { rows =>
+      rows match {
+        case null => invalid
+        case _ => {
+          val pcs = for {
+            a <- rows.asScala
+            b <- a.asScala
+          } yield Bytes.toInt(b.value())
+          if (pcs.isEmpty) invalid else pcs.head
+        }
+      }
+    }
+
+    val pc = Await.result(pcf, props.initTimeout)
+
+    if (pc == invalid) throw new PartitionCountNotFoundException(props.tableName)
+    else partitionCount = pc
   }
 
   override def stop() {

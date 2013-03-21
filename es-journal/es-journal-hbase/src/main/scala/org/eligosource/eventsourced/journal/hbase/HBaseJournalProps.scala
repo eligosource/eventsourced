@@ -34,38 +34,22 @@ import org.eligosource.eventsourced.core.JournalProps
  *  implicit val system: ActorSystem = ...
  *
  *  val zookeeperQuorum: String = ... // "localhost", for example
+ *  val tableName: String = ...       // "event", for example
  *  val journal: ActorRef = Journal(HBaseJournalProps(zookeeperQuorum))
  * }}}
  *
- * For storing event messages to HBase, an HBase table must be initially created. The following
- * example application creates a table that is pre-split into 16 regions. The HBase configuration
- * is specified with a [[org.apache.hadoop.conf.Configuration]] object.
+ * For storing event messages to HBase, an event message table must be initially created. See
+ * [[org.eligosource.eventsourced.journal.hbase.CreateTable]] and
+ * [[org.eligosource.eventsourced.journal.hbase.DeleteTable]] for details.
  *
- * {{{
- *  import org.apache.hadoop.conf.Configuration
- *  import org.eligosource.eventsourced.journal.hbase.CreateSchema
- *
- *  class Temp {
- *    val config: Configuration = ... // HBase/Hadoop configuration
- *    val regions = 16                // number of predefined regions
- *
- *    CreateSchema(config, regions)
- *  }
- * }}}
- *
- * Event messages will be evenly distributed (partitioned) across regions. This requires the
- * `partitionCount` of this configuration object to match the number of `regions` used for table
- * creation. An initially defined `partitionCount` must not be changed later for an existing
- * event message table.
+ * Event messages will be evenly distributed (partitioned) across table regions.
  *
  * @param zookeeperQuorum Comma separated list of servers in the ZooKeeper quorum.
  *        See also the `hbase.zookeeper.quorum`
  *        [[http://hbase.apache.org/book/config.files.html configuration]] property.
+ * @param tableName Event message table name.
  * @param name Optional journal actor name.
  * @param dispatcherName Optional journal actor dispatcher name.
- * @param partitionCount Number of HBase regions to use for distributing event messages
- *        across region servers. '''Do not change this setting once used with an existing
- *        event message table'''.
  * @param writerCount Number of concurrent writers.
  * @param writeTimeout Timeout for asynchronous writes.
  * @param initTimeout Timeout for journal initialization. During initialization
@@ -74,22 +58,22 @@ import org.eligosource.eventsourced.core.JournalProps
  */
 case class HBaseJournalProps(
   zookeeperQuorum: String,
+  tableName: String = DefaultTableName,
   name: Option[String] = None,
   dispatcherName: Option[String] = None,
-  partitionCount: Int = 16,
   writerCount: Int = 16,
   writeTimeout: FiniteDuration = 10 seconds,
   initTimeout: FiniteDuration = 30 seconds,
   replayChunkSize: Int = 16 * 100) extends JournalProps {
+
+  def withTableName(tableName: String) =
+    copy(tableName = tableName)
 
   def withName(name: String) =
     copy(name = Some(name))
 
   def withDispatcherName(dispatcherName: String) =
     copy(dispatcherName = Some(dispatcherName))
-
-  def withPartitionCount(partitionCount: Int) =
-    copy(partitionCount = partitionCount)
 
   def withWriterCount(writerCount: Int) =
     copy(writerCount = writerCount)
