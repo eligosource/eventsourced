@@ -36,7 +36,7 @@ import org.eligosource.eventsourced.journal.common.AsynchronousWriteReplaySuppor
 import org.eligosource.eventsourced.journal.common._
 
 
-class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
+private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
 
 
   val serialization = Serialization(context.system)
@@ -428,7 +428,7 @@ class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteRepl
 
 }
 
-object DynamoDBJournal {
+private [dynamodb] object DynamoDBJournal {
 
   val Id = "key"
   val Data = "data"
