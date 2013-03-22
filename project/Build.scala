@@ -143,7 +143,7 @@ object EventsourcedBuild extends Build {
     id = "eventsourced-journal",
     base = file("es-journal"),
     settings = defaultSettings ++ Publish.parentSettings
-  ) aggregate(esJournalCommon, esJournalInmem, esJournalHbase, esJournalLeveldb, esJournalJournalio, esJournalMongodb)
+  ) aggregate(esJournalCommon, esJournalInmem, esJournalHbase, esJournalLeveldb, esJournalJournalio, esJournalMongodb, esJournalDynamodb)
 
   lazy val esJournalCommon = Project(
     id = "eventsourced-journal-common",
@@ -180,4 +180,11 @@ object EventsourcedBuild extends Build {
     base = file("es-journal/es-journal-mongodb"),
     settings = defaultSettings
   ) dependsOn(esJournalCommon % "test->test;compile->compile")
+
+  lazy val esJournalDynamodb = Project(
+    id = "eventsourced-journal-dynamodb",
+    base = file("es-journal/es-journal-dynamodb"),
+    settings = defaultSettings ++ Defaults.itSettings
+  ) dependsOn(esJournalCommon % "it->test;compile->compile") configs( IntegrationTest )
+
 }
