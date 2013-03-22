@@ -134,6 +134,7 @@ Resources
 - [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
 - [Installation](https://github.com/eligosource/eventsourced/wiki/Installation).
 - [FAQ](https://github.com/eligosource/eventsourced/wiki/FAQ)
+- [Developer guidelines](https://github.com/eligosource/eventsourced/wiki/Developer-guidelines)
 
 ### Articles
 
