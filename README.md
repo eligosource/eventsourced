@@ -108,7 +108,7 @@ For persisting messages, Eventsourced currently provides the following journal i
   </tr>
   <tr>
     <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.dynamodb.DynamoDBJournalProps">DynamoDB journal</a>. A <a href="http://aws.amazon.com/en/dynamodb/">DynamoDB </a> backed journal. Details <a href="https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-dynamodb/readme.md#dynamodb-journal">here</a>. Thanks to <a href="https://github.com/sclasen">Scott Clasen</a>.</td>
-    <td>Coming soon</td>
+    <td>Experimental</td>
   </tr>
   <tr>
     <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps">Journal.IO journal</a>. <a href="https://github.com/sbtourist/Journal.IO">Journal.IO</a> backed journal for testing purposes. Messages are persisted.</td>
