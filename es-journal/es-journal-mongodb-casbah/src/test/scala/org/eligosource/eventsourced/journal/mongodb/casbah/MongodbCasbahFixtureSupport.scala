@@ -17,11 +17,11 @@ package org.eligosource.eventsourced.journal.mongodb.casbah
 
 import com.mongodb.casbah.Imports._
 
-trait MongodbFixtureSupport {
+trait MongodbCasbahFixtureSupport {
 
   val dbName = "es1"
   val collName = "event"
-  val journalProps = MongodbJournalProps(MongoClient(mongoLocalHostName, mongoDefaultPort), dbName, collName)
+  val journalProps = MongodbCasbahJournalProps(MongoClient(mongoLocalHostName, mongoDefaultPort), dbName, collName)
 
   def cleanup() {
     MongoClient(mongoLocalHostName, mongoDefaultPort)(dbName)(collName).dropCollection()

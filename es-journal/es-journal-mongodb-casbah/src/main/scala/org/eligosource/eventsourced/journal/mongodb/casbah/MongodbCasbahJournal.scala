@@ -22,7 +22,7 @@ import com.mongodb.casbah.Imports._
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
 
-private [eventsourced] class MongodbJournal(props: MongodbJournalProps) extends SynchronousWriteReplaySupport {
+private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalProps) extends SynchronousWriteReplaySupport {
   import Journal._
 
   val serialization = Serialization(context.system)
