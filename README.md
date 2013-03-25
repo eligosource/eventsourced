@@ -1170,9 +1170,9 @@ Appendix B: Project
 
 - [Eventsourced API](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package)
 - [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
+- [Developer guidelines](https://github.com/eligosource/eventsourced/wiki/Developer-guidelines)
 - [Installation](https://github.com/eligosource/eventsourced/wiki/Installation)
 - [FAQ](https://github.com/eligosource/eventsourced/wiki/FAQ)
-- [Developer guidelines](https://github.com/eligosource/eventsourced/wiki/Developer-guidelines)
 
 Appendix C: Articles
 --------------------
