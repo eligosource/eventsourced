@@ -125,27 +125,6 @@ Terminology
 
 In the following, the terms *persistent actor*, *event-sourced actor*, *event-sourced processor* and *processor* are used interchangeably. Furthermore, a [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) is often referred to as *event message*.
 
-Resources
----------
-
-### Project
-
-- [Eventsourced API](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package)
-- [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
-- [Installation](https://github.com/eligosource/eventsourced/wiki/Installation).
-- [FAQ](https://github.com/eligosource/eventsourced/wiki/FAQ)
-- [Developer guidelines](https://github.com/eligosource/eventsourced/wiki/Developer-guidelines)
-
-### Articles
-
-- [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html)
-
-### Support
-
-- [Eventsourced user forum](http://groups.google.com/group/eventsourced)
-- [Eventsourced developer forum](http://groups.google.com/group/eventsourced-dev)
-- Commercial support by [Eligotech B.V.](http://www.eligotech.com/)
-
 First steps
 -----------
 
@@ -1134,3 +1113,24 @@ Appendix A: Legend
 ------------------
 
 ![Legend](https://raw.github.com/eligosource/eventsourced/master/doc/images/legend.png)
+
+Appendix B: Project
+-------------------
+
+- [Eventsourced API](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package)
+- [Eventsourced reference application](https://github.com/eligosource/eventsourced-example)
+- [Installation](https://github.com/eligosource/eventsourced/wiki/Installation)
+- [FAQ](https://github.com/eligosource/eventsourced/wiki/FAQ)
+- [Developer guidelines](https://github.com/eligosource/eventsourced/wiki/Developer-guidelines)
+
+Appendix C: Articles
+--------------------
+
+- [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html)
+
+Appendinx D: Support
+--------------------
+
+- [Eventsourced user forum](http://groups.google.com/group/eventsourced)
+- [Eventsourced developer forum](http://groups.google.com/group/eventsourced-dev)
+- Commercial support by [Eligotech B.V.](http://www.eligotech.com/)
