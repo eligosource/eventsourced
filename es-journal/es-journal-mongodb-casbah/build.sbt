@@ -9,7 +9,6 @@ resolvers += "Typesafe"               at "http://repo.typesafe.com/typesafe/rele
 libraryDependencies ++= Seq(
   "org.mongodb"         %% "casbah-core"               %  "2.5.1" % "compile",
   "org.mongodb"         %% "casbah-commons"            %  "2.5.1" % "compile",
-  "org.reactivemongo"   %% "reactivemongo"             %  "0.8"   % "compile",
   "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo" %  "1.29"  % "compile"
 )
 

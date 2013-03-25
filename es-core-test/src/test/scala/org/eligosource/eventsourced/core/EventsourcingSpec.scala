@@ -30,6 +30,7 @@ import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.journal.leveldb._
 import org.eligosource.eventsourced.journal.hbase._
+import org.eligosource.eventsourced.journal.mongodb.casbah._
 
 abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extends WordSpec with MustMatchers {
   type FixtureParam = T

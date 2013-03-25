@@ -30,11 +30,11 @@ import org.eligosource.eventsourced.core._
  *  import akka.actor._
  *
  *  import org.eligosource.eventsourced.core.Journal
- *  import org.eligosource.eventsourced.journal.mongodb.casbah.MongodbJournalProps
+ *  import org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps
  *
  *  implicit val system: ActorSystem = ...
  *
- *  val journal: ActorRef = Journal(MongodbJournalProps(journalConn))
+ *  val journal: ActorRef = Journal(MongodbCasbahJournalProps(journalConn))
  * }}}
  *
  * @param mongoClient Required mongoDB/Casbah client.
@@ -43,7 +43,7 @@ import org.eligosource.eventsourced.core._
  * @param name Optional journal actor name.
  * @param dispatcherName Optional journal actor dispatcher name.
  */
-case class MongodbJournalProps(
+case class MongodbCasbahJournalProps(
   mongoClient: MongoClient,
   dbName: String,
   collName: String,
@@ -51,14 +51,14 @@ case class MongodbJournalProps(
   dispatcherName: Option[String] = None) extends JournalProps {
 
   /**
-   * Returns a new `MongodbJournalProps` with specified journal actor name.
+   * Returns a new `MongodbCasbahJournalProps` with specified journal actor name.
    */
   def withName(name: String) = copy(name = Some(name))
 
   /**
-   * Returns a new `MongodbJournalProps` with specified journal actor dispatcher name.
+   * Returns a new `MongodbCasbahJournalProps` with specified journal actor dispatcher name.
    */
   def withDispatcherName(dispatcherName: String) = copy(dispatcherName = Some(dispatcherName))
 
-  def journal: Actor = new MongodbJournal(this)
+  def journal: Actor = new MongodbCasbahJournal(this)
 }
