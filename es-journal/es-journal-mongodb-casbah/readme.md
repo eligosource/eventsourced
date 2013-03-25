@@ -2,7 +2,7 @@
 
 [Eventsourced](https://github.com/eligosource/eventsourced) applications can create a [mongoDB](http://www.mongodb.org/) backed journal one of two ways.
 
-- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
+- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
 
 ## Properties
 
