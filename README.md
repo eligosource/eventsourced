@@ -14,6 +14,57 @@ Eventsourced
   </tr>
 </table>
 
+Contents
+--------
+
+- [Overview](#overview)
+    - [Building blocks](#building-blocks)
+        - [Processor](#processor)
+        - [Channel](#channel)
+        - [Journal](#journal)
+    - [Application](#application)
+    - [Journals](#journals)
+- [Terminology](#terminology)
+- [First steps](#first-steps)
+    - [Step 1: EventsourcingExtension initialization](#step-1-eventsourcingextension-initialization)
+    - [Step 2: Event-sourced actor definition](#step-2-event-sourced-actor-definition)
+    - [Step 3: Event-sourced actor creation and recovery](#step-3-event-sourced-actor-creation-and-recovery)
+    - [Step 4: Event-sourced actor usage](#step-4-event-sourced-actor-usage)
+    - [Step 5: Channel usage](#step-5-channel-usage)
+- [Stackable traits](#stackable-traits)
+    - [Eventsourced](#eventsourced-1)
+    - [Receiver](#receiver)
+    - [Emitter](#emitter)
+    - [Confirm](#confirm)
+    - [Modified example](#modified-example)
+- [Sender references](#sender-references)
+- [Channels](#channels)
+    - [DefaultChannel](#defaultchannel)
+    - [ReliableChannel](#reliablechannel)
+    - [Reliable request-reply channel](#reliable-request-reply-channel)
+    - [Usage hints](#usage-hints)
+    - [Alternatives](#alternatives)
+- [Recovery](#recovery)
+    - [Await processing](#await-processing)
+    - [Non-blocking recovery](#non-blocking-recovery)
+    - [State dependencies](#state-dependencies)
+- [Behavior changes](#behavior-changes)
+- [Event series](#event-series)
+- [Idempotency](#idempotency)
+- [Serialization](#serialization)
+- [Further examples](#further-examples)
+    - [Order management](#order-management)
+    - [State machines](#state-machines)
+    - [Clustering](#clustering)
+- [Miscellaneous](#miscellaneous)
+    - [Multicast processor](#multicast-processor)
+    - [Retroactive changes](#retroactive-changes)
+    - [Snapshots](#snapshots)
+- [Appendix A: Legend](#appendix-a-legend)
+- [Appendix B: Project](#appendix-b-project)
+- [Appendix C: Articles](#appendix-c-articles)
+- [Appendix D: Support](#appendix-d-support)
+
 Overview
 --------
 
@@ -1128,7 +1179,7 @@ Appendix C: Articles
 
 - [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html)
 
-Appendinx D: Support
+Appendix D: Support
 --------------------
 
 - [Eventsourced user forum](http://groups.google.com/group/eventsourced)
