@@ -19,7 +19,7 @@ import org.scalatest.BeforeAndAfterEach
 import com.mongodb.casbah.Imports._
 import org.eligosource.eventsourced.journal.common.JournalSpec
 
-class MongodbJournalSpec extends JournalSpec with MongodbSpecSupport with BeforeAndAfterEach {
+class MongodbCasbahJournalSpec extends JournalSpec with MongodbSpecSupport with BeforeAndAfterEach {
 
   val dbName = "es2"
   val collName = "event"
@@ -27,7 +27,7 @@ class MongodbJournalSpec extends JournalSpec with MongodbSpecSupport with Before
   // Since multiple embedded instances will run, each one must have a different port.
   override def mongoPort = 54321
 
-  def journalProps = MongodbJournalProps(MongoClient(mongoLocalHostName, mongoPort), dbName, collName)
+  def journalProps = MongodbCasbahJournalProps(MongoClient(mongoLocalHostName, mongoPort), dbName, collName)
 
   override def afterEach() {
     MongoClient(mongoLocalHostName, mongoPort)(dbName)(collName).dropCollection()
