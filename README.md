@@ -154,7 +154,7 @@ For persisting messages, Eventsourced currently provides the following journal i
     <td>Experimental</td>
   </tr>
   <tr>
-    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbJournalProps">MongoDB Casbah based journal</a>. A <a href="http://www.mongodb.org/">MongoDB</a> backed journal. Details <a href="https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-mongodb-casbah/readme.md#mongodb-journal">here</a>. Thanks to <a href="https://github.com/ddevore">Duncan DeVore</a>.</td>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongoDB Casbah based journal</a>. A <a href="http://www.mongodb.org/">MongoDB</a> backed journal. Details <a href="https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-mongodb-casbah/readme.md#mongodb-casbah-journal">here</a>. Thanks to <a href="https://github.com/ddevore">Duncan DeVore</a>.</td>
     <td>Experimental</td>
   </tr>
   <tr>
