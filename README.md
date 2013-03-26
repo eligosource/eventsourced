@@ -14,6 +14,9 @@ Eventsourced
   </tr>
 </table>
 
+- [Releases](https://github.com/eligosource/eventsourced/wiki#releases)
+- [Installation](https://github.com/eligosource/eventsourced/wiki/Installation)
+
 Contents
 --------
 
