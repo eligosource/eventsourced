@@ -92,8 +92,8 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
 
       c ! Deliver
 
-      respondTo(Message("a")) must be("re: a")
-      respondTo(Message("b")) must be("re: b")
+      respondTo(Message("a", processorId = 1, sequenceNr = 12L)) must be("re: a")
+      respondTo(Message("b", processorId = 1, sequenceNr = 13L)) must be("re: b")
     }
     "preserve the message sender before it is initialized" in { fixture =>
       import scala.concurrent._
@@ -214,8 +214,8 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
 
       c ! Deliver
 
-      respondTo(Message("a")) must be("a (6)")
-      respondTo(Message("b")) must be("b (14)")
+      respondTo(Message("a", processorId = 1, sequenceNr = 14L)) must be("a (6)")
+      respondTo(Message("b", processorId = 1, sequenceNr = 15L)) must be("b (14)")
     }
     "recover from destination failures and preserve message order" in { fixture =>
       import fixture._
@@ -224,7 +224,7 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
 
       c ! Deliver
 
-      1 to 7 foreach { i => c ! Message(i) }
+      1 to 7 foreach { i => c ! Message(i, sequenceNr = i.toLong) }
 
       val expected = List(
         Right(Message(1, sequenceNr = 1L)), // success    at event 1

@@ -16,6 +16,7 @@
 package org.eligosource.eventsourced.journal.mongodb.casbah
 
 import akka.actor._
+import akka.event.Logging
 
 import com.mongodb.casbah.Imports._
 
@@ -25,7 +26,9 @@ import org.eligosource.eventsourced.journal.common._
 private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalProps) extends SynchronousWriteReplaySupport {
   import Journal._
 
+  val log = Logging(context.system, this.getClass)
   val serialization = Serialization(context.system)
+
   var client: MongoClient = _
   var collection: MongoCollection = _
 
