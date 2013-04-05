@@ -130,7 +130,8 @@ object EventsourcedBuild extends Build {
   ) dependsOn(esCore,
     esJournalLeveldb % "test->test;compile->compile",
     esJournalHbase % "test->it;compile->compile",
-    esJournalMongodbCasbah % "test->test;compile->compile"
+    esJournalMongodbCasbah % "test->test;compile->compile",
+    esJournalMongodbReactive % "test->it;compile->compile"
   )
 
   lazy val esExamples = Project(
@@ -143,7 +144,7 @@ object EventsourcedBuild extends Build {
     id = "eventsourced-journal",
     base = file("es-journal"),
     settings = defaultSettings ++ Publish.parentSettings
-  ) aggregate(esJournalCommon, esJournalInmem, esJournalHbase, esJournalLeveldb, esJournalJournalio, esJournalMongodbCasbah, esJournalDynamodb)
+  ) aggregate(esJournalCommon, esJournalInmem, esJournalHbase, esJournalLeveldb, esJournalJournalio, esJournalMongodbCasbah, esJournalMongodbReactive, esJournalDynamodb)
 
   lazy val esJournalCommon = Project(
     id = "eventsourced-journal-common",
@@ -180,6 +181,12 @@ object EventsourcedBuild extends Build {
     base = file("es-journal/es-journal-mongodb-casbah"),
     settings = defaultSettings
   ) dependsOn(esJournalCommon % "test->test;compile->compile")
+
+  lazy val esJournalMongodbReactive = Project(
+    id = "eventsourced-journal-mongodb-reactive",
+    base = file("es-journal/es-journal-mongodb-reactive"),
+    settings = defaultSettings ++ Defaults.itSettings
+  ) dependsOn(esJournalCommon % "it->test;compile->compile") configs( IntegrationTest )
 
   lazy val esJournalDynamodb = Project(
     id = "eventsourced-journal-dynamodb",
