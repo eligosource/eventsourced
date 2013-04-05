@@ -72,7 +72,8 @@ case class Message(
   private def confirmPos() = if (posConfirmationTarget ne null) posConfirmationTarget ! posConfirmationMessage
   private def confirmNeg() = if (negConfirmationTarget ne null) negConfirmationTarget ! negConfirmationMessage
 
-  private [eventsourced] def withTimestamp = copy(timestamp = System.currentTimeMillis)
+  private [eventsourced] def withTimestamp: Message = withTimestamp(System.currentTimeMillis)
+  private [eventsourced] def withTimestamp(timestamp: Long): Message = copy(timestamp = timestamp)
   private [eventsourced] def clearConfirmationSettings = copy(
     posConfirmationTarget = null,
     posConfirmationMessage = null,

@@ -91,13 +91,13 @@ trait AsynchronousWriteReplaySupport extends Actor {
       asyncResequence(cmd)
     }
     case cmd: BatchReplayInMsgs => {
-      asyncResequence(SnapshottedReplay(cmd, counter - 1L), 2L)
+      asyncResequence(IsolatedReplay(cmd, counter - 1L), 2L)
     }
     case cmd: ReplayInMsgs => {
-      asyncResequence(SnapshottedReplay(cmd, counter - 1L), 2L)
+      asyncResequence(IsolatedReplay(cmd, counter - 1L), 2L)
     }
     case cmd: ReplayOutMsgs => {
-      asyncResequence(SnapshottedReplay(cmd, counter - 1L), 2L)
+      asyncResequence(IsolatedReplay(cmd, counter - 1L), 2L)
     }
     case cmd: BatchDeliverOutMsgs => {
       asyncResequence(cmd)
@@ -177,32 +177,32 @@ trait AsynchronousWriteReplaySupport extends Actor {
       case Loop(msg, target) => {
         target tell (Looped(msg), sdr)
       }
-      case SnapshottedReplay(cmd @ BatchReplayInMsgs(replays), toSequenceNr) => {
+      case IsolatedReplay(cmd @ BatchReplayInMsgs(replays), toSequenceNr) => {
         replayer.executeBatchReplayInMsgs(replays, (msg, target) => target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
-          case Success(_) => self ! (seqnr + 1L, SnapshottedReplayDone)
-          case Failure(e) => self ! (seqnr + 1L, SnapshottedReplayFailed(cmd, e))
+          case Success(_) => { self ! (seqnr + 1L, ReplayDone); sdr ! ReplayDone }
+          case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)) }
         }
       }
-      case SnapshottedReplay(cmd: ReplayInMsgs, toSequenceNr) => {
+      case IsolatedReplay(cmd: ReplayInMsgs, toSequenceNr) => {
         replayer.executeReplayInMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
-          case Success(_) => self ! (seqnr + 1L, SnapshottedReplayDone)
-          case Failure(e) => self ! (seqnr + 1L, SnapshottedReplayFailed(cmd, e))
+          case Success(_) => { self ! (seqnr + 1L, ReplayDone); sdr ! ReplayDone }
+          case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)) }
         }
       }
-      case SnapshottedReplay(cmd: ReplayOutMsgs, toSequenceNr) => {
+      case IsolatedReplay(cmd: ReplayOutMsgs, toSequenceNr) => {
         replayer.executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
-          case Success(_) => self ! (seqnr + 1L, SnapshottedReplayDone)
-          case Failure(e) => self ! (seqnr + 1L, SnapshottedReplayFailed(cmd, e))
+          case Success(_) => self ! (seqnr + 1L, ReplayDone)
+          case Failure(e) => self ! (seqnr + 1L, ReplayFailed(cmd, e))
         }
       }
       case BatchDeliverOutMsgs(channels) => {
         channels.foreach(_ ! Deliver)
         sdr ! DeliveryDone
       }
-      case SnapshottedReplayDone => {
+      case ReplayDone => {
         // nothing to do ...
       }
-      case e: SnapshottedReplayFailed => {
+      case e: ReplayFailed => {
         context.system.eventStream.publish(e)
       }
       case e: WriteFailed => {
@@ -226,7 +226,6 @@ trait AsynchronousWriteReplaySupport extends Actor {
 
 object AsynchronousWriteReplaySupport {
   case class WriteFailed(cmd: Any, cause: Throwable)
-  case class SnapshottedReplay(replayCmd: Any, toSequencerNr: Long)
-  case class SnapshottedReplayFailed(replayCmd: Any, cause: Throwable)
-  case object SnapshottedReplayDone
+  case class ReplayFailed(replayCmd: Any, cause: Throwable)
+  case class IsolatedReplay(replayCmd: Any, toSequencerNr: Long)
 }

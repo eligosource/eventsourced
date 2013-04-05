@@ -39,7 +39,7 @@ import org.eligosource.eventsourced.journal.common._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extends SynchronousWriteReplaySupport {
+private [eventsourced] class LeveldbJournalSS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport with LeveldbSnapshotting {
   import LeveldbJournalSS._
   import Journal._
 
@@ -49,7 +49,7 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   val levelDbWriteOptions = new WriteOptions().sync(props.fsync)
   val leveldb = factory.open(props.dir, new Options().createIfMissing(true))
 
-  val serialization = Serialization(context.system)
+  val serialization = CommandSerialization(context.system)
 
   implicit def cmdToBytes(cmd: AnyRef): Array[Byte] = serialization.serializeCommand(cmd)
   implicit def cmdFromBytes[A](bytes: Array[Byte]): A = serialization.deserializeCommand(bytes).asInstanceOf[A]
@@ -85,19 +85,22 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
-    val starts = cmds.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
-      a + (r.processorId -> (r.fromSequenceNr, r.target))
+    val ranges = cmds.foldLeft(Map.empty[Int, (Long, Long, ActorRef)]) { (a, r) =>
+      a + (r.processorId -> (r.fromSequenceNr, r.toSequenceNr, r.target))
     }
-    val start = if (starts.isEmpty) 0L else starts.values.map(_._1).min
-    replay(In, start, cmdFromBytes[WriteInMsg] _) { (cmd, acks) =>
-      starts.get(cmd.processorId) match {
-        case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
-          p(cmd.message.copy(acks = acks), target)
+    val start = if (ranges.isEmpty) 0L else ranges.values.map(_._1).min
+    val stop = if (ranges.isEmpty) Long.MaxValue else ranges.values.map(_._2).max
+
+    replay(In, start, stop, cmdFromBytes[WriteInMsg] _) { (cmd, acks) =>
+      ranges.get(cmd.processorId) match {
+        case Some((fromSequenceNr, toSequenceNr, target))
+          if (cmd.message.sequenceNr >= fromSequenceNr &&
+              cmd.message.sequenceNr <= toSequenceNr) => {
+            p(cmd.message.copy(acks = acks), target)
         }
         case _ => {}
       }
     }
-    sender ! ReplayDone
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
@@ -114,7 +117,8 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
   }
 
   override def start() {
-    replay(Out, 0L, cmdFromBytes[WriteOutMsg] _) { (cmd, acks) =>
+    initSnapshotting()
+    replay(Out, 0L, Long.MaxValue, cmdFromBytes[WriteOutMsg] _) { (cmd, acks) =>
       writeOutMsgCache.update(cmd, cmd.message.sequenceNr)
     }
   }
@@ -123,30 +127,32 @@ private [eventsourced] class LeveldbJournalSS(props: LeveldbJournalProps) extend
     leveldb.close()
   }
 
-  def replay[T](direction: Int, fromSequenceNr: Long, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit) {
+  def replay[T](direction: Int, fromSequenceNr: Long, toSequenceNr: Long, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit) {
     val iter = leveldb.iterator(levelDbReadOptions.snapshot(leveldb.getSnapshot))
     try {
       val startKey = SSKey(direction, fromSequenceNr, 0)
       iter.seek(startKey)
-      replay(iter, startKey, deserializer)(p)
+      replay(iter, startKey, toSequenceNr, deserializer)(p)
     } finally {
       iter.close()
     }
   }
 
   @scala.annotation.tailrec
-  private def replay[T](iter: DBIterator, key: SSKey, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit) {
+  private def replay[T](iter: DBIterator, key: SSKey, toSequenceNr: Long, deserializer: Array[Byte] => T)(p: (T, List[Int]) => Unit) {
     if (iter.hasNext) {
       val nextEntry = iter.next()
       val nextKey = keyFromBytes(nextEntry.getKey)
-      if (nextKey.confirmingChannelId != 0) {
+      if (nextKey.sequenceNr > toSequenceNr) {
+        // end iteration here
+      } else if (nextKey.confirmingChannelId != 0) {
         // phantom ack (just advance iterator)
-        replay(iter, nextKey, deserializer)(p)
+        replay(iter, nextKey, toSequenceNr, deserializer)(p)
       } else if (key.direction == nextKey.direction) {
         val cmd = deserializer(nextEntry.getValue)
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(cmd, channelIds)
-        replay(iter, nextKey, deserializer)(p)
+        replay(iter, nextKey, toSequenceNr, deserializer)(p)
       }
     }
   }

@@ -20,7 +20,7 @@ import akka.event.Logging
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common.AsynchronousWriteReplaySupport
+import org.eligosource.eventsourced.journal.common._
 
 import reactivemongo.api._
 import reactivemongo.api.indexes._
@@ -44,7 +44,7 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
 
   val log = Logging(context.system, this.getClass)
-  val serialization = Serialization(context.system)
+  val serialization = MessageSerialization(context.system)
 
   var connection: MongoConnection = _
   var collection: Collection = _
@@ -90,16 +90,16 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   def replayer = new Replayer {
 
     def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
-      Future.sequence(cmds.map(cmd => replay(
+      Future.sequence[Any, Seq](cmds.map(cmd => replay(
         Key(cmd.processorId, sequenceNr = cmd.fromSequenceNr),
         Key(cmd.processorId, sequenceNr = toSequenceNr),
-        msg => p(msg, cmd.target)))) andThen { case _ => sdr ! ReplayDone }
+        msg => p(msg, cmd.target))))
     }
 
     def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
       replay(
         Key(cmd.processorId, sequenceNr = cmd.fromSequenceNr),
-        Key(cmd.processorId, sequenceNr = toSequenceNr), p) andThen { case _ => sdr ! ReplayDone }
+        Key(cmd.processorId, sequenceNr = toSequenceNr), p)
     }
 
     def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {

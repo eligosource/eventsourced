@@ -15,6 +15,9 @@
  */
 package org.eligosource.eventsourced.journal.common
 
+import scala.concurrent.Future
+import scala.util._
+
 import akka.actor._
 
 import org.eligosource.eventsourced.core._
@@ -22,6 +25,8 @@ import org.eligosource.eventsourced.core._
 trait SynchronousWriteReplaySupport extends Actor {
   import Channel.Deliver
   import Journal._
+
+  import context.dispatcher
 
   private val deadLetters = context.system.deadLetters
   private var commandListener: Option[ActorRef] = None
@@ -55,10 +60,14 @@ trait SynchronousWriteReplaySupport extends Actor {
       target forward (Looped(msg))
     }
     case BatchReplayInMsgs(replays) => {
-      executeBatchReplayInMsgs(replays, (msg, target) => target tell (Written(msg), deadLetters))
+      val cs = replays.map(offerSnapshot(_))
+      executeBatchReplayInMsgs(cs, (msg, target) => target tell (Written(msg), deadLetters))
+      sender ! ReplayDone
     }
     case cmd: ReplayInMsgs => {
-      executeReplayInMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters))
+      val c = offerSnapshot(cmd)
+      executeReplayInMsgs(c, msg => c.target tell (Written(msg), deadLetters))
+      sender ! ReplayDone
     }
     case cmd: ReplayOutMsgs => {
       executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters))
@@ -66,6 +75,23 @@ trait SynchronousWriteReplaySupport extends Actor {
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
       sender ! DeliveryDone
+    }
+    case RequestSnapshot(processorId, target) => {
+      target ! SnapshotRequest(processorId, counter - 1L, sender)
+    }
+    case SaveSnapshotDone(metadata, initiator) => {
+      snapshotSaved(metadata)
+      initiator ! metadata
+    }
+    case SaveSnapshotFailed(cause, initiator) => {
+      initiator ! Status.Failure(cause)
+    }
+    case SaveSnapshot(snapshot) => {
+      val initiator = sender
+      saveSnapshot(snapshot.withTimestamp) onComplete {
+        case Success(s) => self ! SaveSnapshotDone(s, initiator)
+        case Failure(e) => self ! SaveSnapshotFailed(e, initiator)
+      }
     }
     case SetCommandListener(cl) => {
       commandListener = cl
@@ -96,6 +122,31 @@ trait SynchronousWriteReplaySupport extends Actor {
    * Returns the last stored counter value.
    */
   protected def storedCounter: Long
+
+  /**
+   * Loads the latest snapshot for specified processor whose metadata match predicate `p`.
+   *
+   * @param processorId processor id of the snapshot.
+   * @param snapshotFilter predicate for selecting saved snapshots.
+   * @return youngest snapshots of those selected by `p`, if any.
+   */
+  def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot] = None
+
+  /**
+   * Saves a snapshot asynchronously.
+   *
+   * @param snapshot a snapshot.
+   * @return a future that is completed when the snapshot has been successfully saved.
+   */
+  def saveSnapshot(snapshot: Snapshot): Future[SnapshotSaved] =
+    Future.failed(new SnapshotNotSupportedException(s"Snapshotting not supported by ${this}"))
+
+  /**
+   * Called when a snapshot has been successfully saved.
+   *
+   * @param metadata snapshot metadata.
+   */
+  def snapshotSaved(metadata: SnapshotMetadata) {}
 
   /**
    * Instructs a journal provider to write an input message.
@@ -138,10 +189,7 @@ trait SynchronousWriteReplaySupport extends Actor {
   def executeDeleteOutMsg(cmd: DeleteOutMsg)
 
   /**
-   * Instructs a journal provider to batch-replay input messages. The provider must
-   * reply to the sender with [[org.eligosource.eventsourced.core.Journal.ReplayDone]]
-   * when all replayed messages have been added to the corresponding replay targets'
-   * mailboxes.
+   * Instructs a journal provider to batch-replay input messages.
    *
    * @param cmds command batch to be executed by the journal provider.
    * @param p function to be called by the provider for every replayed input message.
@@ -156,10 +204,7 @@ trait SynchronousWriteReplaySupport extends Actor {
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit)
 
   /**
-   * Instructs a journal provider to replay input messages. The provider must
-   * reply to the sender with [[org.eligosource.eventsourced.core.Journal.ReplayDone]]
-   * when all replayed messages have been added to the corresponding replay target's
-   * mailbox.
+   * Instructs a journal provider to replay input messages.
    *
    * @param cmd command to be executed by the journal provider.
    * @param p function to be called by the provider for each replayed input message.
@@ -191,4 +236,15 @@ trait SynchronousWriteReplaySupport extends Actor {
    */
   protected def stop() = {}
 
+  private def offerSnapshot(cmd: ReplayInMsgs): ReplayInMsgs = {
+    if (cmd.params.snapshot) loadSnapshot(cmd.processorId, cmd.params.snapshotFilter) match {
+      case Some(s) => {
+        cmd.target ! SnapshotOffer(s)
+        ReplayInMsgs(ReplayParams(cmd.processorId, s.sequenceNr + 1L, cmd.toSequenceNr), cmd.target)
+      }
+      case None => {
+        cmd
+      }
+    } else cmd
+  }
 }

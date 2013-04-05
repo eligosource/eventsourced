@@ -31,7 +31,6 @@ import java.util.Collections
 import java.util.{List => JList, Map => JMap, HashMap => JHMap}
 import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.core.Message
-import org.eligosource.eventsourced.core.Serialization
 import org.eligosource.eventsourced.journal.common.AsynchronousWriteReplaySupport._
 import org.eligosource.eventsourced.journal.common._
 
@@ -39,7 +38,7 @@ import org.eligosource.eventsourced.journal.common._
 private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
 
 
-  val serialization = Serialization(context.system)
+  val serialization = MessageSerialization(context.system)
 
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
 
@@ -367,9 +366,7 @@ private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends As
           val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p(_, cmd.target))))
           Future.sequence(replayer ? ReplayDone :: replayIn(from, msgs, cmd.processorId, replayer).toList)
       }
-      Future.sequence(replayOps) andThen {
-        case _ => sender ! ReplayDone
-      }
+      Future.sequence(replayOps)
     }
 
     def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) = {
@@ -377,9 +374,7 @@ private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends As
       val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
       log.debug(s"replayingIn from ${from} for up to ${msgs}")
       val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
-      Future.sequence(replayer ? ReplayDone ::replayIn(from, msgs, cmd.processorId, replayer).toList) andThen {
-        case _ => sender ! ReplayDone
-      }
+      Future.sequence(replayer ? ReplayDone ::replayIn(from, msgs, cmd.processorId, replayer).toList)
     }
 
     def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) = {

@@ -133,14 +133,33 @@ object Journal {
   /**
    * Instructs a `Journal` to replay input messages to a single `Eventsourced` processor.
    *
-   * @param processorId id of the `Eventsourced` processor.
-   * @param fromSequenceNr sequence number from where the replay should start.
+   * @param params processor-specific replay parameters.
    * @param target receiver of the replayed messages. The journal sends the
    *        replayed messages to `target` wrapped in a
    *        [[org.eligosource.eventsourced.core.Journal.Written]] message. The
    *        sender reference is set to `system.deadLetters`.
    */
-  case class ReplayInMsgs(processorId: Int, fromSequenceNr: Long, target: ActorRef)
+  case class ReplayInMsgs(params: ReplayParams, target: ActorRef) {
+    def processorId: Int = params.processorId
+    def fromSequenceNr: Long = params.fromSequenceNr
+    def toSequenceNr: Long = params.toSequenceNr
+  }
+
+  object ReplayInMsgs {
+    /**
+     * Creates a `ReplayInMsgs` command that will never use a snapshot as starting
+     * point for replay.
+     *
+     * @param processorId id of the `Eventsourced` processor.
+     * @param fromSequenceNr sequence number from where the replay should start.
+     * @param target receiver of the replayed messages. The journal sends the
+     *        replayed messages to `target` wrapped in a
+     *        [[org.eligosource.eventsourced.core.Journal.Written]] message. The
+     *        sender reference is set to `system.deadLetters`.
+     */
+    def apply(processorId: Int, fromSequenceNr: Long, target: ActorRef): ReplayInMsgs =
+      ReplayInMsgs(ReplayParams(processorId, fromSequenceNr), target)
+  }
 
   /**
    * Instructs a `Journal` to replay output messages for a single `ReliableChannel`.
@@ -155,6 +174,24 @@ object Journal {
   case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, target: ActorRef)
 
   /**
+   * Instructs a journal to request a state snapshot from a processor identified by
+   * `processorId`. The provided target will receive a
+   * [[org.eligosource.eventsourced.core.SnapshotRequest]] message.
+   *
+   * @param processorId id of the `Eventsourced` processor.
+   * @param target receiver of the [[org.eligosource.eventsourced.core.SnapshotRequest]]
+   *        message.
+   */
+  case class RequestSnapshot(processorId: Int, target: ActorRef)
+
+  /**
+   * Instructs a journal to save the provided `snapshot`.
+   *
+   * @param snapshot snapshot to be saved.
+   */
+  case class SaveSnapshot(snapshot: Snapshot)
+
+  /**
    * Response from a journal to a sender when input message replay has been completed.
    */
   case object ReplayDone
@@ -163,6 +200,22 @@ object Journal {
    * Response from a journal when message delivery by channels has been initiated.
    */
   case object DeliveryDone
+
+  /**
+   * Event received by journal when a snapshot has been successfully saved.
+   *
+   * @param metadata snapshot metadata.
+   * @param initiator snapshotting initiator.
+   */
+  case class SaveSnapshotDone(metadata: SnapshotSaved, initiator: ActorRef)
+
+  /**
+   * Event received by journal when a snapshot could not be successfully saved.
+   *
+   * @param cause failure cause.
+   * @param initiator snapshotting initiator.
+   */
+  case class SaveSnapshotFailed(cause: Throwable, initiator: ActorRef)
 
   /**
    * Instructs a `Journal` to forward `msg` to `target` wrapped in a
