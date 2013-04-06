@@ -161,6 +161,10 @@ For persisting messages, Eventsourced currently provides the following journal i
     <td>Experimental</td>
   </tr>
   <tr>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongoDB Reactive based journal</a>. A <a href="http://www.mongodb.org/">MongoDB</a> backed journal. Details <a href="https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-mongodb-reactive/readme.md#mongodb-reactive-journal">here</a>. Thanks to <a href="https://github.com/ddevore">Duncan DeVore</a>.</td>
+    <td>Experimental</td>
+  </tr>
+  <tr>
     <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.dynamodb.DynamoDBJournalProps">DynamoDB journal</a>. A <a href="http://aws.amazon.com/en/dynamodb/">DynamoDB </a> backed journal. Details <a href="https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-dynamodb/readme.md#dynamodb-journal">here</a>. Thanks to <a href="https://github.com/sclasen">Scott Clasen</a>.</td>
     <td>Experimental</td>
   </tr>
