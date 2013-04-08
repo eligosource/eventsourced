@@ -1056,7 +1056,7 @@ will produce
     received event DoorMoved(Open,3)
     received event DoorMoved(Closed,4)
 
-The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-core/src/test/scala/org/eligosource/eventsourced/core/FsmSpec.scala).
+The code from this section is contained in slightly modified form in [FsmExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-core-test/src/test/scala/org/eligosource/eventsourced/core/FsmSpec.scala).
 
 ### Clustering
 
