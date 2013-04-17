@@ -7,7 +7,6 @@
 A mongoDB reactive journal has the following properties when running on a real mongoDB cluster:
 
 - Highly available.
-- Highly available.
 - Horizontal scalability of writes via sharding.
 - Horizontal scalability of reads (replay) via sharding.
 - Writes evenly distributed via sharding.
