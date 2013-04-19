@@ -15,6 +15,6 @@
  */
 package org.eligosource.eventsourced.journal.inmem
 
-import org.eligosource.eventsourced.journal.common.JournalSpec
+import org.eligosource.eventsourced.journal.common.ReplaySpec
 
-class InmemJournalSpec extends JournalSpec with InmemJournalLifecycle
+class InmemReplaySpec extends ReplaySpec with InmemJournalLifecycle

@@ -48,7 +48,7 @@ private [eventsourced] class JournalioJournal(props: JournalioJournalProps) exte
   val disposer = Executors.newSingleThreadScheduledExecutor()
   val journal = new JournalIO
 
-  val serialization = Serialization(context.system)
+  val serialization = CommandSerialization(context.system)
 
   implicit def cmdToBytes(cmd: AnyRef): Array[Byte] = serialization.serializeCommand(cmd)
   implicit def cmdFromBytes(bytes: Array[Byte]): AnyRef = serialization.deserializeCommand(bytes)
@@ -93,7 +93,6 @@ private [eventsourced] class JournalioJournal(props: JournalioJournalProps) exte
         case _ => {}
       }
     }
-    sender ! ReplayDone
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {

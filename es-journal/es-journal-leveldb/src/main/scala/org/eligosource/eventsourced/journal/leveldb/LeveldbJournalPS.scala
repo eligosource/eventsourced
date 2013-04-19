@@ -25,8 +25,6 @@ import org.iq80.leveldb._
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
 
-import LeveldbReplay._
-
 /**
  * [[http://code.google.com/p/leveldb/ LevelDB]] based journal that orders
  * entries primarily by processor id.
@@ -41,7 +39,7 @@ import LeveldbReplay._
  *
  *  - deletion of old entries requires full scan
  */
-private [eventsourced] class LeveldbJournalPS(props: LeveldbJournalProps, strategyFactory: ReplayStrategyFactory) extends SynchronousWriteReplaySupport {
+private [eventsourced] class LeveldbJournalPS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport with LeveldbSnapshotting {
   import LeveldbJournalPS._
   import Journal._
 
@@ -49,8 +47,7 @@ private [eventsourced] class LeveldbJournalPS(props: LeveldbJournalProps, strate
   val levelDbWriteOptions = new WriteOptions().sync(props.fsync)
   val leveldb = factory.open(props.dir, new Options().createIfMissing(true))
 
-  val serialization = Serialization(context.system)
-  val strategy = strategyFactory(LeveldbReplayContext(context, props, levelDbReadOptions, leveldb))
+  val serialization = MessageSerialization(context.system)
 
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
@@ -80,15 +77,15 @@ private [eventsourced] class LeveldbJournalPS(props: LeveldbJournalProps, strate
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
-    strategy.batchReplayInMsgs(sender, cmds, p)
+    cmds.foreach(cmd => replay(cmd.processorId, 0, cmd.fromSequenceNr, cmd.toSequenceNr, msg => p(msg, cmd.target)))
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit) {
-    strategy.replayInMsgs(sender, cmd, p)
+    replay(cmd.processorId, 0, cmd.fromSequenceNr, cmd.toSequenceNr, p)
   }
 
   def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit) {
-    strategy.replayOutMsgs(sender, cmd, p)
+    replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, Long.MaxValue, p)
   }
 
   def storedCounter = leveldb.get(CounterKeyBytes, levelDbReadOptions) match {
@@ -96,9 +93,59 @@ private [eventsourced] class LeveldbJournalPS(props: LeveldbJournalProps, strate
     case bytes => counterFromBytes(bytes)
   }
 
+  override def start() {
+    initSnapshotting()
+  }
+
   override def stop() {
     leveldb.close()
   }
+
+  def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, toSequenceNr: Long, p: Message => Unit) {
+    val iter = leveldb.iterator(levelDbReadOptions.snapshot(leveldb.getSnapshot))
+    try {
+      val startKey = Key(processorId, channelId, fromSequenceNr, 0)
+      iter.seek(startKey)
+      replay(iter, startKey, toSequenceNr, p)
+    } finally {
+      iter.close()
+    }
+  }
+
+  @scala.annotation.tailrec
+  final def replay(iter: DBIterator, key: Key, toSequenceNr: Long, p: Message => Unit) {
+    if (iter.hasNext) {
+      val nextEntry = iter.next()
+      val nextKey = keyFromBytes(nextEntry.getKey)
+      if (nextKey.sequenceNr > toSequenceNr) {
+        // end iteration here
+      } else if (nextKey.confirmingChannelId != 0) {
+        // phantom ack (just advance iterator)
+        replay(iter, nextKey, toSequenceNr, p)
+      } else if (key.processorId         == nextKey.processorId &&
+                 key.initiatingChannelId == nextKey.initiatingChannelId) {
+        val msg = serialization.deserializeMessage(nextEntry.getValue)
+        val channelIds = confirmingChannelIds(iter, nextKey, Nil)
+        p(msg.copy(acks = channelIds))
+        replay(iter, nextKey, toSequenceNr, p)
+      }
+    }
+  }
+
+  @scala.annotation.tailrec
+  final def confirmingChannelIds(iter: DBIterator, key: Key, channelIds: List[Int]): List[Int] = {
+    if (iter.hasNext) {
+      val nextEntry = iter.peekNext()
+      val nextKey = keyFromBytes(nextEntry.getKey)
+      if (key.processorId         == nextKey.processorId &&
+          key.initiatingChannelId == nextKey.initiatingChannelId &&
+          key.sequenceNr          == nextKey.sequenceNr) {
+        iter.next()
+        confirmingChannelIds(iter, nextKey, nextKey.confirmingChannelId :: channelIds)
+      } else channelIds
+    } else channelIds
+  }
+
 
   def withBatch(p: WriteBatch => Unit) {
     val batch = leveldb.createWriteBatch()

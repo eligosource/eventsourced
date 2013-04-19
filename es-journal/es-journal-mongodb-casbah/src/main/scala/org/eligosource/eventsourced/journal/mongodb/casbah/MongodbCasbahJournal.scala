@@ -27,7 +27,7 @@ private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalPro
   import Journal._
 
   val log = Logging(context.system, this.getClass)
-  val serialization = Serialization(context.system)
+  val serialization = MessageSerialization(context.system)
 
   var client: MongoClient = _
   var collection: MongoCollection = _
@@ -64,12 +64,10 @@ private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalPro
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
     cmds.foreach(cmd => replay(cmd.processorId, 0, cmd.fromSequenceNr, msg => p(msg, cmd.target)))
-    sender ! ReplayDone
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
     replay(cmd.processorId, 0, cmd.fromSequenceNr, p)
-    sender ! ReplayDone
   }
 
   def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: Message => Unit) {

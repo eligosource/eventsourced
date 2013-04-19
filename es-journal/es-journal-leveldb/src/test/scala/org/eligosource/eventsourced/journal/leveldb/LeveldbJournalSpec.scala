@@ -63,14 +63,6 @@ class LeveldbJournalPSDefaultSpec extends LeveldbJournalPSSpec with BeforeAndAft
   }
 }
 
-class LeveldbJournalPSThrottledSpec extends LeveldbJournalPSSpec with BeforeAndAfterEach {
-  def journalProps = LeveldbJournalProps(LeveldbJournalPSSpec.journalDir).withThrottledReplay(10000)
-
-  override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalPSSpec.journalDir)
-  }
-}
-
 class LeveldbJournalSSSpec extends JournalSpec with BeforeAndAfterEach {
   def journalProps = LeveldbJournalProps(LeveldbJournalPSSpec.journalDir).withSequenceStructure
 
