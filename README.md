@@ -48,9 +48,13 @@ Contents
     - [Usage hints](#usage-hints)
     - [Alternatives](#alternatives)
 - [Recovery](#recovery)
+    - [Replay parameters](#replay-parameters) 
+        - [Recovery without snapshots](#recovery-without-snapshots)
+        - [Recovery with snapshots](#recovery-with-snapshots)
     - [Await processing](#await-processing)
     - [Non-blocking recovery](#non-blocking-recovery)
     - [State dependencies](#state-dependencies)
+- [Snapshots](#snapshots)
 - [Behavior changes](#behavior-changes)
 - [Event series](#event-series)
 - [Idempotency](#idempotency)
@@ -62,7 +66,6 @@ Contents
 - [Miscellaneous](#miscellaneous)
     - [Multicast processor](#multicast-processor)
     - [Retroactive changes](#retroactive-changes)
-    - [Snapshots](#snapshots)
 - [Appendix A: Legend](#appendix-a-legend)
 - [Appendix B: Project](#appendix-b-project)
 - [Appendix C: Articles](#appendix-c-articles)
@@ -77,7 +80,7 @@ The Eventsourced library adds scalable actor state persistence and at-least-once
 - project received messages to derive current state
 - usually hold current state in memory (memory image)
 - recover current (or past) state by replaying received messages (during normal application start or after crashes)
-- never persist current state directly (except optional state snapshots for recovery time optimization)
+- never persist current state directly (except optional state [snapshots](#snapshots) for recovery time optimization)
 
 In other words, Eventsourced implements a write-ahead log (WAL) that is used to keep track of messages an actor receives and to recover its state by replaying logged messages. Appending messages to a log instead of persisting actor state directly allows for actor state persistence at very high transaction rates and supports efficient replication. In contrast to other WAL-based systems, Eventsourced usually keeps the whole message history in the log and makes usage of state snapshots optional.
 
@@ -241,7 +244,7 @@ To make `Processor` an event-sourced actor, it must be modified with the stackab
     // recover registered processors by replaying journaled events
     extension.recover()
 
-An actor that is modified with `Eventsourced` writes event `Message`s to a journal before its `receive` method is called. The `processorOf` method registers that actor under a unique `id`. The processor `id` is defined by implementing the abstract `Eventsourced.id` member which must be a positive integer that is consistently defined across applications runs. The `recover` method recovers the state of `processor` by replaying all event messages that `processor` received in previous application runs.
+An actor that is modified with `Eventsourced` writes event `Message`s to a journal before its `receive` method is called. The `processorOf` method registers that actor under a unique `id`. The processor `id` is defined by implementing the abstract `Eventsourced.id` member which must be a positive integer and consistently re-used across applications runs. The `recover` method recovers the state of `processor` by replaying all event messages that `processor` received in previous application runs.
 
 ### Step 4: Event-sourced actor usage
 
@@ -658,26 +661,83 @@ The `recover()` method first replays journaled event messages to all registered 
 
 If channels delivered event messages immediately instead of buffering them, delivered event messages could wrongly interleave with replayed event messages. This could lead to inconsistencies in event message ordering across application runs and therefore to inconsistencies in application state. Therefore, recovery must ensure that buffered event messages are only delivered after all replayed event messages have been added to their corresponding processors' mailboxes. This is especially important for the recovery of processors and channels that are connected to cyclic, directed graphs.
 
-The [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension) also supports event message replay for individual processors (refer to the API docs for details). This can be useful in situations where processors are registered at `extension` after an initial recovery.
+### Replay parameters
 
-    // initial recovery
-    extension.recover()
+Recovery can be parameterized with [replay parameters](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReplayParams) using the `EventsourcingExtension.recover(Seq[ReplayParams])` method (or one of its overloaded definitions). `ReplayParams` allow fine-grained control over state recovery of individual processors. For each processor to be recovered, an application must create a `ReplayParams` instance. `ReplayParams` specify
 
-    val processorId: Int = …
+- whether replay should start from scratch, from a [snapshot](#snapshots) or from a given sequence number (lower sequence number bound).
+- whether replay should end at current state or any state in the past (using an upper sequence number bound)
 
-    // register another processor after initial recovery
-    extension.processorOf(ProcessorProps(processorId, …))
+The following two subsections demonstrate some `ReplayParams` usage examples. For more details, refer to the API docs of [`ReplayParams`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReplayParams) and its [companion object](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReplayParams$). For details about snapshot creation refer to the [Snapshots](#snapshots) section.
 
-    // replay event messages for that processor individually
-    extension.replay(id => if (id == processorId) Some(0) else None) onSuccess {
-      case _ => // start using processor ...
+#### Recovery without snapshots
+
+As already explained above
+
+    val extension: EventsourcingExtension = … 
+
+    import extension._
+
+    recover()
+
+recovers all processors with no lower and upper sequence number bound i.e. all event messages are replayed. This is equivalent to 
+
+    recover(replayParams.allFromScratch)
+
+or 
+
+    recover(processors.keys.map(pid => ReplayParams(pid)).toSeq)
+
+If an application only wants to recover specific processors it should create `ReplayParams` only for these processors. For example
+
+    recover(Seq(ReplayParams(1), ReplayParams(2)))
+
+only recovers processors with ids `1` and `2`. Upper and lower sequence number bounds can be specified as well.
+
+    recover(Seq(ReplayParams(1, toSequenceNr = 12651L), ReplayParams(2, fromSequenceNr = 10L)))
+
+Here processor `1` will receive replayed event messages with sequence numbers within range `0` and `12615` (inclusive), processor `2` with receive event messages with sequence numbers starting from `10` with no upper sequence number bound. 
+
+#### Recovery with snapshots
+
+During snapshot based recovery, a processor receives a [`SnapshotOffer`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotOffer) message before receiving the remaining event messages (if there are any). A processor uses a `SnapshotOffer` message to restore its state.
+
+    class Processor extends Actor {
+      var state = ...
+
+      def receive = {
+        case so: SnapshotOffer => state = so.snapshot.state
+        ...
+      }
     }
 
-A call to `replay` can be omitted if a processor did not journal any event message in previous application runs. Channels can be activated individually with the `deliver(channelId: Int)` method.
+Snapshot based recovery will only send a `SnapshotOffer` message to a processor if one or more snapshots have been created for that processor before and these snapshots match the criteria in the corresponding `ReplayParams`. Relevant criteria are `toSequenceNr` and `snapshotFilter`. If there are no snapshots for a processor or existing snapshots do not match `ReplayParams` criteria, event messages will be replayed from scratch i.e. from sequence number `0`.
+
+To recover all processors from their latest snapshot
+
+    recover(replayParams.allWithSnapshot)
+
+can be used. This is equivalent to
+
+    recover(processors.keys.map(pid => ReplayParams(pid, snapshot = true)).toSeq)
+
+Snapshot based recovery can also be made with upper sequence number bound.
+
+    recover(Seq(ReplayParams(1, snapshot = true, toSequenceNr = 12651L)))
+
+This recovers processor `1` with the latest snapshot that has a sequence number `<= 12561`. Remaining event messages (if there are any) are replayed up to sequence number `12561` (inclusive). Applications may also define further constraints on snapshots. For example
+
+    import scala.concurrent.duration._
+
+    val limit = System.currentTimeMillis - 24.hours.toMillis
+
+    recover(Seq(ReplayParams(1, snapshotFilter = snapshotMetadata => snapshotMetadata.timestamp < limit)))
+
+uses the latest snapshot of processor `1` that is older than 24 hours. This is done with a `snapshotFilter` that filters snapshots based on their timestamp. Snapshot filters operate on [`SnapshotMetadata`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotMetadata).
 
 ### Await processing
 
-The `recover` method waits for replayed messages being added to the corresponding processor mailboxes but does not wait for replayed event messages being processed by these processors. However, any new message sent to any registered processor, after `recover` successfully returned, will be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessing()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension).
+The `recover` method waits for replayed messages being sent to all processors (via `!`) but does not wait for replayed event messages being processed by these processors. However, any new message sent to any registered processor, after `recover` successfully returned, will be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessing()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension).
 
     val extension: EventsourcingExtension = …
 
@@ -688,7 +748,7 @@ This can be useful in situations where event-sourced processors maintain state v
 
 ### Non-blocking recovery
 
-The `recover` and `awaitProcessing` methods block the calling thread. This may be convenient in scenarios where a main thread wants to recover the state of an event-sourced application before taking any further actions. In other scenarios, for example, where recovery is done for individual child processors (and channels) inside an actor, the non-blocking recovery API should be used:
+The `recover` and `awaitProcessing` methods block the calling thread. This may be convenient in scenarios where a main thread wants to recover the state of an event-sourced application before taking any further actions. In other scenarios, for example, where recovery is done for individual child processors (and channels) inside an actor (see [OrderExampleReliable.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/OrderExampleReliable.scala)), the non-blocking recovery API should be used:
 
     val extension: EventsourcingExtension = …
 
@@ -702,11 +762,61 @@ The `recover` and `awaitProcessing` methods block the calling thread. This may b
       case _ => // event-sourced processors now ready to use …
     }
 
-The futures returned by `replay`, `deliver` and `completeProcessing` are monadically composed with a for-comprehension which ensures a sequential execution of these methods. The composite `future` is completed once all methods have completed their returned futures. More details in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension).
+The futures returned by `replay`, `deliver` and `completeProcessing` are monadically composed with a for-comprehension which ensures a sequential execution of the corresponding asynchronous operations. When the composite `future` completes, the recovered processors and channels are ready to use. More details in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension). The `replay` method can also be parameterized with a `ReplayParams` sequence (see section [Replay parameters](#replay-parameters)).
 
 ### State dependencies
 
 The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) processors may depend on the state of other `Eventsourced` processors. For example, processor A sends a message to processor B and processor B replies with a message that includes (part of) processor B's state. Depending on the state value included in the reply, processor A may take different actions. To ensure a proper recovery of such a setup, any state-conveying or state-dependent messages exchanged between processors A and B must be of type [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) (see also [DependentStateRecoverySpec.scala](https://github.com/eligosource/eventsourced/blob/master/es-core/src/test/scala/org/eligosource/eventsourced/core/DependentStateRecoverySpec.scala)). Exchanging state via non-journaled messages (i.e. messages of type other than `Message`) can break consistent recovery. This is also the case if an `Eventsourced` processor maintains state via an externally visible STM reference and another `Eventsourced` processor directly reads from that reference. Communication between `Eventsourced` processors is closely related to [external queries](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalQueries) and [external updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates).
+
+Snapshots
+---------
+
+Snapshots represent processor state at a certain point in time and can dramatically reduce [recovery](#recovery) times. Snapshot capturing and saving is triggered by applications. Saving is done in a journal-specific way. At the moment, only the [In-memory journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps) and the [LevelDB journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps) support snapshotting. The remaining [journals](#journals) will follow soon. Snapshot capturing and saving does not delete entries from the event message history unless explicitly requested by an application.
+
+Applications can create snapshots by sending a processor the [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest$) message.
+
+    import org.eligosource.eventsourced.core._
+    // … 
+
+    val processor: ActorRef = … 
+
+    processor ! SnapshotRequest
+
+This will asynchronously capture and save a snapshot of `processor`'s state. The sender will be notified when the snapshot has been successfully saved.
+
+    processor ? SnapshotRequest onComplete {
+      case Success(SnapshotSaved(processorId, sequenceNr, timestamp)) => … 
+      case Failure(e)                                                 => … 
+    }
+
+Alternatively, applications may also use the `EventsourcingExtension.snapshot` method to trigger snapshot creation. For example,
+
+    val extension: EventsourcingExtension = ...
+
+    extension.snapshot(Set(1, 2)) onComplete {
+      case Success(snapshotSavedSet) => … 
+      case Failure(_)                => … 
+    }
+
+creates snapshots of processors with ids `1` and `2`. The returned future (of type `Future[Set[SnapshotSaved]]`) successfully completes when the snapshots of both processors have been successfully saved.
+
+To participate in snapshot capturing, a processor must process [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest) messages by calling their `process` method with its current `state` as argument:
+
+    class Processor extends Actor {
+      var state = … 
+
+      def receive = {
+        case sr: SnapshotRequest => sr.process(state)
+        … 
+      }
+    }
+
+Calling `process` will asynchronously save the `state` argument together with (generated) snapshot metadata. Creating a new snapshot does not delete older snapshots unless explicitly requested by an application. Hence, there can be n snapshots per processor.
+
+An example that demonstrates snapshot creation and [snapshot based recovery](#recovery-with-snapshots) is contained in [SnapshotExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/SnapshotExample.scala). It can be executed from the sbt prompt with
+
+    > project eventsourced-examples
+    > run-nobootcp org.eligosource.eventsourced.example.SnapshotExample
 
 Behavior changes
 ----------------
@@ -844,7 +954,7 @@ Here, `example.MyEvent` is an application-specific event type and `example.MyEve
       def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = …
     }
 
-Event [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s themselves are serialized with a [pre-configured](https://github.com/eligosource/eventsourced/blob/master/es-core/src/main/resources/reference.conf#L4), library-specific serializer. This serializer is automatically used for event `Message`s when the `eventsourced-*.jar` is on the classpath of an Akka application.
+Event [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s themselves are serialized with a [pre-configured](https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-common/src/main/resources/reference.conf#L4), library-specific serializer. This serializer is automatically used for event `Message`s when the `eventsourced-journal-common-*.jar` is on the classpath of an Akka application.
 
 Further examples
 ----------------
@@ -1160,10 +1270,6 @@ Applications that want to modify received event `Message`s, before they are forw
 In the above example, the `transformer` function extracts the `event` from a received event `Message`. If the `transformer` function is not specified, it defaults to the `identity` function. Another `Multicast` factory method is the `decorator` method for creating a multicast processor with a single target.
 
 ### Retroactive changes
-
-TODO
-
-### Snapshots
 
 TODO
 

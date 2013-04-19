@@ -144,10 +144,7 @@ class OrderProcessor(val id: Int) extends Actor with ActorLogging { this: Receiv
       import context.dispatcher
       val initiator = sender
       val composite = for {
-        _ <- ext.replay {
-          case `id` => Some(0L)
-          case _    => None
-        } (timeout)
+        _  <- ext.replay(Seq(ReplayParams(id)))(timeout)
         _  <- ext.deliver(validationRequestChannelId)(timeout)
         _  <- ext.deliver(validOrderChannelId)(timeout)
         _  <- ext.deliver(invalidOrderChannelId)(timeout)
