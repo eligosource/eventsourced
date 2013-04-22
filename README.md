@@ -46,7 +46,9 @@ Contents
     - [ReliableChannel](#reliablechannel)
     - [Reliable request-reply channel](#reliable-request-reply-channel)
     - [Usage hints](#usage-hints)
-    - [Alternatives](#alternatives)
+        - [Eventsourced usage](#eventsourced-usage)
+        - [Standalone usage](#standalone-usage)
+    - [Channel alternatives](#channel-alternatives)
 - [Recovery](#recovery)
     - [Replay parameters](#replay-parameters) 
         - [Recovery without snapshots](#recovery-without-snapshots)
@@ -546,7 +548,7 @@ Code from this section is contained in [SenderReferences.scala](https://github.c
 Channels
 --------
 
-A channel is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example.
+A [channel](#channel) is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example.
 
 Currently, the library provides two different channel implementations, [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel), and a pattern on top of `ReliableChannel`, a [reliable request-reply channel](#reliable-request-reply-channel). These are explained in the following subsections.
 
@@ -599,13 +601,13 @@ A reliable request-reply channel is a pattern implemented on top of a [reliable 
 
 - extracts requests from received [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s before sending them to the destination.
 - wraps replies from the destination into a `Message` before sending them back to the request sender.
-- sends a special [`DestinationNotResponding`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationNotResponding) reply to the request sender if the destination doesn't reply within a configurable reply timeout.
-- sends a special [`DestinationFailure`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.DestinationFailure) reply to the request sender if destination responds with `Status.Failure`.
+- sends a special [`DestinationNotResponding`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.reliable.requestreply.DestinationNotResponding) reply to the request sender if the destination doesn't reply within a configurable reply timeout.
+- sends a special [`DestinationFailure`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.reliable.requestreply.DestinationFailure) reply to the request sender if destination responds with `Status.Failure`.
 - guarantees at-least-once delivery of replies to the request sender (in addition to at-least-once delivery of requests to the destination).
 - requires a positive receipt confirmation for a reply to mark a request-reply interaction as successfully completed.
 - redelivers requests, and subsequently replies, on missing or negative receipt confirmations.
 
-A reliable request-reply channel is created and registered in the same way as a reliable channel except that a [`ReliableRequestReplyChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.ReliableRequestReply$ReliableRequestReplyChannelProps) configuration object is used.
+A reliable request-reply channel is created and registered in the same way as a reliable channel except that a [`ReliableRequestReplyChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.reliable.requestreply.ReliableRequestReply$ReliableRequestReplyChannelProps) configuration object is used.
 
     // …
     import org.eligosource.eventsourced.patterns.reliable.requestreply._
@@ -615,6 +617,8 @@ A reliable request-reply channel is created and registered in the same way as a 
 This configuration object additionally allows applications to configure a `replyTimeout` for replies from the destination. A detailed usage example of a reliable request-reply channel is given in [this article](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html).
 
 ### Usage hints
+
+#### Eventsourced usage
 
 For channels to work properly, event-sourced processors must copy the `processorId` and `sequenceNr` values from a received (and journaled) input event message to output event messages. This is usually done by calling `copy()` on the received input event message and updating only those fields that are relevant for the application such as `event` or `ack`, for example:
 
@@ -629,7 +633,21 @@ For channels to work properly, event-sourced processors must copy the `processor
 
 When using a [message emitter](#emitter), this is done automatically.
 
-### Alternatives
+#### Standalone usage
+
+[Reliable channels](#reliablechannel) and [reliable request-reply channels](#reliable-request-reply-channel) can also be used independently of `Eventsourced` processors (i.e. standalone). For standalone channel usage, senders must set the `Message.processorId` of the sent `Message` to `0` (which is the default value):
+
+    val channel = extension.channelOf(ReliableChannelProps(…))
+
+    channel ! Message("my event") // processorId == 0
+
+This is equivalent to directly sending the `Message.event`:
+
+    channel ! "my event"
+
+A reliable channel internally wraps a received event into a `Message` with `processorId` set to `0`. Setting the `processorId` to `0` causes a reliable channel to skip writing an acknowledgement. An acknowledgement always refers to an event message received by an `Eventsourced` processor, so there's no need to write one in this case. Another (unrelated) use case for turning off writing acknowledgements is the emission of [event message series](#event-series) in context of [event-sourced channel usage](#eventsourced-usage).
+
+### Channel alternatives
 
 A less reliable alternative to channels is communication via sender references. This means producing event messages to destinations that have been passed to a processor via sender references (along with an input event message). These sender references will be `deadLetters` during a replay which also prevents redundant delivery. The main difference, however, is that the delivery guarantee changes from *at-least-once* to *at-most-once*.
 

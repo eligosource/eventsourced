@@ -20,9 +20,9 @@ import org.apache.hadoop.hbase.client._
 
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
-import org.eligosource.eventsourced.journal.common.JournalSpec
+import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
 
-class HBaseJournalSpec extends JournalSpec with HBaseCleanup with BeforeAndAfterEach with BeforeAndAfterAll {
+class HBaseJournalSpec extends PersistentJournalSpec with HBaseCleanup with BeforeAndAfterEach with BeforeAndAfterAll {
   var port: Int = 0
   var util: HBaseTestingUtility = _
   var admin: HBaseAdmin = _

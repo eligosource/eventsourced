@@ -21,7 +21,7 @@ import BehaviorSpec._
 
 class BehaviorSpec extends EventsourcingSpec[Fixture] {
   "A eventsourced processor" must {
-    "can change behavior without loosing event-sourcing functionality" in { fixture =>
+    "be able to change behavior without loosing event-sourcing functionality" in { fixture =>
       import fixture._
 
       processor ! Message("foo")

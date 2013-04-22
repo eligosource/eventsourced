@@ -15,11 +15,11 @@
  */
 package org.eligosource.eventsourced.journal.dynamodb
 
-import org.eligosource.eventsourced.journal.common.JournalSpec
+import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
 import org.eligosource.eventsourced.core.JournalProps
 import akka.actor.ActorSystem
 
-class DynamoDBJournalSpec extends JournalSpec with DynamoDBJournalSupport {
+class DynamoDBJournalSpec extends PersistentJournalSpec with DynamoDBJournalSupport {
 
 
 }

@@ -198,3 +198,69 @@ object JournalSpec {
   }
 }
 
+abstract class PersistentJournalSpec extends JournalSpec {
+  import JournalSpec._
+
+  "recover its counter when started" in { fixture =>
+    import fixture._
+
+    journal ! WriteInMsg(1, Message("test-1"), writeTarget)
+    journal ! WriteInMsg(1, Message("test-2"), writeTarget)
+    journal ! WriteOutMsg(1, Message("test-3"), 1, SkipAck, writeTarget)
+    journal ! ReplayOutMsgs(1, 0, replayTarget)
+
+    dequeue(replayQueue) { m => m must be(Message("test-3", sequenceNr = 3)) }
+
+    system.shutdown()
+    system.awaitTermination(duration)
+
+    val anotherSystem = akka.actor.ActorSystem("test")
+    val anotherJournal = Journal(journalProps)(anotherSystem)
+    val anotherReplayTarget = anotherSystem.actorOf(Props(new CommandTarget(replayQueue)))
+
+    anotherJournal ! WriteInMsg(1, Message("test-4"), writeTarget)
+    anotherJournal ! ReplayInMsgs(1, 4, anotherReplayTarget)
+
+    dequeue(replayQueue) { m => m must be(Message("test-4", sequenceNr = 4, timestamp = m.timestamp)) }
+
+    anotherSystem.shutdown()
+    anotherSystem.awaitTermination(duration)
+  }
+  "reset temporary sender paths for previously persisted output messages" in { fixture =>
+    import fixture._
+
+    val p1 = "akka://test/user/$a"
+    val p2 = "akka://test/temp/$a"
+    val p3 = "akka://test/temp/$b"
+
+    journal ! WriteOutMsg(1, Message("test-1", senderPath = p1), 0, SkipAck, writeTarget)
+    journal ! WriteOutMsg(1, Message("test-2", senderPath = p2), 0, SkipAck, writeTarget)
+
+    journal ! ReplayOutMsgs(1, 0, replayTarget)
+
+    dequeue(replayQueue) { m => m.senderPath must be(p1) }
+    dequeue(replayQueue) { m => m.senderPath must be(p2) }
+
+    system.shutdown()
+    system.awaitTermination(duration)
+
+    val anotherSystem = akka.actor.ActorSystem("test")
+    val anotherJournal = Journal(journalProps)(anotherSystem)
+    val anotherReplayTarget = anotherSystem.actorOf(Props(new CommandTarget(replayQueue)))
+
+    prepareJournal(anotherJournal, anotherSystem)
+
+    anotherJournal ! WriteOutMsg(1, Message("test-3", senderPath = p3), 0, SkipAck, writeTarget)
+    anotherJournal ! ReplayOutMsgs(1, 0, anotherReplayTarget)
+
+    dequeue(replayQueue) { m => m.senderPath must be(p1) }
+    dequeue(replayQueue) { m => m.senderPath must be(null) } // sender path reset
+    dequeue(replayQueue) { m => m.senderPath must be(p3) }
+
+    anotherSystem.shutdown()
+    anotherSystem.awaitTermination(duration)
+  }
+
+  def prepareJournal(journal: ActorRef, system: ActorSystem) {}
+}
+

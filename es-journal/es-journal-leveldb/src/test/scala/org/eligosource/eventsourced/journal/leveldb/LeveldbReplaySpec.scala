@@ -21,17 +21,17 @@ import org.scalatest.BeforeAndAfterEach
 import org.eligosource.eventsourced.journal.common.ReplaySpec
 
 class LeveldbReplayPSSpec extends ReplaySpec with BeforeAndAfterEach {
-  def journalProps = LeveldbJournalProps(LeveldbJournalPSSpec.journalDir)
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir)
 
   override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalPSSpec.journalDir)
+    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
   }
 }
 
 class LeveldbReplaySSSpec extends ReplaySpec with BeforeAndAfterEach {
-  def journalProps = LeveldbJournalProps(LeveldbJournalPSSpec.journalDir).withSequenceStructure
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withSequenceStructure
 
   override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalPSSpec.journalDir)
+    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
   }
 }
