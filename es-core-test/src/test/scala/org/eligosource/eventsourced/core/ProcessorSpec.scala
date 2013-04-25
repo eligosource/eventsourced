@@ -23,14 +23,19 @@ class ProcessorSpec extends EventsourcingSpec[Fixture] {
   "A eventsourced processor" must {
     "receive a timestamp message" in { fixture =>
       import fixture._
-      result[Long](processor)(Message("foo")) must be > (0L)
+      result[Long](processor(1))(Message("foo")) must be > (0L)
+    }
+    "not have an id < 1" in { fixture =>
+      import fixture._
+      intercept[InvalidProcessorIdException](processor(0))
+      intercept[InvalidProcessorIdException](processor(-1))
     }
   }
 }
 
 object ProcessorSpec {
   class Fixture extends EventsourcingFixture[Long] {
-    val processor = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = 1 } ))
+    def processor(pid: Int = 1) = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = pid } ))
   }
 
   class Processor extends Actor { this: Receiver =>

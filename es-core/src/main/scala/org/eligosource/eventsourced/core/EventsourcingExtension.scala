@@ -75,6 +75,7 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @return a processor ref.
    * @throws InvalidActorNameException if `props.name` is defined and already
    *         in use in the underlying actor system.
+   * @throws InvalidProcessorIdException if processor id < 1.
    *
    * @see [[org.eligosource.eventsourced.core.ProcessorProps]]
    */
@@ -98,6 +99,7 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @return a processor ref.
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
+   * @throws InvalidProcessorIdException if processor id < 1.
    */
   def processorOf(props: Props, name: Option[String] = None)(implicit actorRefFactory: ActorRefFactory): ActorRef = {
     implicit val duration = 5 seconds
@@ -122,6 +124,7 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * @return a channel ref.
    * @throws InvalidActorNameException if `name` is defined and already in use
    *         in the underlying actor system.
+   * @throws InvalidChannelIdException if channel id < 1.
    *
    * @see [[org.eligosource.eventsourced.core.DefaultChannelProps]]
    *      [[org.eligosource.eventsourced.core.ReliableChannelProps]]
@@ -367,14 +370,22 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   @tailrec
-  private def registerChannel(channelId: Int, channelName: Option[String], channel: ActorRef) {
+  private def registerChannel(channelId: Int, channelName: Option[String], channel: ActorRef)(implicit actorRefFactory: ActorRefFactory) {
+    if (channelId < 1) {
+      actorRefFactory.stop(channel)
+      throw new InvalidChannelIdException
+    }
     val current = channelsRef.get()
     val updated = if (channelName.isDefined) current.add(channelId, channelName.get, channel) else current.add(channelId, channel)
     if (!channelsRef.compareAndSet(current, updated)) registerChannel(channelId, channelName, channel)
   }
 
   @tailrec
-  private def registerProcessor(processorId: Int, processor: ActorRef) {
+  private def registerProcessor(processorId: Int, processor: ActorRef)(implicit actorRefFactory: ActorRefFactory) {
+    if (processorId < 1) {
+      actorRefFactory.stop(processor)
+      throw new InvalidProcessorIdException
+    }
     val current = processorsRef.get()
     val updated = current + (processorId -> processor)
     if (!processorsRef.compareAndSet(current, updated)) registerProcessor(processorId, processor)
@@ -442,3 +453,13 @@ object EventsourcingExtension extends ExtensionId[EventsourcingExtension] with E
 
   def lookup() = EventsourcingExtension
 }
+
+/**
+ * Thrown when a channel is registered with an id < 1.
+ */
+class InvalidChannelIdException extends RuntimeException("Channel id must be a positive integer")
+
+/**
+ * Thrown when a processor is registered with an id < 1.
+ */
+class InvalidProcessorIdException extends RuntimeException("Processor id must be a positive integer")

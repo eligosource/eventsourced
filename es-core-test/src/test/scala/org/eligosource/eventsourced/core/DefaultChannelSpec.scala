@@ -109,6 +109,12 @@ class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
       respondTo(Message("a")) must be("re: a")
       respondTo(Message("b")) must be("re: b")
     }
+    "not have an id < 1" in { fixture =>
+      import fixture._
+
+      intercept[InvalidChannelIdException](extension.channelOf(DefaultChannelProps(0, successDestination)))
+      intercept[InvalidChannelIdException](extension.channelOf(DefaultChannelProps(-1, successDestination)))
+    }
   }
 }
 
@@ -121,7 +127,7 @@ object DefaultChannelSpec {
     val writeAckListener = system.actorOf(Props(new WriteAckListener(writeAckListenerQueue)))
 
     def channel(destination: ActorRef) =
-      system.actorOf(Props(new DefaultChannel(1, journal, destination)))
+      extension.channelOf(DefaultChannelProps(1, destination))
 
     def message(event: Any, sequenceNr: Long = 0L, ack: Boolean = true) =
       Message(event, sequenceNr = sequenceNr, ack = ack, processorId = 1)

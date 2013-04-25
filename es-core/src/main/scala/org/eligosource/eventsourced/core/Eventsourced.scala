@@ -68,7 +68,7 @@ trait Eventsourced extends Behavior {
   protected val journal = extension.journal
 
   /**
-   * Processor id. Must be a positive integer.
+   * Processor id.
    */
   def id: Int
 

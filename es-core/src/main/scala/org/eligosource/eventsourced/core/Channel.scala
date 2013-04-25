@@ -60,7 +60,7 @@ trait Channel extends Actor {
   implicit val executionContext = context.dispatcher
 
   /**
-   * Channel id. Must be a positive integer.
+   * Channel id.
    */
   def id: Int
 
@@ -119,8 +119,6 @@ object Channel {
  */
 class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorRef) extends Channel {
   import Channel.Deliver
-
-  require(id > 0, "channel id must be a positive integer")
 
   private var retain = true
   private var buffer = List.empty[Message]
@@ -245,9 +243,6 @@ object RedeliveryPolicy {
 class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String] = None) extends Channel {
   import ReliableChannel._
   import Channel._
-
-
-  require(id > 0, "channel id must be a positive integer")
 
   private var buffer: Option[ActorRef] = None
   private var restarts = 0

@@ -270,6 +270,12 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       c ! Deliver
       dq() must be (Right(Message(1, sequenceNr = 1L)))
     }
+    "not have an id < 1" in { fixture =>
+      import fixture._
+
+      intercept[InvalidChannelIdException](extension.channelOf(ReliableChannelProps(0, successDestination)))
+      intercept[InvalidChannelIdException](extension.channelOf(ReliableChannelProps(-1, successDestination)))
+    }
   }
 }
 
@@ -286,8 +292,7 @@ object ReliableChannelSpec {
     val writeOutMsgListener = system.actorOf(Props(new WriteOutMsgListener(writeOutMsgListenerQueue)))
 
     val policy = new RedeliveryPolicy(5 seconds, 10 milliseconds, 1, 10 milliseconds, 3)
-    def channel(destination: ActorRef) = system.actorOf(Props(new ReliableChannel(1, journal, destination, policy)))
-
+    def channel(destination: ActorRef) = extension.channelOf(ReliableChannelProps(1, destination, policy))
 
     def dq(queue: LinkedBlockingQueue[Either[Message, Message]]): Either[Message, Message] = super.dequeue(queue) match {
       case Left(msg)  => Left(Message(msg.event, sequenceNr = msg.sequenceNr))
