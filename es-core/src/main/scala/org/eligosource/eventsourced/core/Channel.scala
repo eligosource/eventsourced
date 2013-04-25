@@ -27,6 +27,23 @@ import org.eligosource.eventsourced.core.Journal._
  * Channels are used by [[org.eligosource.eventsourced.core.Eventsourced]] actors to prevent redundant
  * message delivery to destinations during event message replay.
  *
+ * For channels to work properly, `Eventsourced` processors must copy the `processorId` and `sequenceNr`
+ * values from a received (and journaled) input event message to output event messages. This is usually
+ * done by calling `copy()` on the received input event message and updating only those fields that are
+ * relevant for the application such as `event` or `ack`, for example:
+ * {{{
+ *  class Processor(channel: ActorRef) extends Actor {
+ *    def receive = {
+ *      case msg: Message => {
+ *        // ...
+ *        channel ! msg.copy(event = ..., ack = ...)
+ *      }
+ *    }
+ *  }
+ * }}}
+ *
+ * When using an [[org.eligosource.eventsourced.core.Emitter]], this is done automatically.
+ *
  * A less reliable alternative to channels is communication via sender references. Event messages that
  * are sent to processors during a replay always have a `deadLetters` sender reference which prevents
  * redundant delivery as well. The main difference is that the delivery guarantee changes from
@@ -89,6 +106,8 @@ object Channel {
  * if a channel should ignore a message or not.
  *
  * A `DefaultChannel` preserves the `sender` reference (i.e. forwards it to `destination`).
+ * Furthermore, it can only be used in combination with an `Eventsourced` processor as
+ * described in the documentation of [[org.eligosource.eventsourced.core.Channel]].
  *
  * @param id channel id. Must be a positive integer.
  * @param journal journal of the [[org.eligosource.eventsourced.core.EventsourcingExtension]]
@@ -191,6 +210,26 @@ object RedeliveryPolicy {
  * application crashed). If that sender doesn't exist any more after recovery, the reply will go to
  * `deadLetters`.
  *
+ * Usually, a `ReliableChannel` is used in combination with an `Eventsourced` processor, as described
+ * in the documentation of [[org.eligosource.eventsourced.core.Channel]]. A `ReliableChannel` can also
+ * be used independently of an `Eventsourced` processor (i.e. standalone). For standalone channel usage,
+ * senders must set the `Message.processorId` of the sent `Message` to `0` (which is the default value):
+ *
+ * {{{
+ *   channel ! Message("my event") // processorId == 0
+ * }}}
+ *
+ * This is equivalent to directly sending the `Message.event`:
+ *
+ * {{{
+ *   channel ! "my event"
+ * }}}
+ *
+ * A `ReliableChannel` internally wraps a received event into a `Message` with `processorId` set to `0`.
+ * Setting the `processorId` to `0` causes a reliable channel to skip writing an acknowledgement. An
+ * acknowledgement always refers to an event message received by an  `Eventsourced` processor, so there's
+ * no need to write one in this case.
+ *
  * @param id channel id. Must be a positive integer.
  * @param journal journal of the [[org.eligosource.eventsourced.core.EventsourcingExtension]]
  *        at which this channel is registered.
@@ -214,10 +253,9 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
   private var restarts = 0
 
   def receive = {
-    case msg: Message if (!msg.acks.contains(id)) => {
-      val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
-      val senderPath = sender.path.toString
-      journal forward WriteOutMsg(id, msg.copy(senderPath = senderPath), msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
+    case msg: Message => {
+      if       (msg.processorId == 0)  storeAndBufferMessage(msg.copy(ack = false))
+      else if (!msg.acks.contains(id)) storeAndBufferMessage(msg)
     }
     case Deliver => if (!buffer.isDefined) {
       buffer = Some(createBuffer())
@@ -236,6 +274,13 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
         context.system.eventStream.publish(DeliveryStopped(id))
       }
     }
+    case event => receive(Message(event))
+  }
+
+  private def storeAndBufferMessage(msg: Message) {
+    val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
+    val senderPath = sender.path.toString
+    journal forward WriteOutMsg(id, msg.copy(senderPath = senderPath), msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
   }
 
   private def deliverPendingMessages(dst: ActorRef) {

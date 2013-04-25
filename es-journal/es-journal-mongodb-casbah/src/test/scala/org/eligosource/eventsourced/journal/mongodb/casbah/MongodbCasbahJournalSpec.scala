@@ -17,9 +17,9 @@ package org.eligosource.eventsourced.journal.mongodb.casbah
 
 import org.scalatest.BeforeAndAfterEach
 import com.mongodb.casbah.Imports._
-import org.eligosource.eventsourced.journal.common.JournalSpec
+import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
 
-class MongodbCasbahJournalSpec extends JournalSpec with MongodbSpecSupport with BeforeAndAfterEach {
+class MongodbCasbahJournalSpec extends PersistentJournalSpec with MongodbSpecSupport with BeforeAndAfterEach {
 
   val dbName = "es2"
   val collName = "event"

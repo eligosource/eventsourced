@@ -30,13 +30,10 @@ trait AsynchronousWriteReplaySupport extends Actor {
   import Channel.Deliver
   import Journal._
 
-  val deadLetters = context.system.deadLetters
-  val resequencer: ActorRef =
-    actor(new ResequencerActor(replayer), dispatcherName = journalProps.dispatcherName)
+  private val deadLetters = context.system.deadLetters
 
-  val writers = 0 until asyncWriterCount map { id =>
-    actor(new WriterActor(writer(id)), dispatcherName = journalProps.dispatcherName)
-  } toVector
+  var resequencer: ActorRef = _
+  var writers: Seq[ActorRef] = _
 
   var _counter = 0L
   var _counterResequencer = 1L
@@ -109,7 +106,13 @@ trait AsynchronousWriteReplaySupport extends Actor {
 
   override def preStart() {
     start()
-    _counter = storedCounter + 1L
+    _counter =
+      storedCounter + 1L
+    resequencer =
+      actor(new ResequencerActor(counter, replayer), dispatcherName = journalProps.dispatcherName)
+    writers = (0 until asyncWriterCount).map(id =>
+      actor(new WriterActor(writer(id)), dispatcherName = journalProps.dispatcherName)
+    ).toVector
   }
 
   override def postStop() {
@@ -147,7 +150,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
     }
   }
 
-  class ResequencerActor(replayer: Replayer) extends Actor {
+  class ResequencerActor(val initialCounter: Long, replayer: Replayer) extends Actor with SenderPathReset {
     import scala.collection.mutable.Map
 
     private val delayed = Map.empty[Long, (Any, ActorRef)]
@@ -190,7 +193,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
         }
       }
       case IsolatedReplay(cmd: ReplayOutMsgs, toSequenceNr) => {
-        replayer.executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
+        replayer.executeReplayOutMsgs(cmd, resetTempPath(msg => cmd.target tell (Written(msg), deadLetters)), sdr, toSequenceNr) onComplete {
           case Success(_) => self ! (seqnr + 1L, ReplayDone)
           case Failure(e) => self ! (seqnr + 1L, ReplayFailed(cmd, e))
         }

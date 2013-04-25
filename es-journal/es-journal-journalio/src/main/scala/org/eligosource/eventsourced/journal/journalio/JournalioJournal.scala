@@ -126,8 +126,11 @@ private [eventsourced] class JournalioJournal(props: JournalioJournalProps) exte
 
   def storedCounter: Long = {
     val cmds = journal.undo().asScala.map { location => cmdFromBytes(location.getData) }
-    val cmdo = cmds.collectFirst { case cmd: WriteInMsg => cmd }
-    cmdo.map(_.message.sequenceNr).getOrElse(0L)
+    val msgo = cmds.collectFirst {
+      case cmd: WriteInMsg  => cmd.message
+      case cmd: WriteOutMsg => cmd.message
+    }
+    msgo.map(_.sequenceNr).getOrElse(0L)
   }
 
   override def start() {

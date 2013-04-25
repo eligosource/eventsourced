@@ -22,7 +22,7 @@ import akka.actor._
 
 import org.eligosource.eventsourced.core._
 
-trait SynchronousWriteReplaySupport extends Actor {
+trait SynchronousWriteReplaySupport extends Actor with SenderPathReset {
   import Channel.Deliver
   import Journal._
 
@@ -30,7 +30,9 @@ trait SynchronousWriteReplaySupport extends Actor {
 
   private val deadLetters = context.system.deadLetters
   private var commandListener: Option[ActorRef] = None
+
   private var _counter = 0L
+  private var _counterInit = 0L
 
   def receive = {
     case cmd: WriteInMsg => {
@@ -70,7 +72,7 @@ trait SynchronousWriteReplaySupport extends Actor {
       sender ! ReplayDone
     }
     case cmd: ReplayOutMsgs => {
-      executeReplayOutMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters))
+      executeReplayOutMsgs(cmd, resetTempPath(msg => cmd.target tell (Written(msg), deadLetters)))
     }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
@@ -103,7 +105,8 @@ trait SynchronousWriteReplaySupport extends Actor {
    */
   override def preStart() {
     start()
-    _counter = storedCounter + 1L
+    _counterInit = storedCounter + 1L
+    _counter = _counterInit
   }
 
   /**
@@ -112,6 +115,10 @@ trait SynchronousWriteReplaySupport extends Actor {
   override def postStop() {
     stop()
   }
+  /**
+   * Returns the initial counter value after journal start.
+   */
+  def initialCounter = _counterInit
 
   /**
    * Returns the current counter value.
