@@ -45,7 +45,7 @@ abstract class ReplaySpec extends WordSpec with MustMatchers {
 
     def receive = {
       case sr : SnapshotRequest => {
-        Thread.sleep(2) // ensure that snapshots have different timestamps
+        Thread.sleep(10) // ensure that snapshots have different timestamps
         sr.process(counter)
       }
       case so @ SnapshotOffer(Snapshot(_, _, _, ctr: Int)) => {

@@ -22,9 +22,9 @@ import org.scalatest.BeforeAndAfterEach
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common.JournalSpec
+import org.eligosource.eventsourced.journal.common._
 
-abstract class LeveldbJournalPSSpec extends JournalSpec {
+abstract class LeveldbJournalSpec extends PersistentJournalSpec {
   import JournalSpec._
 
   "persist input messages with a custom event serializer" in { fixture =>
@@ -51,22 +51,22 @@ abstract class LeveldbJournalPSSpec extends JournalSpec {
   }
 }
 
-object LeveldbJournalPSSpec {
+object LeveldbJournalSpec {
   val journalDir = new File("es-journal/es-journal-leveldb/target/journal")
 }
 
-class LeveldbJournalPSDefaultSpec extends LeveldbJournalPSSpec with BeforeAndAfterEach {
-  def journalProps = LeveldbJournalProps(LeveldbJournalPSSpec.journalDir)
+class LeveldbJournalPSSpec extends LeveldbJournalSpec with BeforeAndAfterEach {
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir)
 
   override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalPSSpec.journalDir)
+    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
   }
 }
 
 class LeveldbJournalSSSpec extends JournalSpec with BeforeAndAfterEach {
-  def journalProps = LeveldbJournalProps(LeveldbJournalPSSpec.journalDir).withSequenceStructure
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withSequenceStructure
 
   override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalPSSpec.journalDir)
+    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
   }
 }

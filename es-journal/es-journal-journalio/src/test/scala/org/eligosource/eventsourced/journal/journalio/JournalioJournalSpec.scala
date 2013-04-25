@@ -17,14 +17,22 @@ package org.eligosource.eventsourced.journal.journalio
 
 import java.io.File
 
+import akka.actor.ActorSystem
+
 import org.apache.commons.io.FileUtils
 import org.scalatest.BeforeAndAfterEach
 
-import org.eligosource.eventsourced.journal.common.JournalSpec
+import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
+import akka.actor.ActorRef
+import org.eligosource.eventsourced.core.Journal.ReplayInMsgs
 
-class JournalioJournalSpec extends JournalSpec with BeforeAndAfterEach {
+class JournalioJournalSpec extends PersistentJournalSpec with BeforeAndAfterEach {
   val journalDir = new File("es-journal/es-journal-journalio/target/journal")
   def journalProps = JournalioJournalProps(journalDir)
+
+  override def prepareJournal(journal: ActorRef, system: ActorSystem) {
+    journal ! ReplayInMsgs(1, 0, system.deadLetters)
+  }
 
   override def afterEach() {
     FileUtils.deleteDirectory(journalDir)

@@ -21,7 +21,7 @@ import de.flapdoodle.embed.process.runtime.Network
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common.JournalSpec
+import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import reactivemongo.api.{DB, MongoConnection}
@@ -32,7 +32,7 @@ import de.flapdoodle.embed.process.config.io.ProcessOutput
 import de.flapdoodle.embed.process.io.{NullProcessor, Processors}
 import de.flapdoodle.embed.mongo.config.{MongodConfig, RuntimeConfigBuilder}
 
-class MongodbReactiveJournalSpec extends JournalSpec with BeforeAndAfterEach with BeforeAndAfterAll {
+class MongodbReactiveJournalSpec extends PersistentJournalSpec with BeforeAndAfterEach with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val duration = 10 seconds
