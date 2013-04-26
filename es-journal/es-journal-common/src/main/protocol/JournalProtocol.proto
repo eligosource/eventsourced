@@ -1,4 +1,4 @@
-option java_package = "org.eligosource.eventsourced.journal.common";
+option java_package = "org.eligosource.eventsourced.journal.common.serialization";
 option java_outer_classname = "JournalProtocol";
 
 /**

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.leveldb
+package org.eligosource.eventsourced.journal.journalio
 
 import java.io._
 
@@ -21,8 +21,8 @@ import akka.actor.Actor
 
 import org.eligosource.eventsourced.journal.common.serialization._
 
-private [leveldb] trait LeveldbSnapshotting extends FilesystemSnapshotting { this: Actor =>
-  def props: LeveldbJournalProps
+private [journalio] trait JournalioSnapshotting extends FilesystemSnapshotting { this: Actor =>
+  def props: JournalioJournalProps
   def snapshotSerializer = props.snapshotSerializer
   def snapshotSaveTimeout = props.snapshotSaveTimeout
 
@@ -30,4 +30,3 @@ private [leveldb] trait LeveldbSnapshotting extends FilesystemSnapshotting { thi
     if (props.snapshotDir.isAbsolute) props.snapshotDir
     else new File(props.dir, props.snapshotDir.getPath)
 }
-

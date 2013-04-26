@@ -33,6 +33,8 @@ import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.core.Message
 import org.eligosource.eventsourced.journal.common.AsynchronousWriteReplaySupport._
 import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.util._
 
 
 private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {

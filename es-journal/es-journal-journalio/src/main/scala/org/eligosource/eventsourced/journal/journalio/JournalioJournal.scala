@@ -25,6 +25,8 @@ import journal.io.api.{Journal => JournalIO, _}
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.util._
 
 /**
  * [[https://github.com/sbtourist/Journal.IO Journal.IO]] based journal.
@@ -39,7 +41,7 @@ import org.eligosource.eventsourced.journal.common._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class JournalioJournal(props: JournalioJournalProps) extends SynchronousWriteReplaySupport {
+private [eventsourced] class JournalioJournal(val props: JournalioJournalProps) extends SynchronousWriteReplaySupport with JournalioSnapshotting {
   import Journal._
 
   val writeInMsgQueue = new WriteInMsgQueue
@@ -82,12 +84,14 @@ private [eventsourced] class JournalioJournal(props: JournalioJournalProps) exte
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
-    val starts = cmds.foldLeft(Map.empty[Int, (Long, ActorRef)]) { (a, r) =>
-      a + (r.processorId -> (r.fromSequenceNr, r.target))
+    val ranges = cmds.foldLeft(Map.empty[Int, (Long, Long, ActorRef)]) { (a, r) =>
+      a + (r.processorId -> (r.fromSequenceNr, r.toSequenceNr, r.target))
     }
     replayInput { (cmd, acks) =>
-      starts.get(cmd.processorId) match {
-        case Some((fromSequenceNr, target)) if (cmd.message.sequenceNr >= fromSequenceNr) => {
+      ranges.get(cmd.processorId) match {
+        case Some((fromSequenceNr, toSequenceNr, target))
+          if (cmd.message.sequenceNr >= fromSequenceNr &&
+              cmd.message.sequenceNr <= toSequenceNr) => {
           p(cmd.message.copy(acks = acks), target)
         }
         case _ => {}
@@ -135,6 +139,7 @@ private [eventsourced] class JournalioJournal(props: JournalioJournalProps) exte
 
   override def start() {
     props.dir.mkdirs()
+    initSnapshotting()
 
     journal.setPhysicalSync(props.fsync)
     journal.setDirectory(props.dir)

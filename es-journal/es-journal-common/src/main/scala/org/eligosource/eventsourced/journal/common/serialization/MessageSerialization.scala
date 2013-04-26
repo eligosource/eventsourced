@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.common
+package org.eligosource.eventsourced.journal.common.serialization
 
 import scala.language.existentials
 
@@ -24,7 +24,7 @@ import com.google.protobuf.ByteString
 
 import org.eligosource.eventsourced.core.Message
 import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common.JournalProtocol._
+import org.eligosource.eventsourced.journal.common.serialization.JournalProtocol._
 
 /**
  * Extension for protobuf-based (de)serialization of event messages.

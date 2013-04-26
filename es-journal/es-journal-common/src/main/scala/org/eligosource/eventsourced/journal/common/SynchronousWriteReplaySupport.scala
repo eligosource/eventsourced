@@ -22,7 +22,7 @@ import akka.actor._
 
 import org.eligosource.eventsourced.core._
 
-trait SynchronousWriteReplaySupport extends Actor with SenderPathReset {
+trait SynchronousWriteReplaySupport extends Actor {
   import Channel.Deliver
   import Journal._
 
@@ -72,7 +72,7 @@ trait SynchronousWriteReplaySupport extends Actor with SenderPathReset {
       sender ! ReplayDone
     }
     case cmd: ReplayOutMsgs => {
-      executeReplayOutMsgs(cmd, resetTempPath(msg => cmd.target tell (Written(msg), deadLetters)))
+      executeReplayOutMsgs(cmd, util.resetTempPath(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)))
     }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
@@ -137,7 +137,7 @@ trait SynchronousWriteReplaySupport extends Actor with SenderPathReset {
    * @param snapshotFilter predicate for selecting saved snapshots.
    * @return youngest snapshots of those selected by `p`, if any.
    */
-  def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot] = None
+  def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot]
 
   /**
    * Saves a snapshot asynchronously.
@@ -145,15 +145,14 @@ trait SynchronousWriteReplaySupport extends Actor with SenderPathReset {
    * @param snapshot a snapshot.
    * @return a future that is completed when the snapshot has been successfully saved.
    */
-  def saveSnapshot(snapshot: Snapshot): Future[SnapshotSaved] =
-    Future.failed(new SnapshotNotSupportedException(s"Snapshotting not supported by ${this}"))
+  def saveSnapshot(snapshot: Snapshot): Future[SnapshotSaved]
 
   /**
    * Called when a snapshot has been successfully saved.
    *
    * @param metadata snapshot metadata.
    */
-  def snapshotSaved(metadata: SnapshotMetadata) {}
+  def snapshotSaved(metadata: SnapshotMetadata)
 
   /**
    * Instructs a journal provider to write an input message.

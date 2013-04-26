@@ -13,13 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.common
+package org.eligosource.eventsourced.journal.journalio
 
-/**
- * Storage key for some key-value based journal implementations.
- */
-private [journal] case class Key(
-  processorId: Int,
-  initiatingChannelId: Int,
-  sequenceNr: Long,
-  confirmingChannelId: Int)
+import org.apache.commons.io.FileUtils
+import org.scalatest.BeforeAndAfterEach
+
+import org.eligosource.eventsourced.journal.common.ReplaySpec
+
+class JournalioReplaySpec extends ReplaySpec with BeforeAndAfterEach {
+  def journalProps = JournalioJournalProps(JournalioJournalSpec.journalDir)
+
+  override def afterEach() {
+    FileUtils.deleteDirectory(JournalioJournalSpec.journalDir)
+  }
+}

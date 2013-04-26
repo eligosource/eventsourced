@@ -15,18 +15,31 @@
  */
 package org.eligosource.eventsourced.journal.common
 
-import akka.actor._
+import java.nio.ByteBuffer
+
+import akka.actor.ActorPath
 
 import org.eligosource.eventsourced.core.Message
 
-/**
- * Used by journals to reset persistent sender paths on output event messages.
- */
-trait SenderPathReset {
-  /**
-   * Returns the initial counter value after journal start.
-   */
-  def initialCounter: Long
+package object util {
+  private [journal] implicit val ordering = new Ordering[Key] {
+    def compare(x: Key, y: Key) =
+      if (x.processorId != y.processorId)
+        x.processorId - y.processorId
+      else if (x.initiatingChannelId != y.initiatingChannelId)
+        x.initiatingChannelId - y.initiatingChannelId
+      else if (x.sequenceNr != y.sequenceNr)
+        math.signum(x.sequenceNr - y.sequenceNr).toInt
+      else if (x.confirmingChannelId != y.confirmingChannelId)
+        x.confirmingChannelId - y.confirmingChannelId
+      else 0
+  }
+
+  implicit def counterToBytes(ctr: Long): Array[Byte] =
+    ByteBuffer.allocate(8).putLong(ctr).array
+
+  implicit def counterFromBytes(bytes: Array[Byte]): Long =
+    ByteBuffer.wrap(bytes).getLong
 
   /**
    * Decorates `p` to reset `Message.senderPath`. The `senderPath` is reset if the event message
@@ -37,10 +50,11 @@ trait SenderPathReset {
    * Otherwise, the `senderPath` is not changed. This ensures that references to temporary system
    * actors from previous application runs are not resolved.
    *
+   * @param initialCounter initial counter value after journal recovery.
    * @param p event message handler.
    * @return decorated event message handler.
    */
-  def resetTempPath(p: Message => Unit): Message => Unit = msg =>
+  def resetTempPath(initialCounter: Long)(p: Message => Unit): Message => Unit = msg =>
     if (msg.senderPath == null) p(msg)
     else if (ActorPath.fromString(msg.senderPath).elements.head == "temp" && msg.sequenceNr < initialCounter) p(msg.copy(senderPath = null))
     else p(msg)
