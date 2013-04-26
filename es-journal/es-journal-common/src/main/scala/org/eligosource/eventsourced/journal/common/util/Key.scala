@@ -13,21 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.leveldb
+package org.eligosource.eventsourced.journal.common.util
 
-import java.io._
-
-import akka.actor.Actor
-
-import org.eligosource.eventsourced.journal.common.serialization._
-
-private [leveldb] trait LeveldbSnapshotting extends FilesystemSnapshotting { this: Actor =>
-  def props: LeveldbJournalProps
-  def snapshotSerializer = props.snapshotSerializer
-  def snapshotSaveTimeout = props.snapshotSaveTimeout
-
-  val snapshotDir: File =
-    if (props.snapshotDir.isAbsolute) props.snapshotDir
-    else new File(props.dir, props.snapshotDir.getPath)
-}
-
+/**
+ * Storage key for some key-value based journal implementations.
+ */
+private [journal] case class Key(
+  processorId: Int,
+  initiatingChannelId: Int,
+  sequenceNr: Long,
+  confirmingChannelId: Int)

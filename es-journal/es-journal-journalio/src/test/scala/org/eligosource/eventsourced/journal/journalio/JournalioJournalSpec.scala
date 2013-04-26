@@ -27,14 +27,17 @@ import akka.actor.ActorRef
 import org.eligosource.eventsourced.core.Journal.ReplayInMsgs
 
 class JournalioJournalSpec extends PersistentJournalSpec with BeforeAndAfterEach {
-  val journalDir = new File("es-journal/es-journal-journalio/target/journal")
-  def journalProps = JournalioJournalProps(journalDir)
+  def journalProps = JournalioJournalProps(JournalioJournalSpec.journalDir)
 
   override def prepareJournal(journal: ActorRef, system: ActorSystem) {
     journal ! ReplayInMsgs(1, 0, system.deadLetters)
   }
 
   override def afterEach() {
-    FileUtils.deleteDirectory(journalDir)
+    FileUtils.deleteDirectory(JournalioJournalSpec.journalDir)
   }
+}
+
+object JournalioJournalSpec {
+  val journalDir = new File("es-journal/es-journal-journalio/target/journal")
 }

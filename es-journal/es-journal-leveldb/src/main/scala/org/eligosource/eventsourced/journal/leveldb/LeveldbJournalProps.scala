@@ -22,7 +22,7 @@ import scala.concurrent.duration._
 import akka.actor.Actor
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
 
 /**
  * Configuration object for a [[http://code.google.com/p/leveldb/ LevelDB]] based journal. This

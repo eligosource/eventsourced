@@ -22,6 +22,7 @@ import akka.actor._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.journal.common.util._
 
 /**
  * In-memory journal for testing purposes.
@@ -76,6 +77,8 @@ private [eventsourced] class InmemJournal extends SynchronousWriteReplaySupport 
     }
     Future.successful(SnapshotSaved(snapshot.processorId, snapshot.sequenceNr, snapshot.timestamp))
   }
+
+  def snapshotSaved(metadata: SnapshotMetadata) {}
 
   def storedCounter = counter
 

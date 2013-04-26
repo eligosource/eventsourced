@@ -15,6 +15,8 @@
  */
 package org.eligosource.eventsourced.journal.mongodb.casbah
 
+import scala.concurrent.Future
+
 import akka.actor._
 import akka.event.Logging
 
@@ -22,6 +24,8 @@ import com.mongodb.casbah.Imports._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.util._
 
 private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalProps) extends SynchronousWriteReplaySupport {
   import Journal._
@@ -73,6 +77,13 @@ private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalPro
   def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: Message => Unit) {
     replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, p)
   }
+
+  def loadSnapshot(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) = None
+
+  def saveSnapshot(snapshot: Snapshot) =
+    Future.failed(new SnapshotNotSupportedException(s"Snapshotting not supported by ${this}"))
+
+  def snapshotSaved(metadata: SnapshotMetadata) {}
 
   def storedCounter = {
     val cursor = collection.find().sort(MongoDBObject("sequenceNr" -> -1)).limit(1)

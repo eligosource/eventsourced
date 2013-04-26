@@ -24,6 +24,8 @@ import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.util._
 
 /**
  * [[http://code.google.com/p/leveldb/ LevelDB]] based journal that orders
