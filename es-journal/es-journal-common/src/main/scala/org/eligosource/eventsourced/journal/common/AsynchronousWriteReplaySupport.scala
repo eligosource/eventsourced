@@ -150,7 +150,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
     }
   }
 
-  class ResequencerActor(val initialCounter: Long, replayer: Replayer) extends Actor with SenderPathReset {
+  class ResequencerActor(initialCounter: Long, replayer: Replayer) extends Actor {
     import scala.collection.mutable.Map
 
     private val delayed = Map.empty[Long, (Any, ActorRef)]
@@ -193,7 +193,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
         }
       }
       case IsolatedReplay(cmd: ReplayOutMsgs, toSequenceNr) => {
-        replayer.executeReplayOutMsgs(cmd, resetTempPath(msg => cmd.target tell (Written(msg), deadLetters)), sdr, toSequenceNr) onComplete {
+        replayer.executeReplayOutMsgs(cmd, util.resetTempPath(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)), sdr, toSequenceNr) onComplete {
           case Success(_) => self ! (seqnr + 1L, ReplayDone)
           case Failure(e) => self ! (seqnr + 1L, ReplayFailed(cmd, e))
         }

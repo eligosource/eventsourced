@@ -17,9 +17,12 @@ package org.eligosource.eventsourced.journal.journalio
 
 import java.io.File
 
+import scala.concurrent.duration._
+
 import akka.actor.Actor
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
 
 /**
  * Configuration object for a [[https://github.com/sbtourist/Journal.IO Journal.IO]] based journal. It
@@ -62,7 +65,10 @@ case class JournalioJournalProps(
   name: Option[String] = None,
   dispatcherName: Option[String] = None,
   fsync: Boolean = false,
-  checksum: Boolean = false) extends JournalProps {
+  checksum: Boolean = false,
+  snapshotDir: File = new File("snapshots"),
+  snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
+  snapshotSaveTimeout: FiniteDuration = 1 hour) extends JournalProps {
 
   /**
    * Returns a new `JournalioJournalProps` with specified journal actor name.
@@ -87,6 +93,24 @@ case class JournalioJournalProps(
    */
   def withChecksum(checksum: Boolean) =
     copy(checksum = checksum)
+
+  /**
+   * Returns a new `JournalioJournalProps` with specified snapshot directory.
+   */
+  def withSnapshotDir(snapshotDir: File) =
+    copy(snapshotDir = snapshotDir)
+
+  /**
+   * Returns a new `JournalioJournalProps` with specified snapshot serializer.
+   */
+  def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer) =
+    copy(snapshotSerializer = snapshotSerializer)
+
+  /**
+   * Returns a new `JournalioJournalProps` with specified snapshot save timeout.
+   */
+  def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) =
+    copy(snapshotSaveTimeout = snapshotSaveTimeout)
 
   def journal: Actor =
     new JournalioJournal(this)
