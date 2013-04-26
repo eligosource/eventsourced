@@ -397,7 +397,19 @@ Where a `Receiver` modification allows actors to pattern-match against incoming 
 
     val myActor = system.actorOf(Props(new MyActor with Emitter))
 
-Event messages sent by an emitter to a channel are always derived from (i.e. are a copy of) the current event message (an `Emitter` is also `Receiver` and maintains a *current* event message, see also section [Receiver](#receiver)). A call to the `emitter` method with a channel name as argument creates a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) object that captures the named channel and the current event message. Calling `sendEvent` on that object modifies the captured event message with the specified event argument and sends the updated event message to the channel (see also channel [usage hints](#usage-hints)). A `MessageEmitter` object can also be sent to other actors (or threads) and be used there i.e. a `MessageEmitter` object is thread-safe.
+Event messages sent by an emitter to a channel are always derived from (i.e. are a copy of) the current event message (an `Emitter` is also `Receiver` and maintains a *current* event message, see also section [Receiver](#receiver)). A call to the `emitter` method with a channel name as argument creates a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) object that captures the named channel and the current event message. Calling `sendEvent` on that object modifies the captured event message with the specified event argument and sends the updated event message to the channel (see also channel [usage hints](#usage-hints)). A `MessageEmitter` object can also be sent to other actors (or threads) and be used there i.e. a `MessageEmitter` object is thread-safe. Channels can also be referred to by id when creating a `MessageEmitter` i.e. there's no need to define a custom channel name:
+
+    class MyActor extends Actor { this: Emitter =>
+        def receive = {
+          case event => {
+            // emit event to channel with id 1
+            emitter(1) sendEvent ("received: %s" format event)
+          }
+        }
+      }
+
+    // create register channel
+    extension.channelOf(DefaultChannelProps(1, destination))
 
 The `Emitter` trait can also be combined with the stackable `Eventsourced` and/or `Confirm` traits where `Emitter` must always be the first modification. For example:
 
