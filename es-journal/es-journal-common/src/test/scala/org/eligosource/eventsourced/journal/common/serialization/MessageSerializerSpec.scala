@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.core
+package org.eligosource.eventsourced.journal.common.serialization
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -26,6 +26,8 @@ import com.typesafe.config.ConfigFactory
 
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
+
+import org.eligosource.eventsourced.core.Message
 
 class MessageSerializerSpec extends WordSpec with MustMatchers {
   import MessageSerializerSpec._
@@ -43,10 +45,6 @@ class MessageSerializerSpec extends WordSpec with MustMatchers {
 
     server.actorOf(Props[RemoteActor], "remote")
 
-    def request(actor: ActorRef)(r: Any): Any = {
-      Await.result(actor.ask(r), timeout.duration)
-    }
-
     def shutdown() {
       server.shutdown()
       client.shutdown()
@@ -63,8 +61,16 @@ class MessageSerializerSpec extends WordSpec with MustMatchers {
   "A MessageSerializer" must {
     "serialize event messages" in { fixture =>
       import fixture._
+      import client.dispatcher
+
       Thread.sleep(100)
-      request(client.actorFor("akka://server@127.0.0.1:2652/user/remote"))(Message("a")) must be(Message("re: a"))
+
+      val responseFuture = for {
+        ActorIdentity(1, Some(remote)) <- client.actorSelection("akka.tcp://server@127.0.0.1:2652/user/remote") ? Identify(1)
+        response                       <- remote ? Message("a")
+      } yield response
+
+      Await.result(responseFuture, timeout.duration) must be(Message("re: a"))
     }
   }
 }

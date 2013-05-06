@@ -1,6 +1,7 @@
 libraryDependencies ++= Seq(
-  "com.google.protobuf" %  "protobuf-java" % "2.4.1" % "compile",
-  "commons-io"          % "commons-io"     % "2.3"   % "test"
+  "com.google.protobuf"  %  "protobuf-java" % "2.4.1"       % "compile",
+  "com.typesafe.akka"   %% "akka-remote"    % Version.Akka  % "test",
+  "commons-io"           % "commons-io"     % "2.3"         % "test"
 )
 
 OsgiKeys.importPackage := Seq(

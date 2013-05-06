@@ -214,7 +214,7 @@ abstract class PersistentJournalSpec extends JournalSpec {
     system.shutdown()
     system.awaitTermination(duration)
 
-    val anotherSystem = akka.actor.ActorSystem("test")
+    val anotherSystem = ActorSystem("test")
     val anotherJournal = Journal(journalProps)(anotherSystem)
     val anotherReplayTarget = anotherSystem.actorOf(Props(new CommandTarget(replayQueue)))
 
@@ -229,33 +229,47 @@ abstract class PersistentJournalSpec extends JournalSpec {
   "reset temporary sender paths for previously persisted output messages" in { fixture =>
     import fixture._
 
-    val p1 = "akka://test/user/$a"
-    val p2 = "akka://test/temp/$a"
-    val p3 = "akka://test/temp/$b"
+    class A(journal: ActorRef) extends Actor {
+      var ref: ActorRef = _
 
-    journal ! WriteOutMsg(1, Message("test-1", senderPath = p1), 0, SkipAck, writeTarget)
-    journal ! WriteOutMsg(1, Message("test-2", senderPath = p2), 0, SkipAck, writeTarget)
+      def receive = {
+        case "get" => sender ! ref
+        case "init-1" => { journal ! WriteOutMsg(1, Message("test-1", senderRef = self), 0, SkipAck, writeTarget) }
+        case "init-2" => { journal ! WriteOutMsg(1, Message("test-2", senderRef = sender), 0, SkipAck, writeTarget); ref = sender }
+        case "init-3" => { journal ! WriteOutMsg(1, Message("test-3", senderRef = sender), 0, SkipAck, writeTarget); ref = sender }
+      }
+    }
+
+    val r1 = system.actorOf(Props(new A(journal)))
+
+    r1 ! "init-1"
+    r1 ? "init-2"
+
+    val r2 = Await.result(r1.ask("get")(timeout), timeout.duration)
 
     journal ! ReplayOutMsgs(1, 0, replayTarget)
 
-    dequeue(replayQueue) { m => m.senderPath must be(p1) }
-    dequeue(replayQueue) { m => m.senderPath must be(p2) }
+    dequeue(replayQueue) { m => m.senderRef must be(r1) }
+    dequeue(replayQueue) { m => m.senderRef must be(r2) }
 
     system.shutdown()
     system.awaitTermination(duration)
 
-    val anotherSystem = akka.actor.ActorSystem("test")
+    val anotherSystem = ActorSystem("test")
     val anotherJournal = Journal(journalProps)(anotherSystem)
     val anotherReplayTarget = anotherSystem.actorOf(Props(new CommandTarget(replayQueue)))
+    val anotherR1 = anotherSystem.actorOf(Props(new A(anotherJournal)))
+
+    anotherR1 ? "init-3"
+
+    val r3 = Await.result(anotherR1.ask("get")(timeout), timeout.duration)
 
     prepareJournal(anotherJournal, anotherSystem)
-
-    anotherJournal ! WriteOutMsg(1, Message("test-3", senderPath = p3), 0, SkipAck, writeTarget)
     anotherJournal ! ReplayOutMsgs(1, 0, anotherReplayTarget)
 
-    dequeue(replayQueue) { m => m.senderPath must be(p1) }
-    dequeue(replayQueue) { m => m.senderPath must be(null) } // sender path reset
-    dequeue(replayQueue) { m => m.senderPath must be(p3) }
+    dequeue(replayQueue) { m => m.senderRef must be(r1); m.senderRef must not be(anotherR1) }
+    dequeue(replayQueue) { m => m.senderRef must be(null) } // sender ref reset
+    dequeue(replayQueue) { m => m.senderRef must be(r3) }
 
     anotherSystem.shutdown()
     anotherSystem.awaitTermination(duration)

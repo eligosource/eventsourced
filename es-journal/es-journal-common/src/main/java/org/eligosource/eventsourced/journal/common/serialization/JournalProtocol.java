@@ -363,7 +363,7 @@ public final class JournalProtocol {
         maybeForceBuilderInitialization();
       }
       
-      private Builder(com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -776,9 +776,9 @@ public final class JournalProtocol {
     boolean hasTimestamp();
     long getTimestamp();
     
-    // optional string senderPath = 8;
-    boolean hasSenderPath();
-    String getSenderPath();
+    // optional string senderRef = 8;
+    boolean hasSenderRef();
+    String getSenderRef();
   }
   public static final class MessageProtocol extends
       com.google.protobuf.GeneratedMessage
@@ -869,14 +869,14 @@ public final class JournalProtocol {
       return timestamp_;
     }
     
-    // optional string senderPath = 8;
-    public static final int SENDERPATH_FIELD_NUMBER = 8;
-    private java.lang.Object senderPath_;
-    public boolean hasSenderPath() {
+    // optional string senderRef = 8;
+    public static final int SENDERREF_FIELD_NUMBER = 8;
+    private java.lang.Object senderRef_;
+    public boolean hasSenderRef() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-    public String getSenderPath() {
-      java.lang.Object ref = senderPath_;
+    public String getSenderRef() {
+      java.lang.Object ref = senderRef_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -884,17 +884,17 @@ public final class JournalProtocol {
             (com.google.protobuf.ByteString) ref;
         String s = bs.toStringUtf8();
         if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-          senderPath_ = s;
+          senderRef_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getSenderPathBytes() {
-      java.lang.Object ref = senderPath_;
+    private com.google.protobuf.ByteString getSenderRefBytes() {
+      java.lang.Object ref = senderRef_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-        senderPath_ = b;
+        senderRef_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -908,7 +908,7 @@ public final class JournalProtocol {
       processorId_ = 0;
       sequenceNr_ = 0L;
       timestamp_ = 0L;
-      senderPath_ = "";
+      senderRef_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -938,7 +938,7 @@ public final class JournalProtocol {
         output.writeInt64(7, sequenceNr_);
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeBytes(8, getSenderPathBytes());
+        output.writeBytes(8, getSenderRefBytes());
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeInt64(9, timestamp_);
@@ -974,7 +974,7 @@ public final class JournalProtocol {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(8, getSenderPathBytes());
+          .computeBytesSize(8, getSenderRefBytes());
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1090,7 +1090,7 @@ public final class JournalProtocol {
         maybeForceBuilderInitialization();
       }
       
-      private Builder(com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1116,7 +1116,7 @@ public final class JournalProtocol {
         bitField0_ = (bitField0_ & ~0x00000010);
         timestamp_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000020);
-        senderPath_ = "";
+        senderRef_ = "";
         bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
@@ -1183,7 +1183,7 @@ public final class JournalProtocol {
         if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
           to_bitField0_ |= 0x00000040;
         }
-        result.senderPath_ = senderPath_;
+        result.senderRef_ = senderRef_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1218,8 +1218,8 @@ public final class JournalProtocol {
         if (other.hasTimestamp()) {
           setTimestamp(other.getTimestamp());
         }
-        if (other.hasSenderPath()) {
-          setSenderPath(other.getSenderPath());
+        if (other.hasSenderRef()) {
+          setSenderRef(other.getSenderRef());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1279,7 +1279,7 @@ public final class JournalProtocol {
             }
             case 66: {
               bitField0_ |= 0x00000040;
-              senderPath_ = input.readBytes();
+              senderRef_ = input.readBytes();
               break;
             }
             case 72: {
@@ -1425,39 +1425,39 @@ public final class JournalProtocol {
         return this;
       }
       
-      // optional string senderPath = 8;
-      private java.lang.Object senderPath_ = "";
-      public boolean hasSenderPath() {
+      // optional string senderRef = 8;
+      private java.lang.Object senderRef_ = "";
+      public boolean hasSenderRef() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-      public String getSenderPath() {
-        java.lang.Object ref = senderPath_;
+      public String getSenderRef() {
+        java.lang.Object ref = senderRef_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-          senderPath_ = s;
+          senderRef_ = s;
           return s;
         } else {
           return (String) ref;
         }
       }
-      public Builder setSenderPath(String value) {
+      public Builder setSenderRef(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000040;
-        senderPath_ = value;
+        senderRef_ = value;
         onChanged();
         return this;
       }
-      public Builder clearSenderPath() {
+      public Builder clearSenderRef() {
         bitField0_ = (bitField0_ & ~0x00000040);
-        senderPath_ = getDefaultInstance().getSenderPath();
+        senderRef_ = getDefaultInstance().getSenderRef();
         onChanged();
         return this;
       }
-      void setSenderPath(com.google.protobuf.ByteString value) {
+      void setSenderRef(com.google.protobuf.ByteString value) {
         bitField0_ |= 0x00000040;
-        senderPath_ = value;
+        senderRef_ = value;
         onChanged();
       }
       
@@ -1495,14 +1495,14 @@ public final class JournalProtocol {
       "col\022!\n\013commandType\030\001 \002(\0162\014.CommandType\022!" +
       "\n\007message\030\002 \001(\0132\020.MessageProtocol\022\023\n\013pro" +
       "cessorId\030\003 \001(\005\022\021\n\tchannelId\030\004 \001(\005\022\022\n\nseq" +
-      "uenceNr\030\005 \001(\003\"\242\001\n\017MessageProtocol\022\r\n\005eve" +
+      "uenceNr\030\005 \001(\003\"\241\001\n\017MessageProtocol\022\r\n\005eve" +
       "nt\030\002 \001(\014\022\025\n\reventManifest\030\003 \001(\014\022\031\n\021event" +
       "SerializerId\030\004 \001(\005\022\023\n\013processorId\030\006 \001(\005\022" +
-      "\022\n\nsequenceNr\030\007 \001(\003\022\021\n\ttimestamp\030\t \001(\003\022\022" +
-      "\n\nsenderPath\030\010 \001(\t*9\n\013CommandType\022\014\n\010WRI" +
-      "TE_IN\020\001\022\r\n\tWRITE_OUT\020\002\022\r\n\tWRITE_ACK\020\003BL\n",
-      "9org.eligosource.eventsourced.journal.co" +
-      "mmon.serializationB\017JournalProtocol"
+      "\022\n\nsequenceNr\030\007 \001(\003\022\021\n\ttimestamp\030\t \001(\003\022\021" +
+      "\n\tsenderRef\030\010 \001(\t*9\n\013CommandType\022\014\n\010WRIT" +
+      "E_IN\020\001\022\r\n\tWRITE_OUT\020\002\022\r\n\tWRITE_ACK\020\003BL\n9",
+      "org.eligosource.eventsourced.journal.com" +
+      "mon.serializationB\017JournalProtocol"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1522,7 +1522,7 @@ public final class JournalProtocol {
           internal_static_MessageProtocol_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MessageProtocol_descriptor,
-              new java.lang.String[] { "Event", "EventManifest", "EventSerializerId", "ProcessorId", "SequenceNr", "Timestamp", "SenderPath", },
+              new java.lang.String[] { "Event", "EventManifest", "EventSerializerId", "ProcessorId", "SequenceNr", "Timestamp", "SenderRef", },
               org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol.class,
               org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol.Builder.class);
           return null;

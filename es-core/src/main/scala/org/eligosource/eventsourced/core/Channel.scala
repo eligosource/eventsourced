@@ -203,10 +203,10 @@ object RedeliveryPolicy {
  * [[akka.actor.ActorSystem]] this channel belongs to. Applications can then re-activate the channel
  * by calling `EventsourcingExtension.deliver(Int)` with the channel id as argument.
  *
- * A `ReliableChannel` stores `sender` references along with event messages. A destination can even
- * reply to a sender that was sending an event message in a previous application run (e.g. before the
- * application crashed). If that sender doesn't exist any more after recovery, the reply will go to
- * `deadLetters`.
+ * A `ReliableChannel` stores `sender` references along with event messages so that they can be forwarded
+ * to destinations even after the channel has been restarted. If a stored sender reference is a remote
+ * reference, it remains valid even after recovery from a JVM crash (i.e. a crash of the JVM the channel
+ * is running in) provided the remote sender is still available.
  *
  * Usually, a `ReliableChannel` is used in combination with an `Eventsourced` processor, as described
  * in the documentation of [[org.eligosource.eventsourced.core.Channel]]. A `ReliableChannel` can also
@@ -274,8 +274,7 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
 
   private def storeAndBufferMessage(msg: Message) {
     val ackSequenceNr: Long = if (msg.ack) msg.sequenceNr else SkipAck
-    val senderPath = sender.path.toString
-    journal forward WriteOutMsg(id, msg.copy(senderPath = senderPath), msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
+    journal forward WriteOutMsg(id, msg.copy(senderRef = sender), msg.processorId, ackSequenceNr, buffer.getOrElse(context.system.deadLetters))
   }
 
   private def deliverPendingMessages(dst: ActorRef) {
@@ -354,13 +353,13 @@ private [core] class ReliableChannelDeliverer(channelId: Int, channel: ActorRef,
     case Next(r) => if (queue.size > 0) {
       val (msg, q) = queue.dequeue
       val m = msg.copy(
-        senderPath = null,
+        senderRef = null,
         posConfirmationTarget = self,
         negConfirmationTarget = self,
         posConfirmationMessage = Confirmed(msg.sequenceNr, true),
         negConfirmationMessage = Confirmed(msg.sequenceNr, false))
 
-      val sdr = if (msg.senderPath == null) context.system.deadLetters else context.actorFor(msg.senderPath)
+      val sdr = if (msg.senderRef == null) context.system.deadLetters else msg.senderRef
 
       destination tell (m, sdr)
 

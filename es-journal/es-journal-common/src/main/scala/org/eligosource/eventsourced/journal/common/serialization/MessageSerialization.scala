@@ -18,7 +18,7 @@ package org.eligosource.eventsourced.journal.common.serialization
 import scala.language.existentials
 
 import akka.actor._
-import akka.serialization.{Serializer, SerializationExtension}
+import akka.serialization.{Serializer, Serialization, SerializationExtension}
 
 import com.google.protobuf.ByteString
 
@@ -63,8 +63,9 @@ class MessageSerialization(system: ExtendedActorSystem) extends Extension {
       .setSequenceNr(message.sequenceNr)
       .setTimestamp(message.timestamp)
 
-    if (message.senderPath != null) {
-      builder.setSenderPath(message.senderPath)
+
+    if (message.senderRef != null) {
+      builder.setSenderRef(Serialization.serializedActorPath(message.senderRef))
     }
 
     if (serializer.includeManifest) {
@@ -83,14 +84,14 @@ class MessageSerialization(system: ExtendedActorSystem) extends Extension {
       messageProtocol.getEventSerializerId,
       eventClass).get
 
-    val senderPath = if (messageProtocol.hasSenderPath) messageProtocol.getSenderPath else null
+    val senderRef = if (messageProtocol.hasSenderRef) system.provider.resolveActorRef(messageProtocol.getSenderRef) else null
 
     Message(
       event = event,
       processorId = messageProtocol.getProcessorId,
       sequenceNr = messageProtocol.getSequenceNr,
       timestamp = messageProtocol.getTimestamp,
-      senderPath = senderPath)
+      senderRef = senderRef)
   }
 }
 

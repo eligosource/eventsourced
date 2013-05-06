@@ -26,13 +26,13 @@ import sbtunidoc.Plugin.UnidocKeys._
 
 object Version {
   val Scala = "2.10.1"
-  val Akka = "2.1.2"
+  val Akka = "2.2.0-RC1"
   val ScalaTest = "1.9.1"
 }
 
 object Compiler {
   val defaultSettings = Seq(
-    scalacOptions in Compile ++= Seq("-target:jvm-1.6", "-unchecked", "-feature", "-language:postfixOps", "-language:implicitConversions"),
+    scalacOptions in Compile ++= Seq("-target:jvm-1.6", "-deprecation", "-unchecked", "-feature", "-language:postfixOps", "-language:implicitConversions"),
     javacOptions in Compile ++= Seq("-source", "1.6", "-target", "1.6")
   )
 }
@@ -139,18 +139,13 @@ object EventsourcedBuild extends Build {
     id = "eventsourced-core-test",
     base = file("es-core-test"),
     settings = defaultSettings
-  ) dependsOn(esCore,
-    esJournalLeveldb % "test->test;compile->compile",
-    esJournalHbase % "test->it;compile->compile",
-    esJournalMongodbCasbah % "test->test;compile->compile",
-    esJournalMongodbReactive % "test->it;compile->compile"
-  )
+  ) dependsOn(esCore, esJournalLeveldb % "test->test;compile->compile")
 
   lazy val esExamples = Project(
     id = "eventsourced-examples",
     base = file("es-examples"),
     settings = defaultSettings
-  ) dependsOn(esCore, esCoreTest % "compile->test", esJournalInmem, esJournalLeveldb, esJournalJournalio, esJournalHbase)
+  ) dependsOn(esCore, esCoreTest % "compile->test", esJournalInmem, esJournalLeveldb, esJournalJournalio)
 
   lazy val esJournal = Project(
     id = "eventsourced-journal",

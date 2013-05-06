@@ -17,8 +17,6 @@ package org.eligosource.eventsourced.journal.common
 
 import java.nio.ByteBuffer
 
-import akka.actor.ActorPath
-
 import org.eligosource.eventsourced.core.Message
 
 package object util {
@@ -42,20 +40,23 @@ package object util {
     ByteBuffer.wrap(bytes).getLong
 
   /**
-   * Decorates `p` to reset `Message.senderPath`. The `senderPath` is reset if the event message
+   * Decorates `p` to reset `Message.senderRef`. The `senderRef` is reset if the event message
    *
    *  - has a `sequenceNr < initialCounter` and
-   *  - has a `senderPath` that refers to a temporary (short-lived) system actor (e.g. a future)
+   *  - has a `senderRef` of type `PromiseActorRef`
    *
-   * Otherwise, the `senderPath` is not changed. This ensures that references to temporary system
+   * Otherwise, the `senderRef` is not changed. This ensures that references to temporary system
    * actors from previous application runs are not resolved.
    *
    * @param initialCounter initial counter value after journal recovery.
    * @param p event message handler.
    * @return decorated event message handler.
    */
-  def resetTempPath(initialCounter: Long)(p: Message => Unit): Message => Unit = msg =>
-    if (msg.senderPath == null) p(msg)
-    else if (ActorPath.fromString(msg.senderPath).elements.head == "temp" && msg.sequenceNr < initialCounter) p(msg.copy(senderPath = null))
+  def resetPromiseActorRef(initialCounter: Long)(p: Message => Unit): Message => Unit = msg =>
+    if (msg.senderRef == null) p(msg)
+    // TODO: change to isInstanceOf[PromiseActorRef]
+    else if (msg.senderRef.getClass.getSimpleName == "PromiseActorRef" && msg.sequenceNr < initialCounter) {
+      p(msg.copy(senderRef = null))
+    }
     else p(msg)
 }

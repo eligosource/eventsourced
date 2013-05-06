@@ -137,30 +137,6 @@ class ReliableChannelSpec extends EventsourcingSpec[Fixture] {
       dq() must be (Left(Message("a", sequenceNr = 1L)))
       dq() must be (Right(Message("a", sequenceNr = 1L)))
     }
-    "tolerate invalid actor paths" in { fixture =>
-      import fixture._
-
-      class Destination extends Actor { this: Receiver =>
-        def receive = { case event => sender ! event }
-      }
-
-      val dlq = new LinkedBlockingQueue[Any]
-
-      writeOutMsg(Message("a", sequenceNr = 1L, senderPath = "akka://test/temp/x"))
-      writeOutMsg(Message("b", sequenceNr = 2L, senderPath = "akka://test/user/y"))
-
-      system.eventStream.subscribe(system.actorOf(Props(new Actor {
-        def receive = { case DeadLetter(response, _, _) => dlq add response }
-      })), classOf[DeadLetter])
-
-      val d = system.actorOf(Props(new Destination with Receiver with Confirm))
-      val c = channel(d)
-
-      c ! Deliver
-
-      dequeue(dlq) must be("a")
-      dequeue(dlq) must be("b")
-    }
     "publish DeliveryStopped to event stream when reaching restartMax" in { fixture =>
       import fixture._
 

@@ -31,6 +31,6 @@ message MessageProtocol {
   optional int32 processorId = 6;
   optional int64 sequenceNr = 7;
   optional int64 timestamp = 9;
-  optional string senderPath = 8;
+  optional string senderRef = 8;
 }
 

@@ -16,7 +16,7 @@
 package org.eligosource.eventsourced.journal.journalio
 
 import java.io.File
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executor, Executors}
 
 import scala.collection.JavaConverters._
 
@@ -141,9 +141,12 @@ private [eventsourced] class JournalioJournal(val props: JournalioJournalProps) 
     props.dir.mkdirs()
     initSnapshotting()
 
+    context.dispatcher match {
+      case e: Executor => journal.setWriter(e)
+      case _           => // use internal writer
+    }
     journal.setPhysicalSync(props.fsync)
     journal.setDirectory(props.dir)
-    journal.setWriter(context.dispatcher)
     journal.setDisposer(disposer)
     journal.setChecksum(props.checksum)
     journal.open()

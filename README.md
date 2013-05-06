@@ -10,7 +10,7 @@ Eventsourced
   </tr>
   <tr>
     <td>Akka version: </td>
-    <td>2.1.2</td>
+    <td>2.2.0-RC1</td>
   </tr>
 </table>
 
@@ -527,7 +527,7 @@ No surprise here. The sender reference in this example represents the future tha
 
 ![Destination reply](https://raw.github.com/eligosource/eventsourced/master/doc/images/senderrefs-2.png)
 
-Instead of replying to the sender, the processor can also forward the sender reference to a destination and let the destination reply to the sender. This even works if the destination is wrapped by a channel because a channel simply forwards sender references when delivering event messages to destinations. For that reason, a [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) needs to store sender references (in contrast to processors). A reliable channel destination can even reply to a sender that was sending an event message in a previous application run (e.g. before the application crashed). If that sender doesn't exist any more after recovery, the reply will go to `deadLetters`.
+Instead of replying to the sender, the processor can also forward the sender reference to a destination and let the destination reply to the sender. This even works if the destination is wrapped by a channel because a channel simply forwards sender references when delivering event messages to destinations. For that reason, a [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) needs to store sender references (in contrast to processors), so that sender references are even available after a reliable channel has been restarted. If a stored sender reference is a remote reference, it remains valid even after recovery from a JVM crash (i.e. a crash of the JVM the reliable channel is running in) provided the remote sender is still available.
 
     class Processor(destination: ActorRef) extends Actor {
       var counter = 0
@@ -623,8 +623,7 @@ A `ReliableChannel` is created and registered in the same way as a default chann
 
 This configuration object additionally allows applications to configure a [`RedeliveryPolicy`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.RedeliveryPolicy) for the channel.
 
-
-A reliable channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. Details have already been described in the [default channel](#defaultchannel) section. A reliable channel also stores sender references along with event messages. A destination can even reply to a sender that was sending an event message in a previous application run (i.e. before the application was restarted or crashed). If that sender doesn't exist any more after recovery or if it's a temporary sender reference (e.g. a `Future` reference), the reply will go to `deadLetters`.
+A reliable channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. Details have already been described in the [default channel](#defaultchannel) section. A reliable channel also stores sender references along with event messages so that they can be forwarded to destinations even after the channel has been restarted. If a stored sender reference is a remote reference, it remains valid even after recovery from a JVM crash (i.e. a crash of the JVM the reliable channel is running in) provided the remote sender is still available.
 
 ### Reliable request-reply channel
 

@@ -207,7 +207,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
         }
       }
       case cmd: ReplayOutMsgs => {
-        replayer.executeReplayOutMsgs(cmd, util.resetTempPath(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)), sdr) onComplete {
+        replayer.executeReplayOutMsgs(cmd, util.resetPromiseActorRef(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)), sdr) onComplete {
           case Success(_) => self ! (seqnr + 1L, ReplayDone)
           case Failure(e) => self ! (seqnr + 1L, ReplayFailed(cmd, e))
         }

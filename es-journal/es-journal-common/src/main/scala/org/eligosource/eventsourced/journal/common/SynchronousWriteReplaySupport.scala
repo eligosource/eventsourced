@@ -72,7 +72,7 @@ trait SynchronousWriteReplaySupport extends Actor {
       sender ! ReplayDone
     }
     case cmd: ReplayOutMsgs => {
-      executeReplayOutMsgs(cmd, util.resetTempPath(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)))
+      executeReplayOutMsgs(cmd, util.resetPromiseActorRef(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)))
     }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)

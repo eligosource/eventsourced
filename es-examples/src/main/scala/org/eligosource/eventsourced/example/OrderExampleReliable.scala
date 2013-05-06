@@ -17,6 +17,7 @@ package org.eligosource.eventsourced.example
 
 import java.io.File
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import akka.actor._
@@ -196,13 +197,18 @@ object OrderProcessor extends App {
 
   val processor = extension.processorOf(ProcessorProps(1, id => new OrderProcessor(id) with Receiver with Eventsourced, Some("processor")))
   val destination = system.actorOf(Props(new OrderDestination with Receiver with Confirm), "destination")
-  val validator = system.actorFor("akka://example@127.0.0.1:2852/user/validator")
 
-  processor ! SetCreditCardValidator(validator)
-  processor ! SetValidOrderDestination(destination)
-  processor ! SetInvalidOrderDestination(destination)
+  def processorInit: Future[Unit] = system.actorSelection("akka.tcp://example@127.0.0.1:2852/user/validator") ? Identify(1) flatMap {
+    case ActorIdentity(1, None) => Future.failed(new Exception("validator lookup failed"))
+    case ActorIdentity(1, Some(validator)) => Future.successful {
+      processor ! SetCreditCardValidator(validator)
+      processor ! SetValidOrderDestination(destination)
+      processor ! SetInvalidOrderDestination(destination)
+    }
+  }
 
   for {
+    _ <- processorInit
     _ <- processor ? Recover(timeout)
     r1 <- processor ? Message(OrderSubmitted(Order(details = "jelly beans", creditCardNumber = "1234-5678-1234-5678")))
     r2 <- processor ? Message(OrderSubmitted(Order(details = "jelly beans", creditCardNumber = "1234-5678-1234-0000")))

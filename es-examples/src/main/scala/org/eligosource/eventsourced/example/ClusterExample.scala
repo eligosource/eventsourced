@@ -29,7 +29,7 @@ import com.typesafe.config.ConfigFactory
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.FsmSpec._
-import org.eligosource.eventsourced.journal.journalio._
+import org.eligosource.eventsourced.journal.leveldb._
 
 /**
  * Manages a cluster-wide `Door` singleton. `Door` is a finite state machine (FSM)
@@ -41,23 +41,28 @@ import org.eligosource.eventsourced.journal.journalio._
  * If the JVM of the leader crashes, another `NodeActor` will be determined to be
  * the new leader. The new leader re-creates the `Door` instance and recovers its
  * state by replaying journaled event messages. All other `NodeActor`s update their
- * remote references.
+ * remote door references.
  *
  * @param selfAddress address of the cluster node this actor is running on.
+ * @param destination remote destination actor reference.
  */
-class NodeActor(selfAddress: Address) extends Actor {
+class NodeActor(destination: ActorRef, selfAddress: Address) extends Actor {
   val extension = EventsourcingExtension(context.system)
 
   var door: Option[ActorRef] = None
   var doorCreatedByMe = false
 
   def receive = {
+    case cmd: String =>
+      door foreach { _ forward Message(cmd) }
     case state: CurrentClusterState =>
       state.leader.foreach(setupDoor)
     case LeaderChanged(leader) =>
       leader.foreach(setupDoor)
-    case cmd: String =>
-      door foreach { _ forward Message(cmd) }
+    case door: ActorRef => {
+      this.door = Some(door)
+      this.doorCreatedByMe = false
+    }
   }
 
   def setupDoor(leaderAddress: Address) {
@@ -82,15 +87,15 @@ class NodeActor(selfAddress: Address) extends Actor {
         // stop and deregister destination channel on this node
         context.stop(extension.channels(1))
       }
-      // obtain remote Door reference from leader and store that reference locally
-      door = Some(context.actorFor(self.path.toStringWithAddress(leaderAddress) + "/door"))
-      doorCreatedByMe = false
+
+      implicit val timeout = Timeout(5 seconds)
+      implicit val executor = context.dispatcher
+
+      for { ActorIdentity(1, Some(door)) <- context.actorSelection(self.path.toStringWithAddress(leaderAddress) + "/door") ? Identify(1) } { self ! door }
+
       println("SLAVE: referenced door at %s" format leaderAddress)
     }
   }
-
-  /** Obtain remote destination reference */
-  def destination = context.actorFor("akka://journal@127.0.0.1:2553/user/destination")
 }
 
 /**
@@ -101,38 +106,42 @@ class NodeActor(selfAddress: Address) extends Actor {
  */
 object Node {
   def main(args: Array[String]) {
-    if (args.nonEmpty) System.setProperty("akka.remote.netty.port", args(0))
+    if (args.nonEmpty) System.setProperty("akka.remote.netty.tcp.port", args(0))
 
     // create an actor system with a configuration loaded from "cluster.conf"
     val system = ActorSystem("node", ConfigFactory.load("cluster"))
 
-    // obtain remote journal reference
-    val journal = system.actorFor("akka://journal@127.0.0.1:2553/user/journal")
-
-    // initialize cluster extension
-    val cluster = Cluster(system)
-
-    // initialize event-sourcing extension
-    EventsourcingExtension(system, journal)
-
-    // create an actor that manages the cluster-wide Door singleton
-    val nodeActor = system.actorOf(Props(new NodeActor(cluster.selfAddress)))
-
-    // subscribe that actor to the cluster so that it receives cluster events
-    cluster.subscribe(nodeActor, classOf[ClusterDomainEvent])
-
-    implicit val timeout = Timeout(5 seconds)
     implicit val executor = system.dispatcher
+    implicit val timeout = Timeout(5 seconds)
 
-    Thread.sleep(2000)
+    for {
+      // lookup remote journal
+      ActorIdentity(1, Some(journal)) <- system.actorSelection("akka.tcp://journal@127.0.0.1:2553/user/journal") ? Identify(1)
 
-    // prompt user for "open" and "close" commands on stdin and write responses
-    // to stdout
-    while (true) {
-      print("command (open|close): ")
-      val cmd = Console.readLine()
-      if (cmd != null) nodeActor ? cmd onSuccess { case r => println(r) }
-      Thread.sleep(200)
+      // lookup remote destination
+      ActorIdentity(2, Some(destination)) <- system.actorSelection("akka.tcp://journal@127.0.0.1:2553/user/destination") ? Identify(2)
+    } {
+      // initialize cluster extension
+      val cluster = Cluster(system)
+
+      // initialize event-sourcing extension
+      EventsourcingExtension(system, journal)
+
+      // create an actor that manages the cluster-wide Door singleton
+      val nodeActor = system.actorOf(Props(new NodeActor(destination, cluster.selfAddress)))
+
+      // subscribe that actor to the cluster so that it receives cluster events
+      cluster.subscribe(nodeActor, classOf[ClusterDomainEvent])
+
+      Thread.sleep(2000)
+
+      // prompt user for "open" and "close" commands on stdin and write responses to stdout
+      while (true) {
+        print("command (open|close): ")
+        val cmd = Console.readLine()
+        if (cmd != null) nodeActor ? cmd onSuccess { case r => println(r) }
+        Thread.sleep(200)
+      }
     }
   }
 }
@@ -148,7 +157,7 @@ object Destination extends App {
 
   // create a journal and register that journal actor actor under name "journal"
   // in the underlying actor system (needed for remote lookup).
-  val journal = Journal(JournalioJournalProps(new File("target/cluster")).withName("journal"))
+  val journal = Journal(LeveldbJournalProps(new File("target/cluster")).withName("journal").withNative(false))
 
   // create a destination and register that destination actor under name "destination"
   // in the underlying actor system (needed for remote lookup).
