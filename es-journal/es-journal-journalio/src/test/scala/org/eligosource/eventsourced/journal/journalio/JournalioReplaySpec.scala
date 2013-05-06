@@ -18,9 +18,9 @@ package org.eligosource.eventsourced.journal.journalio
 import org.apache.commons.io.FileUtils
 import org.scalatest.BeforeAndAfterEach
 
-import org.eligosource.eventsourced.journal.common.ReplaySpec
+import org.eligosource.eventsourced.journal.common.PersistentReplaySpec
 
-class JournalioReplaySpec extends ReplaySpec with BeforeAndAfterEach {
+class JournalioReplaySpec extends PersistentReplaySpec with BeforeAndAfterEach {
   def journalProps = JournalioJournalProps(JournalioJournalSpec.journalDir)
 
   override def afterEach() {

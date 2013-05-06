@@ -46,6 +46,11 @@ sealed trait ReplayParams {
    * number (if any) will be the replay starting point.
    */
   def snapshotFilter: SnapshotMetadata => Boolean
+
+  /**
+   * Updates `toSequenceNr` with specified value.
+   */
+  def withToSequenceNr(toSequenceNr: Long): ReplayParams
 }
 
 /**
@@ -107,6 +112,12 @@ object ReplayParams {
      * Not applicable.
      */
     def snapshotFilter = _ => false
+
+    /**
+     * Updates `toSequenceNr` with specified value.
+     */
+    def withToSequenceNr(toSequenceNr: Long) =
+      copy(toSequenceNr = toSequenceNr)
   }
 
   /**
@@ -136,5 +147,11 @@ object ReplayParams {
      */
     def snapshotFilter: SnapshotMetadata => Boolean =
       smd => snapshotBaseFilter(smd) && (smd.sequenceNr <= toSequenceNr)
+
+    /**
+     * Updates `toSequenceNr` with specified value.
+     */
+    def withToSequenceNr(toSequenceNr: Long) =
+      copy(toSequenceNr = toSequenceNr)
   }
 }

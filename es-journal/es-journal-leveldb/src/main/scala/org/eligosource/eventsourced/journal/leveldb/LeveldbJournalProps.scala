@@ -56,7 +56,7 @@ import org.eligosource.eventsourced.journal.common.serialization.SnapshotSeriali
  *        id, `false` if entries are ordered by sequence number.  Default is `true`.
  * @param snapshotDir Directory where the journal will store snapshots. A relative
  *        path is relative to `dir`.
- * @param snapshotSerializer serializer for writing and reading snapshots.
+ * @param snapshotSerializer Serializer for writing and reading snapshots.
  * @param snapshotSaveTimeout Timeout for saving a snapshot.
  */
 case class LeveldbJournalProps(

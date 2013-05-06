@@ -38,6 +38,9 @@ abstract class ReplaySpec extends WordSpec with MustMatchers {
   val GetSnapshotOffer = "getSo"
   val GetMessages = "getMs"
 
+  implicit val duration = 10 seconds
+  implicit val timeout = Timeout(duration)
+
   case class WaitFor(num: Int)
 
   class Processor extends Actor { this: Receiver =>
@@ -57,37 +60,35 @@ abstract class ReplaySpec extends WordSpec with MustMatchers {
     }
   }
 
+  class Target(val system: ActorSystem) {
+    // This actor doesn't journal messages. It is Eventsourced only for
+    // - responding to CompleteProcessing
+    // - unwrapping Replayed messages
+    val actor = system.actorOf(Props(new TargetActor with Eventsourced { val id = 3 } ))
+    def awaitReplayProcessed = Await.result(actor ? CompleteProcessing, duration)
+    def receivedOffer = request[Option[SnapshotOffer]](GetSnapshotOffer)
+    def receivedMessages = request[List[Message]](GetMessages)
+    private def request[A : scala.reflect.ClassTag](r: Any): A = Await.result((actor ? r).mapTo[A], duration)
+  }
+
+  class TargetActor extends Actor {
+    var oo: Option[SnapshotOffer] = None
+    var ms: List[Message] = Nil
+
+    def receive = {
+      case o: SnapshotOffer    => { oo = Some(o) }
+      case m: Message          => { ms = m :: ms }
+      case GetSnapshotOffer    => sender ! oo
+      case GetMessages         => sender ! ms.reverse
+    }
+  }
+
   class Fixture {
     implicit val system = ActorSystem("test")
-    implicit val duration = 10 seconds
-    implicit val timeout = Timeout(duration)
-
-    class Target {
-      // This actor doesn't journal messages. It is Eventsourced only for
-      // - responding to CompleteProcessing
-      // - unwrapping Replayed messages
-      val actor = system.actorOf(Props(new TargetActor with Eventsourced { val id = 3 } ))
-      def awaitReplayProcessed = Await.result(actor ? CompleteProcessing, duration)
-      def receivedOffer = request[Option[SnapshotOffer]](GetSnapshotOffer)
-      def receivedMessages = request[List[Message]](GetMessages)
-      private def request[A : scala.reflect.ClassTag](r: Any): A = Await.result((actor ? r).mapTo[A], duration)
-    }
-
-    class TargetActor extends Actor {
-      var oo: Option[SnapshotOffer] = None
-      var ms: List[Message] = Nil
-
-      def receive = {
-        case o: SnapshotOffer    => { oo = Some(o) }
-        case m: Message          => { ms = m :: ms }
-        case GetSnapshotOffer    => sender ! oo
-        case GetMessages         => sender ! ms.reverse
-      }
-    }
 
     val journal = Journal(journalProps)
     val extension = EventsourcingExtension(system, journal)
-    val target = new Target
+    val target = new Target(system)
 
     val processor1 = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = 1 }))
     val processor2 = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = 2 }))
@@ -328,5 +329,40 @@ abstract class ReplaySpec extends WordSpec with MustMatchers {
         target.receivedMessages.map(_.withTimestamp(0L)) must be(Nil)
       }
     }
+  }
+}
+
+abstract class PersistentReplaySpec extends ReplaySpec {
+  "recognize stored snapshots when started" in { fixture =>
+    import fixture._
+
+    system.shutdown()
+    system.awaitTermination(duration)
+
+    val anotherSystem = akka.actor.ActorSystem("test")
+    val anotherJournal = Journal(journalProps)(anotherSystem)
+    val anotherExtension = EventsourcingExtension(anotherSystem, anotherJournal)
+    val anotherTarget1 = new Target(anotherSystem)
+    val anotherTarget2 = new Target(anotherSystem)
+
+    anotherJournal ! ReplayInMsgs(ReplayParams(1, true), anotherTarget1.actor)
+    anotherJournal ! ReplayInMsgs(ReplayParams(1, _.sequenceNr < 4), anotherTarget2.actor)
+
+    anotherTarget1.awaitReplayProcessed
+    anotherTarget1.receivedOffer.get.snapshot must be(Snapshot(1, 4, ss12.timestamp, 4))
+    anotherTarget1.receivedMessages.map(_.withTimestamp(0L)) must be(List(
+      Message(Increment, 5, 0L, 1)
+    ))
+
+    anotherTarget2.awaitReplayProcessed
+    anotherTarget2.receivedOffer.get.snapshot must be(Snapshot(1, 2, ss11.timestamp, 2))
+    anotherTarget2.receivedMessages.map(_.withTimestamp(0L)) must be(List(
+      Message(Increment, 3, 0L, 1),
+      Message(Increment, 4, 0L, 1),
+      Message(Increment, 5, 0L, 1)
+    ))
+
+    anotherSystem.shutdown()
+    anotherSystem.awaitTermination(duration)
   }
 }

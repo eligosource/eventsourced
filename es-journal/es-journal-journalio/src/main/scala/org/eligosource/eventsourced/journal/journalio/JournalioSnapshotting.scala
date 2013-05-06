@@ -21,7 +21,7 @@ import akka.actor.Actor
 
 import org.eligosource.eventsourced.journal.common.serialization._
 
-private [journalio] trait JournalioSnapshotting extends FilesystemSnapshotting { this: Actor =>
+private [journalio] trait JournalioSnapshotting extends LocalFilesystemSnapshotting { this: Actor =>
   def props: JournalioJournalProps
   def snapshotSerializer = props.snapshotSerializer
   def snapshotSaveTimeout = props.snapshotSaveTimeout

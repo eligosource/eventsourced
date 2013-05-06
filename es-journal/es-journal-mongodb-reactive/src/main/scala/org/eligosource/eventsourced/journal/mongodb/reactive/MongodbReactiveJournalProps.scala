@@ -44,8 +44,6 @@ import reactivemongo.core.actors.Authenticate
  * @param collName Optional mongoDB collection name. Defaults to {@see DefaultCollectionName}
  * @param name Optional journal actor name.
  * @param dispatcherName Optional journal actor dispatcher name.
- * @param writerCount Number of concurrent writers.
- * @param writeTimeout Timeout for asynchronous writes.
  * @param initTimeout Timeout for journal initialization. During initialization
  *        the highest stored sequence number is loaded from the event message table.
  * @param replayChunkSize Maximum number of event messages to keep in memory during replay.
@@ -61,8 +59,6 @@ case class MongodbReactiveJournalProps(
   collName: String = DefaultCollectionName,
   name: Option[String] = None,
   dispatcherName: Option[String] = None,
-  writerCount: Int = 16,
-  writeTimeout: FiniteDuration = 10 seconds,
   initTimeout: FiniteDuration = 30 seconds,
   replayChunkSize: Int = 16 * 100) extends JournalProps {
 
@@ -87,14 +83,8 @@ case class MongodbReactiveJournalProps(
   /** Returns a new `MongodbReactiveJournalProps` with specified journal actor dispatcher name. */
   def withDispatcherName(dispatcherName: String) = copy(dispatcherName = Some(dispatcherName))
 
-  /** Returns a new `MongodbReactiveJournalProps` with specified writer count value. */
-  def withWriterCount(writerCount: Int) = copy(writerCount = writerCount)
-
-  /** Returns a new `MongodbReactiveJournalProps` with specified write timeout. */
-  def withWriteTimeout(writeTimeout: FiniteDuration) = copy(writeTimeout = writeTimeout)
-
   /** Returns a new `MongodbReactiveJournalProps` with specified init timeout. */
-  def withInitTimeout(initTimeout: FiniteDuration) = copy(writeTimeout = writeTimeout)
+  def withInitTimeout(initTimeout: FiniteDuration) = copy(initTimeout = initTimeout)
 
   /** Returns a new `MongodbReactiveJournalProps` with specified replay chunk size. */
   def withReplayChunkSize(replayChunkSize: Int) = copy(replayChunkSize = replayChunkSize)

@@ -166,12 +166,28 @@ object Journal {
    *
    * @param channelId id of the reliable channel.
    * @param fromSequenceNr sequence number from where the replay should start.
+   * @param toSequenceNr sequence number where the replay should end (inclusive).
    * @param target receiver of the replayed messages. The journal sends the
    *        replayed messages to `target` wrapped in a
    *        [[org.eligosource.eventsourced.core.Journal.Written]] message. The
    *        sender reference is set to `system.deadLetters`.
    */
-  case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, target: ActorRef)
+  case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, toSequenceNr: Long, target: ActorRef)
+
+  object ReplayOutMsgs {
+    /**
+     * Creates a `ReplayOutMsgs` command with `toSequenceNr` set to `Long.MaxValue`.
+     *
+     * @param channelId id of the reliable channel.
+     * @param fromSequenceNr sequence number from where the replay should start.
+     * @param target receiver of the replayed messages. The journal sends the
+     *        replayed messages to `target` wrapped in a
+     *        [[org.eligosource.eventsourced.core.Journal.Written]] message. The
+     *        sender reference is set to `system.deadLetters`.
+     */
+    def apply(channelId: Int, fromSequenceNr: Long, target: ActorRef) =
+      new ReplayOutMsgs(channelId, fromSequenceNr, Long.MaxValue, target)
+  }
 
   /**
    * Instructs a journal to request a state snapshot from a processor identified by

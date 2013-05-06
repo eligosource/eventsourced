@@ -13,21 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.leveldb
-
-import java.io._
+package org.eligosource.eventsourced.journal.hbase
 
 import akka.actor.Actor
 
-import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.hbase.serialization.HadoopFilesystemSnapshotting
 
-private [leveldb] trait LeveldbSnapshotting extends LocalFilesystemSnapshotting { this: Actor =>
-  def props: LeveldbJournalProps
+import org.apache.hadoop.fs.Path
+
+private [hbase] trait HBaseSnapshotting extends HadoopFilesystemSnapshotting { this: Actor =>
+  def props: HBaseJournalProps
+
+  def snapshotFilesystem = props.snapshotFilesystem
   def snapshotSerializer = props.snapshotSerializer
-  def snapshotSaveTimeout = props.snapshotSaveTimeout
+  def snapshotSaveTimeout = props.snapshotLoadTimeout
+  def snapshotLoadTimeout = props.snapshotSaveTimeout
 
-  val snapshotDir: File =
+  val snapshotDir =
     if (props.snapshotDir.isAbsolute) props.snapshotDir
-    else new File(props.dir, props.snapshotDir.getPath)
+    else new Path(snapshotFilesystem.getWorkingDirectory, props.snapshotDir)
 }
-
