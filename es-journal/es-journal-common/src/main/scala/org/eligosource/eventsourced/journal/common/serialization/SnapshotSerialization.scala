@@ -34,13 +34,15 @@ trait SnapshotSerialization {
    * Serializes a snapshot using `snapshotSerializer` and `snapshotAccess`.
    */
   def serializeSnapshot(snapshot: Snapshot): Unit =
-    snapshotAccess.withOutputStream(snapshot)(snapshotSerializer.serializeSnapshot(_, snapshot))
+    snapshotAccess.withOutputStream(snapshot)(snapshotSerializer.serializeSnapshot(_, snapshot, snapshot.state))
 
   /**
    * Deserializes and returns a snapshot using `snapshotSerializer` and `snapshotAccess`.
    */
-  def deserializeSnapshot(metadata: SnapshotMetadata): Snapshot =
-    snapshotAccess.withInputStream(metadata)(snapshotSerializer.deserializeSnapshot(_, metadata))
+  def deserializeSnapshot(metadata: SnapshotMetadata): Snapshot = {
+    val state = snapshotAccess.withInputStream(metadata)(snapshotSerializer.deserializeSnapshot(_, metadata))
+    Snapshot(metadata.processorId, metadata.sequenceNr, metadata.timestamp, state)
+  }
 }
 
 /**
@@ -48,7 +50,7 @@ trait SnapshotSerialization {
  */
 trait SnapshotAccess {
   /**
-   * Provides a managed output stream for writing snapshots.
+   * Provides a managed output stream for writing a state object.
    *
    * @param metadata snapshot metadata needed to create an output stream.
    * @param p called with the managed output stream.
@@ -57,39 +59,39 @@ trait SnapshotAccess {
   def withOutputStream(metadata: SnapshotMetadata)(p: OutputStream => Unit)
 
   /**
-   * Provides a managed input stream for reading snapshots.
+   * Provides a managed input stream for reading a state object.
    *
    * @param metadata snapshot metadata needed to create an input stream.
    * @param f called with the managed input stream.
    * @return read snapshot.
    * @throws IOException if reading fails.
    */
-  def withInputStream(metadata: SnapshotMetadata)(f: InputStream => Snapshot): Snapshot
+  def withInputStream(metadata: SnapshotMetadata)(f: InputStream => Any): Any
 }
 
 /**
- * Snapshot serializer.
+ * State serializer.
  */
 trait SnapshotSerializer {
   /**
-   * Serializes a snapshot to an output stream.
+   * Serializes a state object to an output stream.
    */
-  def serializeSnapshot(stream: OutputStream, snapshot: Snapshot): Unit
+  def serializeSnapshot(stream: OutputStream, metadata: SnapshotMetadata, state: Any): Unit
   /**
-   * Deserializes a snapshot from an input stream.
+   * Deserializes a state object from an input stream.
    */
-  def deserializeSnapshot(stream: InputStream, metadata: SnapshotMetadata): Snapshot
+  def deserializeSnapshot(stream: InputStream, metadata: SnapshotMetadata): Any
 }
 
 object SnapshotSerializer {
   /**
-   * Snapshot serializer using Java serialization.
+   * State serializer using Java serialization.
    */
   val java = new SnapshotSerializer {
-    def serializeSnapshot(stream: OutputStream, snapshot: Snapshot) =
-      new ObjectOutputStream(stream).writeObject(snapshot)
+    def serializeSnapshot(stream: OutputStream, metadata: SnapshotMetadata, state: Any) =
+      new ObjectOutputStream(stream).writeObject(state)
 
     def deserializeSnapshot(stream: InputStream, metadata: SnapshotMetadata) =
-      new ClassLoaderObjectInputStream(getClass.getClassLoader, stream).readObject().asInstanceOf[Snapshot]
+      new ClassLoaderObjectInputStream(getClass.getClassLoader, stream).readObject()
   }
 }

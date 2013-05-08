@@ -40,7 +40,7 @@ private [journal] trait FilesystemSnapshotting { outer: Actor =>
   }
 
   lazy val snapshotSerialization = new SnapshotSerialization {
-    val snapshotAccess = new FilesystemSnapshotAccess(snapshotDir)
+    val snapshotAccess = new FilesystemStateAccess(snapshotDir)
     val snapshotSerializer = outer.snapshotSerializer
   }
 
@@ -102,11 +102,11 @@ private [journal] trait FilesystemSnapshotting { outer: Actor =>
   }
 }
 
-private [journal] class FilesystemSnapshotAccess(snapshotDir: File) extends SnapshotAccess {
+private [journal] class FilesystemStateAccess(snapshotDir: File) extends SnapshotAccess {
   def withOutputStream(metadata: SnapshotMetadata)(p: (OutputStream) => Unit) =
     withStream(new FileOutputStream(snapshotFile(metadata)), p)
 
-  def withInputStream(metadata: SnapshotMetadata)(p: (InputStream) => Snapshot) =
+  def withInputStream(metadata: SnapshotMetadata)(p: (InputStream) => Any) =
     withStream(new FileInputStream(snapshotFile(metadata)), p)
 
   private def withStream[A <: Closeable, B](stream: A, p: A => B): B =
