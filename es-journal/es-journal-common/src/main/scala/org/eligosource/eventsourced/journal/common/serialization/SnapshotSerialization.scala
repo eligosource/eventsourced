@@ -40,7 +40,7 @@ trait SnapshotSerialization {
    * Deserializes and returns a snapshot using `snapshotSerializer` and `snapshotAccess`.
    */
   def deserializeSnapshot(metadata: SnapshotMetadata): Snapshot =
-    snapshotAccess.withInputStream(metadata)(snapshotSerializer.deserializeSnapshot)
+    snapshotAccess.withInputStream(metadata)(snapshotSerializer.deserializeSnapshot(_, metadata))
 }
 
 /**
@@ -78,7 +78,7 @@ trait SnapshotSerializer {
   /**
    * Deserializes a snapshot from an input stream.
    */
-  def deserializeSnapshot(stream: InputStream): Snapshot
+  def deserializeSnapshot(stream: InputStream, metadata: SnapshotMetadata): Snapshot
 }
 
 object SnapshotSerializer {
@@ -89,7 +89,7 @@ object SnapshotSerializer {
     def serializeSnapshot(stream: OutputStream, snapshot: Snapshot) =
       new ObjectOutputStream(stream).writeObject(snapshot)
 
-    def deserializeSnapshot(stream: InputStream) =
+    def deserializeSnapshot(stream: InputStream, metadata: SnapshotMetadata) =
       new ClassLoaderObjectInputStream(getClass.getClassLoader, stream).readObject().asInstanceOf[Snapshot]
   }
 }
