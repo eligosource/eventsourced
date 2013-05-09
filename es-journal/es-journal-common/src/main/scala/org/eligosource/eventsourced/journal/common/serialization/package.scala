@@ -13,21 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.leveldb
+package org.eligosource.eventsourced.journal.common
 
-import java.io._
+import org.eligosource.eventsourced.core.SnapshotMetadata
 
-import akka.actor.Actor
-
-import org.eligosource.eventsourced.journal.common.serialization._
-
-private [leveldb] trait LeveldbSnapshotting extends LocalFilesystemSnapshotting { this: Actor =>
-  def props: LeveldbJournalProps
-  def snapshotSerializer = props.snapshotSerializer
-  def snapshotSaveTimeout = props.snapshotSaveTimeout
-
-  val snapshotDir: File =
-    if (props.snapshotDir.isAbsolute) props.snapshotDir
-    else new File(props.dir, props.snapshotDir.getPath)
+package object serialization {
+  implicit val snapshotMetadataOrdering = new Ordering[SnapshotMetadata] {
+    def compare(x: SnapshotMetadata, y: SnapshotMetadata) =
+      if (x.processorId == y.processorId) math.signum(x.sequenceNr - y.sequenceNr).toInt
+      else x.processorId - y.processorId
+  }
 }
-

@@ -76,18 +76,16 @@ package object hbase {
     def withPartition(p: Int) = copy(partition = p)
   }
 
-  private [hbase] case class CounterKey(partition: Int, writerId: Int) extends Key {
-    require(sequenceNumber == 0 || sequenceNumber == 1)
+  private [hbase] case class CounterKey(partition: Int, sequenceNumber: Long) extends Key {
     val source = 0
-    val sequenceNumber = writerId.toLong
-    def withSequenceNumber(f: (Long) => Long) = copy(writerId = f(writerId).toInt)
+    def withSequenceNumber(f: (Long) => Long) =  copy(sequenceNumber = f(sequenceNumber))
     def withPartition(p: Int) = copy(partition = p)
   }
 
   private [hbase] case class PartitionCountKey(upper: Boolean = false) extends Key {
     val partition = -1
     val source = 0
-    def sequenceNumber = if (upper) 1L else 0L
+    val sequenceNumber = if (upper) 1L else 0L
 
     def withPartition(p: Int) =
       throw new UnsupportedOperationException("withPartition on PartitionCountKey")

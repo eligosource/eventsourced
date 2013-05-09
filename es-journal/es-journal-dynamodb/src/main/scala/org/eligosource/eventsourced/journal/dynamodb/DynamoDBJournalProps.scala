@@ -31,7 +31,7 @@ case class DynamoDBJournalProps(journalTable: String, eventSourcedApp: String,
                                 key: String, secret: String,
                                 operationTimeout: Timeout = Timeout(10 seconds),
                                 replayOperationTimeout: Timeout = Timeout(1 minute),
-                                asyncWriterCount: Int = 16, counterShards:Int=10000,
+                                counterShards:Int=10000,
                                 system: ActorSystem, factory: Option[ActorRefFactory] = None,
                                 dynamoEndpoint:String = "dynamodb.us-east-1.amazonaws.com",
                                 val name: Option[String] = None, val dispatcherName: Option[String] = None) extends JournalProps {

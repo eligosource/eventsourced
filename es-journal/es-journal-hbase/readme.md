@@ -71,3 +71,17 @@ For storing event messages to a real HBase cluster, a table must be initially cr
     }
 
 This creates an event message table with the name `event` that is pre-split into 16 regions. The journal actor will evenly distribute (partition) event messages across regions.
+
+Snapshots
+---------
+
+The HBase journal uses a Hadoop [`FileSystem`](http://hadoop.apache.org/docs/r1.1.2/api/org/apache/hadoop/fs/FileSystem.html) instance for saving snapshots. By default, snapshots are saved to the local filesystem. Applications may also provide other `FileSystem` instances (e.g. for saving snapshots to HDFS), as shown in the following example:
+
+    ...
+    import org.apache.hadoop.fs.FileSystem
+
+    ...
+    val hdfs: FileSystem = FileSystem.get(...)
+    val journal: ActorRef = Journal(HBaseJournalProps(..., snapshotFilesystem = hdfs))
+
+Find out more in the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) API docs.
