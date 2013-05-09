@@ -35,9 +35,9 @@ Add the required depedencies to your project's `build.sbt` file:
 
     resolvers += "Eligosource Snapshots" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-snapshots"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.6-SNAPSHOT"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-hbase" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-hbase" % "0.6-SNAPSHOT"
 
 Initialize the HBase journal in your application:
 

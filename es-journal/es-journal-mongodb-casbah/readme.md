@@ -27,9 +27,9 @@ First, download, install and start a standalone mongoDB instance by following th
 
     resolvers += "Eligosource Snapshots" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-snapshots"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.6-SNAPSHOT"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-casbah" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-casbah" % "0.6-SNAPSHOT"
 
 ### Mongodb Casbah Based Journal Initialization
 
