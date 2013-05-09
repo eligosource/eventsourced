@@ -1,8 +1,8 @@
 # MongoDB Casbah Journal
 
-[Eventsourced](https://github.com/eligosource/eventsourced) applications can create a [mongoDB](http://www.mongodb.org/) Casbah backed journal.
+[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.0) applications can create a [mongoDB](http://www.mongodb.org/) Casbah backed journal.
 
-- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
+- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
 
 ## Properties
 
@@ -25,11 +25,11 @@ This section shows how to initialize a journal that connects to a local, standal
 
 First, download, install and start a standalone mongoDB instance by following the instructions in the mongoDB [Installing MongoDB](http://docs.mongodb.org/manual/installation/). Then add the required dependencies to your project's `build.sbt` file:
 
-    resolvers += "Eligosource Snapshots" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-snapshots"
+    resolvers += "Eligosource Releases" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.0"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-casbah" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-casbah" % "0.5.0"
 
 ### Mongodb Casbah Based Journal Initialization
 

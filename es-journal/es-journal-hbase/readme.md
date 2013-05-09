@@ -1,7 +1,7 @@
 HBase Journal
 =============
 
-[Eventsourced](https://github.com/eligosource/eventsourced) applications create an [HBase](http://hbase.apache.org) backed journal using the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) configuration object.
+[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.0) applications create an [HBase](http://hbase.apache.org) backed journal using the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) configuration object.
 
 Properties
 ----------
@@ -33,11 +33,11 @@ First, download, install and start a standalone HBase instance by following the 
 
 Add the required depedencies to your project's `build.sbt` file:
 
-    resolvers += "Eligosource Snapshots" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-snapshots"
+    resolvers += "Eligosource Releases" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.0"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-hbase" % "0.5-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-hbase" % "0.5.0"
 
 Initialize the HBase journal in your application:
 
@@ -58,7 +58,7 @@ Initialize the HBase journal in your application:
 Cluster setup
 -------------
 
-For storing event messages to a real HBase cluster, a table must be initially created with the [CreateTable](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.CreateTable$) utility as shown in the following example:
+For storing event messages to a real HBase cluster, a table must be initially created with the [CreateTable](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.hbase.CreateTable$) utility as shown in the following example:
 
     import org.eligosource.eventsourced.journal.hbase.CreateTable
 
@@ -84,4 +84,4 @@ The HBase journal uses a Hadoop [`FileSystem`](http://hadoop.apache.org/docs/r1.
     val hdfs: FileSystem = FileSystem.get(...)
     val journal: ActorRef = Journal(HBaseJournalProps(..., snapshotFilesystem = hdfs))
 
-Find out more in the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) API docs.
+Find out more in the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) API docs.
