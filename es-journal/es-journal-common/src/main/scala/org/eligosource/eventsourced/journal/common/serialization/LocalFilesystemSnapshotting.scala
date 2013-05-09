@@ -29,18 +29,12 @@ import akka.util._
 
 import org.eligosource.eventsourced.core._
 
-private [journal] trait FilesystemSnapshotting { outer: Actor =>
+private [journal] trait LocalFilesystemSnapshotting { outer: Actor =>
   private val FilenamePattern = """^snapshot-(\d+)-(\d+)-(\d+)""".r
   private var snapshotMetadata = Map.empty[Int, SortedSet[SnapshotMetadata]]
 
-  implicit val snapshotMetadataOrdering = new Ordering[SnapshotMetadata] {
-    def compare(x: SnapshotMetadata, y: SnapshotMetadata) =
-      if (x.processorId == y.processorId) math.signum(x.sequenceNr - y.sequenceNr).toInt
-      else x.processorId - y.processorId
-  }
-
   lazy val snapshotSerialization = new SnapshotSerialization {
-    val snapshotAccess = new FilesystemStateAccess(snapshotDir)
+    val snapshotAccess = new LocalFilesystemSnapshotAccess(snapshotDir)
     val snapshotSerializer = outer.snapshotSerializer
   }
 
@@ -67,7 +61,7 @@ private [journal] trait FilesystemSnapshotting { outer: Actor =>
   }
 
   def saveSnapshot(snapshot: Snapshot): Future[SnapshotSaved] = {
-    val snapshotter = context.actorOf(Props(new FilesystemSnapshotter)
+    val snapshotter = context.actorOf(Props(new Snapshotter)
       .withDispatcher("eventsourced.journal.snapshot-dispatcher"))
     snapshotter.ask(snapshot)(Timeout(snapshotSaveTimeout)).mapTo[SnapshotSaved]
   }
@@ -89,7 +83,7 @@ private [journal] trait FilesystemSnapshotting { outer: Actor =>
     snapshotMetadata = SortedSet.empty[SnapshotMetadata] ++ metadata groupBy(_.processorId)
   }
 
-  private class FilesystemSnapshotter extends Actor {
+  private class Snapshotter extends Actor {
     def receive = {
       case s: Snapshot => {
         Try(snapshotSerialization.serializeSnapshot(s)) match {
@@ -102,7 +96,7 @@ private [journal] trait FilesystemSnapshotting { outer: Actor =>
   }
 }
 
-private [journal] class FilesystemStateAccess(snapshotDir: File) extends SnapshotAccess {
+private [journal] class LocalFilesystemSnapshotAccess(snapshotDir: File) extends SnapshotAccess {
   def withOutputStream(metadata: SnapshotMetadata)(p: (OutputStream) => Unit) =
     withStream(new FileOutputStream(snapshotFile(metadata)), p)
 

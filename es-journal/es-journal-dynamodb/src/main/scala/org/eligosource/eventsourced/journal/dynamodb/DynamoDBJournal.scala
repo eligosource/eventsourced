@@ -65,11 +65,9 @@ private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends As
 
   val dynamo = new DynamoDBClient(props.clientProps)
 
-  def asyncWriteTimeout: FiniteDuration = props.operationTimeout.duration
+  def snapshotter = ???
 
-  def asyncWriterCount: Int = props.asyncWriterCount
-
-  def writer(id: Int) = new DynamoWriter
+  def writer = new DynamoWriter
 
   def replayer = new DynamoReplayer
 
@@ -359,11 +357,11 @@ private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends As
 
     implicit val timeout = props.replayOperationTimeout
 
-    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sender: ActorRef, replayTo: Long) = {
+    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sender: ActorRef) = {
       val replayOps = cmds.map {
         cmd =>
           val from = cmd.fromSequenceNr
-          val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
+          val msgs = (cmd.toSequenceNr - cmd.fromSequenceNr).toInt + 1
           log.debug(s"replayingIn from ${from} for up to ${msgs}")
           val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p(_, cmd.target))))
           Future.sequence(replayer ? ReplayDone :: replayIn(from, msgs, cmd.processorId, replayer).toList)
@@ -371,17 +369,17 @@ private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends As
       Future.sequence(replayOps)
     }
 
-    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) = {
+    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sender: ActorRef) = {
       val from = cmd.fromSequenceNr
-      val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
+      val msgs = (cmd.toSequenceNr - cmd.fromSequenceNr).toInt + 1
       log.debug(s"replayingIn from ${from} for up to ${msgs}")
       val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
       Future.sequence(replayer ? ReplayDone ::replayIn(from, msgs, cmd.processorId, replayer).toList)
     }
 
-    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef, replayTo: Long) = {
+    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef) = {
       val from = cmd.fromSequenceNr
-      val msgs = (replayTo - cmd.fromSequenceNr).toInt + 1
+      val msgs = (cmd.toSequenceNr - cmd.fromSequenceNr).toInt + 1
       log.debug(s"replayingOut from ${from} for up to ${msgs}")
       val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
       Future.sequence(replayer ? ReplayDone ::replayOut(from, msgs, cmd.channelId, replayer).toList)

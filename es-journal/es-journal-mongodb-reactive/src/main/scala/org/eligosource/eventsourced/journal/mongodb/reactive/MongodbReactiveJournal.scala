@@ -40,8 +40,8 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
 
   import context.dispatcher
 
-  implicit val reader = ReactiveMessage.ReactiveMessageReader
-  implicit val writer = ReactiveMessage.ReactiveMessageWriter
+  implicit val rmReader = ReactiveMessage.ReactiveMessageReader
+  implicit val rmWriter = ReactiveMessage.ReactiveMessageWriter
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
 
@@ -52,10 +52,10 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   var collection: Collection = _
 
   def journalProps = props
-  def asyncWriteTimeout = props.writeTimeout
-  def asyncWriterCount = props.writerCount
 
-  def writer(id: Int) = new Writer {
+  def snapshotter = ???
+
+  def writer = new Writer {
 
     def executeWriteInMsg(cmd: WriteInMsg): Future[Any] = {
       val rm = ReactiveMessage(key = Key(cmd.processorId, sequenceNr = cmd.message.sequenceNr), msgAsBytes = msgToBytes(cmd.message.clearConfirmationSettings))
@@ -91,23 +91,23 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
 
   def replayer = new Replayer {
 
-    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
+    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef): Future[Any] = {
       Future.sequence[Any, Seq](cmds.map(cmd => replay(
         Key(cmd.processorId, sequenceNr = cmd.fromSequenceNr),
-        Key(cmd.processorId, sequenceNr = toSequenceNr),
+        Key(cmd.processorId, sequenceNr = cmd.toSequenceNr),
         msg => p(msg, cmd.target))))
     }
 
-    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
+    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef): Future[Any] = {
       replay(
         Key(cmd.processorId, sequenceNr = cmd.fromSequenceNr),
-        Key(cmd.processorId, sequenceNr = toSequenceNr), p)
+        Key(cmd.processorId, sequenceNr = cmd.toSequenceNr), p)
     }
 
-    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
+    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef): Future[Any] = {
       replay(
         Key(initiatingChannelId = cmd.channelId, sequenceNr = cmd.fromSequenceNr),
-        Key(initiatingChannelId = cmd.channelId, sequenceNr = toSequenceNr), p)
+        Key(initiatingChannelId = cmd.channelId, sequenceNr = cmd.toSequenceNr), p)
     }
 
     def replay(startKey: Key, stopKey: Key, p: (Message) => Unit): Future[Any] = {

@@ -801,7 +801,14 @@ The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/
 Snapshots
 ---------
 
-Snapshots represent processor state at a certain point in time and can dramatically reduce [recovery](#recovery) times. Snapshot capturing and saving is triggered by applications. Saving is done in a journal-specific way. At the moment, only the [LevelDB journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps), [Journal.IO journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps) and the [In-memory journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps) support snapshotting. The remaining [journals](#journals) will follow soon. Snapshot capturing and saving does not delete entries from the event message history unless explicitly requested by an application.
+Snapshots represent processor state at a certain point in time and can dramatically reduce [recovery](#recovery) times. Snapshot capturing and saving is triggered by applications. Saving is done in a journal-specific way. At the moment, the following journals support snapshotting:
+
+- [HBase journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps): saves snapshots to a configurable Hadoop [`FileSystem`](http://hadoop.apache.org/docs/r1.1.2/api/org/apache/hadoop/fs/FileSystem.html). By default the local filesystem is used. Production deployments should use another filesystem (HDFS, for example).
+- [LevelDB journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps): saves snapshots to the local filesystem.
+- [Journal.IO journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps): saves snapshots to the local filesystem.
+- [In-memory journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps): keeps snapshots in-memory only.
+
+Snapshot capturing and saving does not delete entries from the event message history unless explicitly requested by an application.
 
 Applications can create snapshots by sending a processor the [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest$) message.
 

@@ -18,11 +18,11 @@ package org.eligosource.eventsourced.journal.hbase
 import org.apache.hadoop.hbase._
 import org.apache.hadoop.hbase.client._
 
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
-import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
+import org.eligosource.eventsourced.journal.common.{PersistentReplaySpec, PersistentJournalSpec}
 
-class HBaseJournalSpec extends PersistentJournalSpec with HBaseCleanup with BeforeAndAfterEach with BeforeAndAfterAll {
+trait HBaseSpec extends HBaseCleanup with BeforeAndAfterEach with BeforeAndAfterAll { self: Suite =>
   var port: Int = 0
   var util: HBaseTestingUtility = _
   var admin: HBaseAdmin = _
@@ -31,8 +31,8 @@ class HBaseJournalSpec extends PersistentJournalSpec with HBaseCleanup with Befo
   def zookeeperQuorum = "localhost:%d" format port
   def journalProps = {
     HBaseJournalProps(zookeeperQuorum)
-      .withWriterCount(4)
       .withReplayChunkSize(8)
+      .withSnapshotFilesystem(util.getTestFileSystem)
   }
 
   override def afterEach() {
@@ -54,3 +54,6 @@ class HBaseJournalSpec extends PersistentJournalSpec with HBaseCleanup with Befo
     util.cleanupTestDir()
   } catch { case _: Throwable => /* ignore */ }
 }
+
+class HBaseJournalSpec extends PersistentJournalSpec with HBaseSpec
+class HBaseReplaySpec extends PersistentReplaySpec with HBaseSpec

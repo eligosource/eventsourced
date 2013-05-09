@@ -33,7 +33,7 @@ import org.eligosource.eventsourced.journal.common.util._
 /**
  * HBase journal with asynchronous, non-blocking IO and concurrent reads/writes.
  */
-private [hbase] class HBaseJournal(props: HBaseJournalProps) extends AsynchronousWriteReplaySupport {
+private [hbase] class HBaseJournal(val props: HBaseJournalProps) extends AsynchronousWriteReplaySupport with HBaseSnapshotting { outer =>
   import context.dispatcher
 
   val serialization = MessageSerialization(context.system)
@@ -43,12 +43,20 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
   var partitionCount: Int = _
 
   def journalProps = props
-  def asyncWriteTimeout = props.writeTimeout
-  def asyncWriterCount = props.writerCount
   def partition(snr: Long) = snr % partitionCount toInt
 
+  def snapshotter = new Snapshotter {
+    def loadSnapshot(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) =
+      outer.loadSnapshot(processorId, snapshotFilter)
 
-  def writer(id: Int) = new Writer {
+    def saveSnapshot(snapshot: Snapshot) =
+      outer.saveSnapshot(snapshot)
+
+    def snapshotSaved(metadata: SnapshotMetadata) =
+      outer.snapshotSaved(metadata)
+  }
+
+  def writer = new Writer {
     def executeWriteInMsg(cmd: WriteInMsg): Future[Any] = {
       val snr = cmd.message.sequenceNr
       val prt = partition(snr)
@@ -81,13 +89,28 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
     }
 
     def executeWriteMsg(prt: Int, snr: Long, key: Array[Byte], msg: Array[Byte]): Future[Any] = {
+      // EXPERIMENTAL
+      //
+      // - write lower counter limit every 256 messages (per partition)
+      // - needed for efficient counter value recovery during journal start
+      //
+      val lmt = 256
+      //
+      // - TODO: make configurable
+      //
+
       val putMsg = new PutRequest(tableNameBytes, key, ColumnFamilyNameBytes, MsgColumnNameBytes, msg)
-      val putCtr = new PutRequest(tableNameBytes, CounterKey(prt, id).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
+      val putCtr = new PutRequest(tableNameBytes, CounterKey(prt, snr).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
       val putMsgFuture: Future[Any] = client.put(putMsg)
       val putCtrFuture: Future[Any] = client.put(putCtr)
+      val putLmtFuture: Future[Any] = if ((snr >= lmt) && (snr - prt) % lmt == 0) {
+        val putLmt = new PutRequest(tableNameBytes, CounterKey(prt, 0L).toBytes, ColumnFamilyNameBytes, SequenceNrColumnNameBytes, longToBytes(snr))
+        client.put(putLmt)
+      } else putCtrFuture
       for {
         _ <- putMsgFuture
-        a <- putCtrFuture
+        _ <- putCtrFuture
+        a <- putLmtFuture
       } yield a
     }
 
@@ -109,22 +132,22 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
   }
 
   def replayer = new Replayer {
-    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
+    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef): Future[Any] = {
       Future.sequence[Any, Seq](cmds.map(cmd => scan(
         InMsgKey(-1, cmd.processorId, cmd.fromSequenceNr),
-        InMsgKey(-1, cmd.processorId, toSequenceNr), msg => p(msg, cmd.target))))
+        InMsgKey(-1, cmd.processorId, cmd.toSequenceNr), msg => p(msg, cmd.target))))
     }
 
-    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
+    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef): Future[Any] = {
       scan(
         InMsgKey(-1, cmd.processorId, cmd.fromSequenceNr),
-        InMsgKey(-1, cmd.processorId, toSequenceNr), p)
+        InMsgKey(-1, cmd.processorId, cmd.toSequenceNr), p)
     }
 
-    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any] = {
+    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef): Future[Any] = {
       scan(
         OutMsgKey(-1, cmd.channelId, cmd.fromSequenceNr),
-        OutMsgKey(-1, cmd.channelId, toSequenceNr), p)
+        OutMsgKey(-1, cmd.channelId, cmd.toSequenceNr), p)
     }
 
     def scan(startKey: Key, stopKey: Key, p: (Message) => Unit): Future[Any] = {
@@ -204,20 +227,20 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
   }
 
   def storedCounter = {
-    def storedCounter(partition: Int): Future[Long] = {
+    def storedCounterP(partition: Int, start: Long, stop: Long): Future[Long] = {
       val scanner = client.newScanner(tableNameBytes)
 
       scanner.setFamily(ColumnFamilyNameBytes)
       scanner.setQualifier(SequenceNrColumnNameBytes)
-      scanner.setStartKey(CounterKey(partition, 0).toBytes)
-      scanner.setStopKey(CounterKey(partition, Int.MaxValue).toBytes)
+      scanner.setStartKey(CounterKey(partition, start).toBytes)
+      scanner.setStopKey(CounterKey(partition, stop).toBytes)
 
       def go(): Future[Long] = {
         deferredToFuture(scanner.nextRows()).flatMap { rows =>
           rows match {
             case null => {
               scanner.close()
-              Future.successful(0L)
+              Future.successful(start)
             }
             case _ => {
               val vals = for {
@@ -232,10 +255,20 @@ private [hbase] class HBaseJournal(props: HBaseJournalProps) extends Asynchronou
       go()
     }
 
-    Await.result(Future.sequence(0 until partitionCount map(storedCounter)).map(_.max), props.initTimeout)
+    def storedCounter(start: Long, stop: Long): Future[Long] =
+      Future.sequence(0 until partitionCount map(storedCounterP(_, start, stop))).map(_.max)
+
+    val max = for {
+      lower <- storedCounter(0L, 1L)
+      upper <- storedCounter(lower, Long.MaxValue)
+    } yield upper
+
+    Await.result(max, props.initTimeout)
   }
 
   override def start() {
+    initSnapshotting()
+
     client = new HBaseClient(props.zookeeperQuorum)
 
     val invalid = -1

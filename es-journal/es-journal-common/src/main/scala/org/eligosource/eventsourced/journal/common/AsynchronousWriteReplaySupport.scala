@@ -16,14 +16,12 @@
 package org.eligosource.eventsourced.journal.common
 
 import scala.concurrent._
-import scala.concurrent.duration._
 import scala.util._
 
 import akka.actor._
-import akka.pattern.{ask, pipe}
-import akka.util.Timeout
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.Journal.{BatchReplayInMsgs, ReplayInMsgs, ReplayOutMsgs, RequestSnapshot}
 
 trait AsynchronousWriteReplaySupport extends Actor {
   import AsynchronousWriteReplaySupport._
@@ -32,87 +30,100 @@ trait AsynchronousWriteReplaySupport extends Actor {
 
   private val deadLetters = context.system.deadLetters
 
-  var resequencer: ActorRef = _
-  var writers: Seq[ActorRef] = _
+  private lazy val w = writer
+  private lazy val r = replayer
+  private lazy val s = snapshotter
 
-  var _counter = 0L
-  var _counterResequencer = 1L
+  private var _counter = 0L
+  private var _counterResequencer = 1L
+  private var _resequencer: ActorRef = _
+
+  private def counter = _counter
+  private def counterResequencer = _counterResequencer
+
+  protected def writer: Writer
+  protected def replayer: Replayer
+  protected def snapshotter: Snapshotter
 
   def journalProps: JournalProps
 
-  val asyncWriteTimeoutObj = Timeout(asyncWriteTimeout)
-  def asyncWriteTimeout: FiniteDuration
-  def asyncWriterCount: Int
-
-  def counter = _counter
-  def counterResequencer = _counterResequencer
-
-  def writer(id: Int): Writer
-  def replayer: Replayer
-
   import context.dispatcher
 
-  def asyncWriteAndResequence(cmd: Any) {
+  def asyncWriteAndResequence[A](cmd: A, handler: A => Future[Any]) {
     val ctr = counterResequencer
     val sdr = sender
-    val idx = counter % asyncWriterCount
-    val write = writers(idx.toInt).ask(cmd)(asyncWriteTimeoutObj)
-    write onSuccess { case _ => resequencer tell ((ctr, cmd), sdr) }
-    write onFailure { case t => resequencer tell ((ctr, WriteFailed(cmd, t)), sdr) }
+    val write = handler(cmd)
+    write onSuccess { case _ => _resequencer tell ((ctr, cmd), sdr) }
+    write onFailure { case t => _resequencer tell ((ctr, WriteFailed(cmd, t)), sdr) }
     _counterResequencer += 1L
   }
 
   def asyncResequence(cmd: Any, inc: Long = 1L) {
-    resequencer forward (counterResequencer, cmd)
+    _resequencer forward (counterResequencer, cmd)
     _counterResequencer += inc
   }
 
   def receive = {
     case cmd: WriteInMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else { _counter = cmd.message.sequenceNr; cmd }
-      asyncWriteAndResequence(c.withTimestamp)
+      asyncWriteAndResequence(c.withTimestamp, w.executeWriteInMsg)
       _counter += 1L
     }
     case cmd: WriteOutMsg => {
       val c = if(cmd.genSequenceNr) cmd.withSequenceNr(counter) else { _counter = cmd.message.sequenceNr; cmd }
-      asyncWriteAndResequence(c)
+      asyncWriteAndResequence(c, w.executeWriteOutMsg)
       _counter += 1L
     }
     case cmd: WriteAck => {
-      asyncWriteAndResequence(cmd)
+      asyncWriteAndResequence(cmd, w.executeWriteAck)
     }
     case cmd: DeleteOutMsg => {
-      asyncWriteAndResequence(cmd)
+      asyncWriteAndResequence(cmd, w.executeDeleteOutMsg)
     }
     case cmd: Loop => {
       asyncResequence(cmd)
     }
     case cmd: BatchReplayInMsgs => {
-      asyncResequence(IsolatedReplay(cmd, counter - 1L), 2L)
+      asyncResequence(toSequenceNrLimit(cmd, counter - 1L), 2L)
     }
     case cmd: ReplayInMsgs => {
-      asyncResequence(IsolatedReplay(cmd, counter - 1L), 2L)
+      asyncResequence(toSequenceNrLimit(cmd, counter - 1L), 2L)
     }
     case cmd: ReplayOutMsgs => {
-      asyncResequence(IsolatedReplay(cmd, counter - 1L), 2L)
+      asyncResequence(toSequenceNrLimit(cmd, counter - 1L), 2L)
     }
     case cmd: BatchDeliverOutMsgs => {
       asyncResequence(cmd)
     }
+    case cmd: RequestSnapshot => {
+      asyncResequence(InternalRequestSnapshot(cmd, counter - 1L, self))
+    }
+    case SaveSnapshotDone(metadata, initiator) => {
+      s.snapshotSaved(metadata)
+      initiator ! metadata
+    }
+    case SaveSnapshotFailed(cause, initiator) => {
+      initiator ! Status.Failure(cause)
+    }
+    case SaveSnapshot(snapshot) => {
+      val initiator = sender
+      s.saveSnapshot(snapshot.withTimestamp) onComplete {
+        case Success(s) => self ! SaveSnapshotDone(s, initiator)
+        case Failure(e) => self ! SaveSnapshotFailed(e, initiator)
+      }
+    }
+    case InternalLoadSnapshot(processorId, snapshotFilter, promise) => {
+      promise.completeWith(s.loadSnapshot(processorId, snapshotFilter))
+    }
     case cmd: SetCommandListener => {
-      resequencer ! cmd
+      _resequencer ! cmd
     }
   }
 
   override def preStart() {
     start()
-    _counter =
-      storedCounter + 1L
-    resequencer =
-      actor(new ResequencerActor(counter, replayer), dispatcherName = journalProps.dispatcherName)
-    writers = (0 until asyncWriterCount).map(id =>
-      actor(new WriterActor(writer(id)), dispatcherName = journalProps.dispatcherName)
-    ).toVector
+    _counter = storedCounter + 1L
+    _resequencer = actor(new Resequencer(counter, r), dispatcherName = journalProps.dispatcherName)
   }
 
   override def postStop() {
@@ -132,25 +143,18 @@ trait AsynchronousWriteReplaySupport extends Actor {
   }
 
   trait Replayer {
-    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any]
-    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any]
-    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef, toSequenceNr: Long): Future[Any]
+    def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit, sdr: ActorRef): Future[Any]
+    def executeReplayInMsgs(cmd: ReplayInMsgs, p: (Message) => Unit, sdr: ActorRef): Future[Any]
+    def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sdr: ActorRef): Future[Any]
   }
 
-  class WriterActor(writer: Writer) extends Actor {
-    def receive = {
-      case cmd: WriteInMsg   => writer.executeWriteInMsg(cmd) pipeTo sender
-      case cmd: WriteOutMsg  => writer.executeWriteOutMsg(cmd) pipeTo sender
-      case cmd: WriteAck     => writer.executeWriteAck(cmd) pipeTo sender
-      case cmd: DeleteOutMsg => writer.executeDeleteOutMsg(cmd) pipeTo sender
-    }
-
-    override def preRestart(reason: Throwable, message: Option[Any]) {
-      sender ! Status.Failure(reason)
-    }
+  trait Snapshotter {
+    def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Future[Option[Snapshot]]
+    def saveSnapshot(snapshot: Snapshot): Future[SnapshotSaved]
+    def snapshotSaved(metadata: SnapshotMetadata)
   }
 
-  class ResequencerActor(initialCounter: Long, replayer: Replayer) extends Actor {
+  class Resequencer(initialCounter: Long, replayer: Replayer) extends Actor {
     import scala.collection.mutable.Map
 
     private val delayed = Map.empty[Long, (Any, ActorRef)]
@@ -180,20 +184,30 @@ trait AsynchronousWriteReplaySupport extends Actor {
       case Loop(msg, target) => {
         target tell (Looped(msg), sdr)
       }
-      case IsolatedReplay(cmd @ BatchReplayInMsgs(replays), toSequenceNr) => {
-        replayer.executeBatchReplayInMsgs(replays, (msg, target) => target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
+      case cmd @ BatchReplayInMsgs(replays) => {
+        val ftr = for {
+          cs <- Future.sequence(replays.map(offerSnapshot(_)))
+          r  <- replayer.executeBatchReplayInMsgs(cs, (msg, target) => target tell (Written(msg), deadLetters), sdr)
+        } yield r
+
+        ftr onComplete {
           case Success(_) => { self ! (seqnr + 1L, ReplayDone); sdr ! ReplayDone }
           case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)) }
         }
       }
-      case IsolatedReplay(cmd: ReplayInMsgs, toSequenceNr) => {
-        replayer.executeReplayInMsgs(cmd, msg => cmd.target tell (Written(msg), deadLetters), sdr, toSequenceNr) onComplete {
+      case cmd: ReplayInMsgs => {
+        val ftr = for {
+          c <- offerSnapshot(cmd)
+          r <- replayer.executeReplayInMsgs(c, msg => c.target tell (Written(msg), deadLetters), sdr)
+        } yield r
+
+        ftr onComplete {
           case Success(_) => { self ! (seqnr + 1L, ReplayDone); sdr ! ReplayDone }
           case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)) }
         }
       }
-      case IsolatedReplay(cmd: ReplayOutMsgs, toSequenceNr) => {
-        replayer.executeReplayOutMsgs(cmd, util.resetTempPath(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)), sdr, toSequenceNr) onComplete {
+      case cmd: ReplayOutMsgs => {
+        replayer.executeReplayOutMsgs(cmd, util.resetTempPath(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)), sdr) onComplete {
           case Success(_) => self ! (seqnr + 1L, ReplayDone)
           case Failure(e) => self ! (seqnr + 1L, ReplayFailed(cmd, e))
         }
@@ -201,6 +215,9 @@ trait AsynchronousWriteReplaySupport extends Actor {
       case BatchDeliverOutMsgs(channels) => {
         channels.foreach(_ ! Deliver)
         sdr ! DeliveryDone
+      }
+      case InternalRequestSnapshot(RequestSnapshot(processorId, target), lastSequenceNr, journal) => {
+        target.tell(SnapshotRequest(processorId, lastSequenceNr, sdr), journal)
       }
       case ReplayDone => {
         // nothing to do ...
@@ -211,6 +228,24 @@ trait AsynchronousWriteReplaySupport extends Actor {
       case e: WriteFailed => {
         context.system.eventStream.publish(e)
       }
+    }
+
+    private def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Future[Option[Snapshot]] = {
+      val promise = Promise[Option[Snapshot]]
+      context.parent ! InternalLoadSnapshot(processorId, snapshotFilter, promise)
+      promise.future
+    }
+
+    private def offerSnapshot(cmd: ReplayInMsgs): Future[ReplayInMsgs] = {
+      if (cmd.params.snapshot) loadSnapshot(cmd.processorId, cmd.params.snapshotFilter).map { snapshotOption =>
+          snapshotOption match {
+          case None    => cmd
+          case Some(s) => {
+            cmd.target ! SnapshotOffer(s)
+            ReplayInMsgs(ReplayParams(cmd.processorId, s.sequenceNr + 1L, cmd.toSequenceNr), cmd.target)
+          }
+        }
+      } else Future.successful(cmd)
     }
 
     @scala.annotation.tailrec
@@ -227,8 +262,19 @@ trait AsynchronousWriteReplaySupport extends Actor {
   }
 }
 
-object AsynchronousWriteReplaySupport {
+private [journal] object AsynchronousWriteReplaySupport {
   case class WriteFailed(cmd: Any, cause: Throwable)
   case class ReplayFailed(replayCmd: Any, cause: Throwable)
-  case class IsolatedReplay(replayCmd: Any, toSequencerNr: Long)
+
+  case class InternalRequestSnapshot(cmd: RequestSnapshot, lastSequenceNr: Long, journal: ActorRef)
+  case class InternalLoadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean, promise: Promise[Option[Snapshot]])
+
+  def toSequenceNrLimit(cmd: ReplayOutMsgs, limit: Long): ReplayOutMsgs =
+    if (cmd.toSequenceNr > limit) cmd.copy(toSequenceNr = limit) else cmd
+
+  def toSequenceNrLimit(cmd: ReplayInMsgs, limit: Long): ReplayInMsgs =
+    if (cmd.params.toSequenceNr > limit) cmd.copy(params = cmd.params.withToSequenceNr(limit)) else cmd
+
+  def toSequenceNrLimit(cmd: BatchReplayInMsgs, limit: Long): BatchReplayInMsgs =
+    cmd.copy(replays = cmd.replays.map(toSequenceNrLimit(_, limit)))
 }

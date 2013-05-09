@@ -18,9 +18,9 @@ package org.eligosource.eventsourced.journal.leveldb
 import org.apache.commons.io.FileUtils
 import org.scalatest.BeforeAndAfterEach
 
-import org.eligosource.eventsourced.journal.common.ReplaySpec
+import org.eligosource.eventsourced.journal.common.PersistentReplaySpec
 
-class LeveldbReplayPSSpec extends ReplaySpec with BeforeAndAfterEach {
+class LeveldbReplayPSSpec extends PersistentReplaySpec with BeforeAndAfterEach {
   def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir)
 
   override def afterEach() {
@@ -28,7 +28,7 @@ class LeveldbReplayPSSpec extends ReplaySpec with BeforeAndAfterEach {
   }
 }
 
-class LeveldbReplaySSSpec extends ReplaySpec with BeforeAndAfterEach {
+class LeveldbReplaySSSpec extends PersistentReplaySpec with BeforeAndAfterEach {
   def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withSequenceStructure
 
   override def afterEach() {
