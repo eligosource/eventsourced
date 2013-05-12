@@ -196,11 +196,11 @@ This section guides through the minimum steps required to create, use and recove
     > project eventsourced-examples
     > run-nobootcp org.eligosource.eventsourced.guide.FirstSteps
 
-Details about the `run-nobootcp` task are described [here](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). It is needed to run a [`native LevelDB`](https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb) instance. There's also an option to use a [LevelDB Java port](https://github.com/eligosource/eventsourced/wiki/Installation#leveldb-java-port) that allows running the example with
+Details about the `run-nobootcp` task are described [here](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). It is needed to run a [native LevelDB](https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb) instance. There's also an option to use a [LevelDB Java port](https://github.com/eligosource/eventsourced/wiki/Installation#leveldb-java-port) that allows running the example with
 
     > run-main org.eligosource.eventsourced.guide.FirstSteps
 
-The example in this section and most of the other examples in this user guide run a native LevelDB instance. The legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
+The example in this section and most of the other examples in this user guide use a native LevelDB instance. The legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
 
 ### Step 1: `EventsourcingExtension` initialization
 

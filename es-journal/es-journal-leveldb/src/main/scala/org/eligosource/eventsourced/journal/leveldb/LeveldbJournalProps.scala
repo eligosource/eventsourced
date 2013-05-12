@@ -26,7 +26,7 @@ import org.eligosource.eventsourced.journal.common.serialization.SnapshotSeriali
 
 /**
  * Configuration object for a [[http://code.google.com/p/leveldb/ LevelDB]] based journal.
- * Applications may also chose to use a [[https://github.com/dain/leveldb Java port]] of
+ * Applications may also choose to use a [[https://github.com/dain/leveldb Java port]] of
  * LevelDB that doesn't run native code (see `native` field). This journal comes with
  * different optimizations to choose from, as described at the methods
  *
