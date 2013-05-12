@@ -25,8 +25,10 @@ import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
 
 /**
- * Configuration object for a [[http://code.google.com/p/leveldb/ LevelDB]] based journal. This
- * journal comes with different optimizations to choose from, as described at the methods
+ * Configuration object for a [[http://code.google.com/p/leveldb/ LevelDB]] based journal.
+ * Applications may also chose to use a [[https://github.com/dain/leveldb Java port]] of
+ * LevelDB that doesn't run native code (see `native` field). This journal comes with
+ * different optimizations to choose from, as described at the methods
  *
  *  - `withProcessorStructure`
  *  - `withSequenceStructure`
@@ -52,6 +54,9 @@ import org.eligosource.eventsourced.journal.common.serialization.SnapshotSeriali
  * @param dispatcherName Optional journal actor dispatcher name.
  * @param fsync `true` if every write is physically synced. Default is `false`.
  * @param checksum `true` if checksums are verified on read. Default is `false`.
+ * @param native `true` if the [[http://code.google.com/p/leveldb/ native LevelDB]]
+ *        should be used (default), `false` for using a
+ *        [[https://github.com/dain/leveldb Java port]].
  * @param processorStructured `true` if entries are primarily ordered by processor
  *        id, `false` if entries are ordered by sequence number.  Default is `true`.
  * @param snapshotDir Directory where the journal will store snapshots. A relative
@@ -65,6 +70,7 @@ case class LeveldbJournalProps(
   dispatcherName: Option[String] = None,
   fsync: Boolean = false,
   checksum: Boolean = false,
+  native: Boolean = true,
   processorStructured: Boolean = true,
   snapshotDir: File = new File("snapshots"),
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
@@ -100,6 +106,12 @@ case class LeveldbJournalProps(
    */
   def withChecksum(checksum: Boolean) =
     copy(checksum = checksum)
+
+  /**
+   * Returns a new `LeveldbJournalProps` with specified native setting.
+   */
+  def withNative(native: Boolean) =
+    copy(native = native)
 
   /**
    * Returns a new `LeveldbJournalProps` with `processorStructured` set to `true` and

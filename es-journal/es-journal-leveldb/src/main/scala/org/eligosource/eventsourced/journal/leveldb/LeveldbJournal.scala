@@ -19,7 +19,30 @@ import java.io.File
 
 import akka.actor._
 
-import org.eligosource.eventsourced.core.Journal
+import org.iq80.leveldb._
+
+import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.common.serialization.CommandSerialization
+
+trait LeveldbJournal { this: Actor =>
+  def props: LeveldbJournalProps
+
+  val levelDbReadOptions = new ReadOptions().verifyChecksums(props.checksum)
+  val levelDbWriteOptions = new WriteOptions().sync(props.fsync)
+  val leveldb = factory.open(props.dir, leveldbOptions)
+
+  val serialization = CommandSerialization(context.system)
+
+  def factory = {
+    if (props.native) org.fusesource.leveldbjni.JniDBFactory.factory
+    else org.iq80.leveldb.impl.Iq80DBFactory.factory
+  }
+
+  def leveldbOptions = {
+    val options = new Options().createIfMissing(true)
+    if (props.native) options else options.compressionType(CompressionType.NONE)
+  }
+}
 
 /**
  * @see [[org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps]]

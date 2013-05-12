@@ -19,7 +19,6 @@ import java.nio.ByteBuffer
 
 import akka.actor._
 
-import org.fusesource.leveldbjni.JniDBFactory._
 import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
@@ -41,15 +40,12 @@ import org.eligosource.eventsourced.journal.common.util._
  *
  *  - deletion of old entries requires full scan
  */
-private [eventsourced] class LeveldbJournalPS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport with LeveldbSnapshotting {
+private [eventsourced] class LeveldbJournalPS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport
+    with LeveldbJournal
+    with LeveldbSnapshotting {
+
   import LeveldbJournalPS._
   import Journal._
-
-  val levelDbReadOptions = new ReadOptions().verifyChecksums(props.checksum)
-  val levelDbWriteOptions = new WriteOptions().sync(props.fsync)
-  val leveldb = factory.open(props.dir, new Options().createIfMissing(true))
-
-  val serialization = MessageSerialization(context.system)
 
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)

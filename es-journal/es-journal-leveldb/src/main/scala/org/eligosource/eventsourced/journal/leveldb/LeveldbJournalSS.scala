@@ -19,7 +19,6 @@ import java.nio.ByteBuffer
 
 import akka.actor._
 
-import org.fusesource.leveldbjni.JniDBFactory._
 import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
@@ -41,17 +40,14 @@ import org.eligosource.eventsourced.journal.common.util._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class LeveldbJournalSS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport with LeveldbSnapshotting {
+private [eventsourced] class LeveldbJournalSS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport
+    with LeveldbJournal
+    with LeveldbSnapshotting {
+
   import LeveldbJournalSS._
   import Journal._
 
   val writeOutMsgCache = new WriteOutMsgCache[Long]
-
-  val levelDbReadOptions = new ReadOptions().verifyChecksums(props.checksum)
-  val levelDbWriteOptions = new WriteOptions().sync(props.fsync)
-  val leveldb = factory.open(props.dir, new Options().createIfMissing(true))
-
-  val serialization = CommandSerialization(context.system)
 
   implicit def cmdToBytes(cmd: AnyRef): Array[Byte] = serialization.serializeCommand(cmd)
   implicit def cmdFromBytes[A](bytes: Array[Byte]): A = serialization.deserializeCommand(bytes).asInstanceOf[A]

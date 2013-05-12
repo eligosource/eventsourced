@@ -15,23 +15,20 @@
  */
 package org.eligosource.eventsourced.journal.leveldb
 
-import org.apache.commons.io.FileUtils
-import org.scalatest.BeforeAndAfterEach
-
 import org.eligosource.eventsourced.journal.common.PersistentReplaySpec
 
-class LeveldbReplayPSSpec extends PersistentReplaySpec with BeforeAndAfterEach {
+class LeveldbReplayPSNativeSpec extends PersistentReplaySpec with LeveldbCleanup {
   def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir)
-
-  override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
-  }
 }
 
-class LeveldbReplaySSSpec extends PersistentReplaySpec with BeforeAndAfterEach {
+class LeveldbReplaySSNativeSpec extends PersistentReplaySpec with LeveldbCleanup {
   def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withSequenceStructure
+}
 
-  override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
-  }
+class LeveldbReplayPSJavaSpec extends PersistentReplaySpec with LeveldbCleanup {
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withNative(false)
+}
+
+class LeveldbReplaySSJavaSpec extends PersistentReplaySpec with LeveldbCleanup {
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withSequenceStructure.withNative(false)
 }

@@ -18,6 +18,7 @@ package org.eligosource.eventsourced.journal.leveldb
 import java.io.File
 
 import org.apache.commons.io.FileUtils
+import org.scalatest.{Suite, BeforeAndAfterEach}
 
 trait LeveldbSupport {
   val journalDir = new File("es-core-test/target/journal")
@@ -28,3 +29,8 @@ trait LeveldbSupport {
   }
 }
 
+trait LeveldbCleanup extends BeforeAndAfterEach { this: Suite =>
+  override def afterEach() {
+    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
+  }
+}

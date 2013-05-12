@@ -3,7 +3,8 @@ import com.typesafe.sbt.osgi.SbtOsgi
 Nobootcp.settings
 
 libraryDependencies ++= Seq(
-  "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.6" % "compile"
+  "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.6" % "compile",
+  "org.iq80.leveldb"          % "leveldb"        % "0.5" % "compile"
 )
 
 OsgiKeys.importPackage := Seq(

@@ -17,9 +17,6 @@ package org.eligosource.eventsourced.journal.leveldb
 
 import java.io.File
 
-import org.apache.commons.io.FileUtils
-import org.scalatest.BeforeAndAfterEach
-
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.journal.common._
@@ -55,18 +52,18 @@ object LeveldbJournalSpec {
   val journalDir = new File("es-journal/es-journal-leveldb/target/journal")
 }
 
-class LeveldbJournalPSSpec extends LeveldbJournalSpec with BeforeAndAfterEach {
+class LeveldbJournalPSNativeSpec extends LeveldbJournalSpec with LeveldbCleanup {
   def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir)
-
-  override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
-  }
 }
 
-class LeveldbJournalSSSpec extends JournalSpec with BeforeAndAfterEach {
+class LeveldbJournalSSNativeSpec extends JournalSpec with LeveldbCleanup {
   def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withSequenceStructure
+}
 
-  override def afterEach() {
-    FileUtils.deleteDirectory(LeveldbJournalSpec.journalDir)
-  }
+class LeveldbJournalPSJavaSpec extends LeveldbJournalSpec with LeveldbCleanup {
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withNative(false)
+}
+
+class LeveldbJournalSSJavaSpec extends JournalSpec with LeveldbCleanup {
+  def journalProps = LeveldbJournalProps(LeveldbJournalSpec.journalDir).withSequenceStructure.withNative(false)
 }
