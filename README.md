@@ -140,7 +140,7 @@ A journal is an actor that is used by processors and channels to log messages an
 
 ### Application
 
-The Eventsourced library doesn't impose any restrictions on the structure and semantics of [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) payloads. Hence, persistent messages can therefore be events as well as commands. The Eventsourced [reference application](https://github.com/eligosource/eventsourced-example) uses both, for example.
+The Eventsourced library doesn't impose any restrictions on the structure and semantics of [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message) payloads. Hence, persistent messages can therefore be events as well as commands. Both can be seen as *facts* about the interaction of an application with its environment. This is demonstrated in the Eventsourced [reference application](https://github.com/eligosource/eventsourced-example) which persists events as well as commands. This also simplifies the implementation of long-running, persistent business processes (sometimes referred to as *sagas*). These are processors that react on events by sending commands to other services which can be other processors or external services, for example.
 
 Eventsourced fits well into applications that implement the [CQRS](http://martinfowler.com/bliki/CQRS.html) pattern and follow a [domain-driven design](http://domaindrivendesign.org/resources/what_is_ddd) (DDD) (see [reference application](https://github.com/eligosource/eventsourced-example)). On the other hand, the library doesn't force applications to do so and allows them to implement event-sourcing (and/or command-sourcing) without CQRS and/or DDD.
 
