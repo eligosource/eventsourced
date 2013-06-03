@@ -1,0 +1,589 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+        <head>
+          <title>org.eligosource.eventsourced.core.EventsourcingExtension</title>
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link type="text/css" media="screen" rel="stylesheet" href="../../../../lib/template.css" />
+      <script type="text/javascript" src="../../../../lib/jquery.js"></script>
+      <script type="text/javascript" src="../../../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../../../lib/template.js"></script>
+      <script type="text/javascript" src="../../../../lib/tools.tooltip.js"></script>
+    
+        </head>
+        <body onload="sh_highlightDocument('../lib/', '.min.js');" class="type">
+      <div id="definition">
+        <a title="Go to companion" href="EventsourcingExtension$.html"><img src="../../../../lib/class_to_object_big.png" /></a>
+        <p id="owner"><a name="org" class="extype" href="../../../package.html">org</a>.<a name="org.eligosource" class="extype" href="../../package.html">eligosource</a>.<a name="org.eligosource.eventsourced" class="extype" href="../package.html">eventsourced</a>.<a name="org.eligosource.eventsourced.core" class="extype" href="package.html">core</a></p>
+        <h1><a title="Go to companion" href="EventsourcingExtension$.html">EventsourcingExtension</a></h1>
+      </div>
+
+      <h4 class="signature" id="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <span class="name">EventsourcingExtension</span><span class="result"> extends <span name="akka.actor.Extension" class="extype">Extension</span></span>
+      </span>
+      </h4>
+      
+      <div class="fullcommenttop" id="comment"><div class="comment cmt"><p>Event-sourcing extension for Akka. Used by applications to create and register
+<a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a> processors and event message
+<a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a>s and to recover them from journaled
+event <a name="org.eligosource.eventsourced.core.Message" class="extype" href="Message.html">Message</a>s.
+</p></div><div class="toggleContainer block">
+          <span class="toggle">Linear Supertypes</span>
+          <div class="superTypes hiddenContent"><span name="akka.actor.Extension" class="extype">Extension</span>, AnyRef, <span name="scala.Any" class="extype">Any</span></div>
+        </div></div>
+    
+
+      <div id="mbrsel">
+        <div id="textfilter"><span class="pre"></span><span class="input"><input accesskey="/" type="text" /></span><span class="post"></span></div>
+        <div id="order">
+              <span class="filtertype">Ordering</span>
+              <ol><li class="alpha in"><span>Alphabetic</span></li><li class="inherit out"><span>By inheritance</span></li></ol>
+            </div>
+        <div id="ancestors">
+              <span class="filtertype">Inherited</span>
+              <ol><li class="hideall out"><span>Hide All</span></li>
+              <li class="showall in"><span>Show all</span></li></ol>
+              <ol id="linearization"><li name="org.eligosource.eventsourced.core.EventsourcingExtension" class="in"><span>EventsourcingExtension</span></li><li name="akka.actor.Extension" class="in"><span>Extension</span></li><li name="scala.AnyRef" class="in"><span>AnyRef</span></li><li name="scala.Any" class="in"><span>Any</span></li></ol>
+            </div>
+        <div id="visbl">
+            <span class="filtertype">Visibility</span>
+            <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+          </div>
+      </div>
+
+      <div id="template">
+        <div id="allMembers">
+        <div class="members" id="constructors">
+              <h3>Instance Constructors</h3>
+              <ol><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#this" data-isabs="false">
+      <a id="this:EventsourcingExtension"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">new</span>
+      </span>
+      <span class="symbol">
+        <span class="name">EventsourcingExtension</span><span class="params">(<span name="system">system: <span name="akka.actor.ExtendedActorSystem" class="extype">ExtendedActorSystem</span></span>)</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="paramcmts block"><dt class="param">system</dt><dd class="cmt"><p>actor system this extension is associated with.
+</p></dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+
+        
+
+        <div class="values members" id="values">
+              <h3>Value Members</h3>
+              <ol><li visbl="pub" name="scala.AnyRef#!=" data-isabs="false">
+      <a id="!=(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name" title="gt4s: $bang$eq">!=</span><span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#!=" data-isabs="false">
+      <a id="!=(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name" title="gt4s: $bang$eq">!=</span><span class="params">(<span name="arg0">arg0: <span name="scala.Any" class="extype">Any</span></span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef###" data-isabs="false">
+      <a id="##():Int"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name" title="gt4s: $hash$hash">##</span><span class="params">()</span><span class="result">: <span name="scala.Int" class="extype">Int</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#==" data-isabs="false">
+      <a id="==(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name" title="gt4s: $eq$eq">==</span><span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#==" data-isabs="false">
+      <a id="==(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name" title="gt4s: $eq$eq">==</span><span class="params">(<span name="arg0">arg0: <span name="scala.Any" class="extype">Any</span></span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#asInstanceOf" data-isabs="false">
+      <a id="asInstanceOf[T0]:T0"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">asInstanceOf</span><span class="tparams">[<span name="T0">T0</span>]</span><span class="result">: T0</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#awaitProcessing" data-isabs="false">
+      <a id="awaitProcessing(Set[Int],Duration):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">awaitProcessing</span><span class="params">(<span name="processorIds">processorIds: Set[<span name="scala.Int" class="extype">Int</span>] = <span class="symbol"><span class="name"><a href="#processors:Map[Int, ActorRef]">processors.keySet</a></span></span></span>, <span name="atMost">atMost: <span name="akka.util.Duration" class="extype">Duration</span> = <span class="symbol"><span class="name"><a href="../../../../akka/package.html">1 minute</a></span></span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Waits for selected processors to complete processing of all pending messages
+in their mailboxes.</p><div class="fullcomment"><div class="comment cmt"><p>Waits for selected processors to complete processing of all pending messages
+in their mailboxes.
+</p></div><dl class="paramcmts block"><dt class="param">processorIds</dt><dd class="cmt"><p>ids of registered processors to wait for. Default value
+       is the set of all registered processor ids.</p></dd><dt class="param">atMost</dt><dd class="cmt"><p>maximum duration to wait for processing to complete.
+</p></dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#channelOf" data-isabs="false">
+      <a id="channelOf(ChannelProps)(ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">channelOf</span><span class="params">(<span name="props">props: <a name="org.eligosource.eventsourced.core.ChannelProps" class="extype" href="ChannelProps.html">ChannelProps</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="actorRefFactory">actorRefFactory: <span name="akka.actor.ActorRefFactory" class="extype">ActorRefFactory</span></span>)</span><span class="result">: <span name="akka.actor.ActorRef" class="extype">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Creates and registers a <a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a>.</p><div class="fullcomment"><div class="comment cmt"><p>Creates and registers a <a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a>. The channel is
+registered under the id specified by <code>props.id</code>. If <code>props.name</code> is defined it is also
+registered under that name.
+</p></div><dl class="paramcmts block"><dt class="param">props</dt><dd class="cmt"><p>channel configuration object.</p></dd><dt class="param">actorRefFactory</dt><dd class="cmt"><p><a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a> ref factory.</p></dd><dt>returns</dt><dd class="cmt"><p>a channel ref.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">InvalidActorNameException<p>if <code>name</code> is defined and already in use
+        in the underlying actor system.
+</p></span></dd><dt>See also</dt><dd><span class="cmt"><p><a name="org.eligosource.eventsourced.core.DefaultChannelProps" class="extype" href="DefaultChannelProps.html">DefaultChannelProps</a>
+     <a name="org.eligosource.eventsourced.core.ReliableChannelProps" class="extype" href="ReliableChannelProps.html">ReliableChannelProps</a>
+</p></span></dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#channels" data-isabs="false">
+      <a id="channels:Map[Int, ActorRef]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">channels</span><span class="result">: Map[<span name="scala.Int" class="extype">Int</span>, <span name="akka.actor.ActorRef" class="extype">ActorRef</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Map of registered <a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a>s.</p><div class="fullcomment"><div class="comment cmt"><p>Map of registered <a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a>s. Mapping key is
+the channel id.
+</p></div></div>
+    </li><li visbl="prt" name="scala.AnyRef#clone" data-isabs="false">
+      <a id="clone():AnyRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">clone</span><span class="params">()</span><span class="result">: AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<a name="java.lang" class="extype" href="../../../../java/lang/package.html">lang</a>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#deliver" data-isabs="false">
+      <a id="deliver(Int):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">deliver</span><span class="params">(<span name="channelId">channelId: <span name="scala.Int" class="extype">Int</span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Enables the channel registered under <code>channelId</code> and starts delivery of pending messages.</p>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#deliver" data-isabs="false">
+      <a id="deliver():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">deliver</span><span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Enables all registered channels and starts delivery of pending messages.</p>
+    </li><li visbl="pub" name="scala.AnyRef#eq" data-isabs="false">
+      <a id="eq(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">eq</span><span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#equals" data-isabs="false">
+      <a id="equals(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">equals</span><span class="params">(<span name="arg0">arg0: <span name="scala.Any" class="extype">Any</span></span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="prt" name="scala.AnyRef#finalize" data-isabs="false">
+      <a id="finalize():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">finalize</span><span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<a name="java.lang" class="extype" href="../../../../java/lang/package.html">lang</a>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#getClass" data-isabs="false">
+      <a id="getClass():java.lang.Class[_]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getClass</span><span class="params">()</span><span class="result">: java.lang.Class[_]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#hashCode" data-isabs="false">
+      <a id="hashCode():Int"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hashCode</span><span class="params">()</span><span class="result">: <span name="scala.Int" class="extype">Int</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#isInstanceOf" data-isabs="false">
+      <a id="isInstanceOf[T0]:Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">isInstanceOf</span><span class="tparams">[<span name="T0">T0</span>]</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#journal" data-isabs="false">
+      <a id="journal:ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">journal</span><span class="result">: <span name="akka.actor.ActorRef" class="extype">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Journal for this extension.</p>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#namedChannels" data-isabs="false">
+      <a id="namedChannels:Map[String, ActorRef]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">namedChannels</span><span class="result">: Map[String, <span name="akka.actor.ActorRef" class="extype">ActorRef</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Map of registered named <a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a>s.</p><div class="fullcomment"><div class="comment cmt"><p>Map of registered named <a name="org.eligosource.eventsourced.core.Channel" class="extype" href="Channel.html">Channel</a>s. Mapping key is
+the channel name.
+</p></div></div>
+    </li><li visbl="pub" name="scala.AnyRef#ne" data-isabs="false">
+      <a id="ne(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ne</span><span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#notify" data-isabs="false">
+      <a id="notify():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">notify</span><span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#notifyAll" data-isabs="false">
+      <a id="notifyAll():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">notifyAll</span><span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#processorOf" data-isabs="false">
+      <a id="processorOf(Props,Option[String])(ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">processorOf</span><span class="params">(<span name="props">props: <span name="akka.actor.Props" class="extype">Props</span></span>, <span name="name">name: <span name="scala.Option" class="extype">Option</span>[String] = <span class="symbol"><span class="name"><a href="../../../../scala/package.html">None</a></span></span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="actorRefFactory">actorRefFactory: <span name="akka.actor.ActorRefFactory" class="extype">ActorRefFactory</span></span>)</span><span class="result">: <span name="akka.actor.ActorRef" class="extype">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Registers an <a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a> processor.</p><div class="fullcomment"><div class="comment cmt"><p>Registers an <a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a> processor.</p><p>This method obtains the id from the created processor with a blocking operation.
+Use the overloaded <code>processorOf(ProcessorProps)</code> method if you want to avoid
+blocking.
+</p></div><dl class="paramcmts block"><dt class="param">props</dt><dd class="cmt"><p>actor ref configuration object.</p></dd><dt class="param">name</dt><dd class="cmt"><p>optional processor name.</p></dd><dt class="param">actorRefFactory</dt><dd class="cmt"><p><a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a>
+       ref factory.</p></dd><dt>returns</dt><dd class="cmt"><p>a processor ref.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">InvalidActorNameException<p>if <code>name</code> is defined and already in use
+        in the underlying actor system.
+</p></span></dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#processorOf" data-isabs="false">
+      <a id="processorOf(ProcessorProps)(ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">processorOf</span><span class="params">(<span name="props">props: <a name="org.eligosource.eventsourced.core.ProcessorProps" class="extype" href="ProcessorProps.html">ProcessorProps</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="actorRefFactory">actorRefFactory: <span name="akka.actor.ActorRefFactory" class="extype">ActorRefFactory</span></span>)</span><span class="result">: <span name="akka.actor.ActorRef" class="extype">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Registers an <a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a> processor.</p><div class="fullcomment"><div class="comment cmt"><p>Registers an <a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a> processor.
+</p></div><dl class="paramcmts block"><dt class="param">props</dt><dd class="cmt"><p>processor configuration object.</p></dd><dt>returns</dt><dd class="cmt"><p>a processor ref.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">InvalidActorNameException<p>if <code>props.name</code> is defined and already
+        in use in the underlying actor system.
+</p></span></dd><dt>See also</dt><dd><span class="cmt"><p><a name="org.eligosource.eventsourced.core.ProcessorProps" class="extype" href="ProcessorProps.html">ProcessorProps</a>
+</p></span></dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#processors" data-isabs="false">
+      <a id="processors:Map[Int, ActorRef]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">processors</span><span class="result">: Map[<span name="scala.Int" class="extype">Int</span>, <span name="akka.actor.ActorRef" class="extype">ActorRef</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Map of registered <a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a> processors.</p><div class="fullcomment"><div class="comment cmt"><p>Map of registered <a name="org.eligosource.eventsourced.core.Eventsourced" class="extype" href="Eventsourced.html">Eventsourced</a> processors.
+Mapping key is the processor id.
+</p></div></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#recover" data-isabs="false">
+      <a id="recover((Int) ⇒ Option[Long],Duration):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">recover</span><span class="params">(<span name="f">f: (<span name="scala.Int" class="extype">Int</span>) ⇒ <span name="scala.Option" class="extype">Option</span>[<span name="scala.Long" class="extype">Long</span>]</span>, <span name="waitAtMost">waitAtMost: <span name="akka.util.Duration" class="extype">Duration</span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Recovers selected processors and all channels registered at this extension by first
+calling <code>replay(f)</code> and then <code>deliver()</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Recovers selected processors and all channels registered at this extension by first
+calling <code>replay(f)</code> and then <code>deliver()</code>.</p><p>This method waits for replayed messages being added to processor mailboxes but
+does not wait for replayed input messages being processed. However, any new message
+sent to any of the selected processors, after this method successfully returned,
+is guaranteed to be processed after the replayed event messages.</p><p>Clients that want to wait for replayed messages being processed should call the
+<code>awaitProcessing</code> method after this method successfully returned.
+</p></div><dl class="paramcmts block"><dt class="param">f</dt><dd class="cmt"><p>function called for each processor id. If the function returns <code>None</code>
+       no message replay will be done for that processor. If it returns <code>Some(snr)</code>
+       message replay will start from sequence number <code>snr</code> for that processor.</p></dd><dt class="param">waitAtMost</dt><dd class="cmt"><p>wait for the specified duration for the replay to complete.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within the specified duration.
+</p></span></dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#recover" data-isabs="false">
+      <a id="recover(Duration):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">recover</span><span class="params">(<span name="waitAtMost">waitAtMost: <span name="akka.util.Duration" class="extype">Duration</span> = <span class="symbol"><span class="name"><a href="../../../../akka/package.html">1 minute</a></span></span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Recovers all processors and channels registered at this extension by first
+calling <code>replay(_ =&gt; Some(0))</code> and then <code>deliver()</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Recovers all processors and channels registered at this extension by first
+calling <code>replay(_ =&gt; Some(0))</code> and then <code>deliver()</code>. Replay is done with no
+lower bound (i.e. with all messages in the journal).</p><p>This method waits for replayed messages being added to processor mailboxes but
+does not wait for replayed input messages being processed. However, any new message
+sent to any of the selected processors, after this method successfully returned,
+is guaranteed to be processed after the replayed event messages.</p><p>Clients that want to wait for replayed messages being processed should call the
+<code>awaitProcessing</code> method after this method successfully returned.
+</p></div><dl class="paramcmts block"><dt class="param">waitAtMost</dt><dd class="cmt"><p>wait for the specified duration for the replay to complete.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within the specified duration.
+</p></span></dd></dl></div>
+    </li><li visbl="pub" name="org.eligosource.eventsourced.core.EventsourcingExtension#replay" data-isabs="false">
+      <a id="replay((Int) ⇒ Option[Long],Duration):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">replay</span><span class="params">(<span name="f">f: (<span name="scala.Int" class="extype">Int</span>) ⇒ <span name="scala.Option" class="extype">Option</span>[<span name="scala.Long" class="extype">Long</span>]</span>, <span name="waitAtMost">waitAtMost: <span name="akka.util.Duration" class="extype">Duration</span> = <span class="symbol"><span class="name"><a href="../../../../akka/package.html">1 minute</a></span></span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Replays input messages to selected processors.</p><div class="fullcomment"><div class="comment cmt"><p>Replays input messages to selected processors. This method waits for replayed
+messages being added to processor mailboxes but does not wait for replayed input
+messages being processed. However, any new message sent to any of the selected
+processors, after this method successfully returned, is guaranteed to be processed
+after the replayed event messages.</p><p>Clients that want to wait for replayed messages being processed should call the
+<code>awaitProcessing</code> method after this method successfully returned.
+</p></div><dl class="paramcmts block"><dt class="param">f</dt><dd class="cmt"><p>function called for each processor id. If the function returns <code>None</code>
+       no message replay will be done for that processor. If it returns <code>Some(snr)</code>
+       message replay will start from sequence number <code>snr</code> for that processor.</p></dd><dt class="param">waitAtMost</dt><dd class="cmt"><p>wait for the specified duration for the replay to complete.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within the specified duration.
+</p></span></dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#synchronized" data-isabs="false">
+      <a id="synchronized[T0](⇒ T0):T0"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">synchronized</span><span class="tparams">[<span name="T0">T0</span>]</span><span class="params">(<span name="arg0">arg0: ⇒ T0</span>)</span><span class="result">: T0</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#toString" data-isabs="false">
+      <a id="toString():String"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">toString</span><span class="params">()</span><span class="result">: <span name="java.lang.String" class="extype">String</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#wait" data-isabs="false">
+      <a id="wait():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">wait</span><span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#wait" data-isabs="false">
+      <a id="wait(Long,Int):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">wait</span><span class="params">(<span name="arg0">arg0: <span name="scala.Long" class="extype">Long</span></span>, <span name="arg1">arg1: <span name="scala.Int" class="extype">Int</span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#wait" data-isabs="false">
+      <a id="wait(Long):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">wait</span><span class="params">(<span name="arg0">arg0: <span name="scala.Long" class="extype">Long</span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+        </div>
+
+        <div id="inheritedMembers">
+        <div name="akka.actor.Extension" class="parent">
+              <h3>Inherited from <span name="akka.actor.Extension" class="extype">Extension</span></h3>
+            </div><div name="scala.AnyRef" class="parent">
+              <h3>Inherited from AnyRef</h3>
+            </div><div name="scala.Any" class="parent">
+              <h3>Inherited from <span name="scala.Any" class="extype">Any</span></h3>
+            </div>
+        </div>
+
+      </div>
+
+      <div id="tooltip"></div>
+
+      <div id="footer">  </div>
+
+
+    </body>
+      </html>

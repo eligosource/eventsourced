@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+        <head>
+          <title>requestreply - org.eligosource.eventsourced.patterns.reliable.requestreply</title>
+          <meta name="description" content="requestreply - org.eligosource.eventsourced.patterns.reliable.requestreply" />
+          <meta name="keywords" content="requestreply org.eligosource.eventsourced.patterns.reliable.requestreply" />
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link href="../../../../../../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
+      <link href="../../../../../../lib/diagrams.css" media="screen" type="text/css" rel="stylesheet" id="diagrams-css" />
+      <script type="text/javascript" src="../../../../../../lib/jquery.js" id="jquery-js"></script>
+      <script type="text/javascript" src="../../../../../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../../../../../lib/template.js"></script>
+      <script type="text/javascript" src="../../../../../../lib/tools.tooltip.js"></script>
+      
+      <script type="text/javascript">
+         if(top === self) {
+            var url = '../../../../../../index.html';
+            var hash = 'org.eligosource.eventsourced.patterns.reliable.requestreply.package';
+            var anchor = window.location.hash;
+            var anchor_opt = '';
+            if (anchor.length >= 1)
+              anchor_opt = '@' + anchor.substring(1);
+            window.location.href = url + '#' + hash + anchor_opt;
+         }
+   	  </script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img src="../../../../../../lib/package_big.png" />
+        <p id="owner"><a href="../../../../../package.html" class="extype" name="org">org</a>.<a href="../../../../package.html" class="extype" name="org.eligosource">eligosource</a>.<a href="../../../package.html" class="extype" name="org.eligosource.eventsourced">eventsourced</a>.<a href="../../package.html" class="extype" name="org.eligosource.eventsourced.patterns">patterns</a>.<a href="../package.html" class="extype" name="org.eligosource.eventsourced.patterns.reliable">reliable</a></p>
+        <h1>requestreply</h1>
+      </div>
+
+      <h4 id="signature" class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <span class="name">requestreply</span>
+      </span>
+      </h4>
+      
+          <div id="comment" class="fullcommenttop"></div>
+        
+
+      <div id="mbrsel">
+        <div id="textfilter"><span class="pre"></span><span class="input"><input id="mbrsel-input" type="text" accesskey="/" /></span><span class="post"></span></div>
+        
+        
+        <div id="visbl">
+            <span class="filtertype">Visibility</span>
+            <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+          </div>
+      </div>
+
+      <div id="template">
+        <div id="allMembers">
+        
+
+        <div id="types" class="types members">
+              <h3>Type Members</h3>
+              <ol><li name="org.eligosource.eventsourced.patterns.reliable.requestreply.DestinationFailure" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="DestinationFailureextendsProductwithSerializable"></a>
+      <a id="DestinationFailure:DestinationFailure"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="DestinationFailure.html"><span class="name">DestinationFailure</span></a><span class="params">(<span name="channelId">channelId: <span class="extype" name="scala.Int">Int</span></span>, <span name="failureCount">failureCount: <span class="extype" name="scala.Int">Int</span></span>, <span name="request">request: <span class="extype" name="scala.Any">Any</span></span>, <span name="t">t: <span class="extype" name="scala.Throwable">Throwable</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Reply message to a request sender if the destination of a reliable request-reply
+channel responds with <code>akka.actor.Status.Failure</code>.</p>
+    </li><li name="org.eligosource.eventsourced.patterns.reliable.requestreply.DestinationNotResponding" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="DestinationNotRespondingextendsProductwithSerializable"></a>
+      <a id="DestinationNotResponding:DestinationNotResponding"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="DestinationNotResponding.html"><span class="name">DestinationNotResponding</span></a><span class="params">(<span name="channelId">channelId: <span class="extype" name="scala.Int">Int</span></span>, <span name="failureCount">failureCount: <span class="extype" name="scala.Int">Int</span></span>, <span name="request">request: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Reply message to a request sender if the destination does not respond.</p>
+    </li><li name="org.eligosource.eventsourced.patterns.reliable.requestreply.ReliableRequestReplyChannelProps" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ReliableRequestReplyChannelPropsextendsChannelPropswithProductwithSerializable"></a>
+      <a id="ReliableRequestReplyChannelProps:ReliableRequestReplyChannelProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="ReliableRequestReplyChannelProps.html"><span class="name">ReliableRequestReplyChannelProps</span></a><span class="params">(<span name="id">id: <span class="extype" name="scala.Int">Int</span></span>, <span name="destination">destination: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>, <span name="replyTimeout">replyTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(5).seconds">...</span></span>, <span name="policy">policy: <a href="../../../core/RedeliveryPolicy.html" class="extype" name="org.eligosource.eventsourced.core.RedeliveryPolicy">RedeliveryPolicy</a> = <span class="defval" name="{<br/>&amp;nbsp;&amp;nbsp;  val qual$1: org.eligosource.eventsourced.core.RedeliveryPolicy = org.eligosource.eventsourced.core.RedeliveryPolicy.apply();<br/>&amp;nbsp;&amp;nbsp;  val x$2: scala.concurrent.duration.FiniteDuration = scala.concurrent.duration.`package`.DurationInt(10).seconds;<br/>&amp;nbsp;&amp;nbsp;  val x$3: scala.concurrent.duration.FiniteDuration = qual$1.copy$default$2;<br/>&amp;nbsp;&amp;nbsp;  val x$4: Int = qual$1.copy$default$3;<br/>&amp;nbsp;&amp;nbsp;  val x$5: scala.concurrent.duration.FiniteDuration = qual$1.copy$default$4;<br/>&amp;nbsp;&amp;nbsp;  val x$6: Int = qual$1.copy$default$5;<br/>&amp;nbsp;&amp;nbsp;  qual$1.copy(x$2, x$3, x$4, x$5, x$6)<br/>&amp;nbsp;&amp;nbsp;}">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>)</span><span class="result"> extends <a href="../../../core/ChannelProps.html" class="extype" name="org.eligosource.eventsourced.core.ChannelProps">ChannelProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Reliable request-reply channel configuration object used to configure a
+<a href="../../../core/ReliableChannel.html" class="extype" name="org.eligosource.eventsourced.core.ReliableChannel">org.eligosource.eventsourced.core.ReliableChannel</a> and a proxy for
+<code>destination</code>.</p>
+    </li></ol>
+            </div>
+
+        
+
+        
+
+        
+
+        
+        </div>
+
+        <div id="inheritedMembers">
+        
+        
+        </div>
+
+        <div id="groupedMembers">
+        <div class="group" name="Ungrouped">
+              <h3>Ungrouped</h3>
+              
+            </div>
+        </div>
+
+      </div>
+
+      <div id="tooltip"></div>
+
+      <div id="footer">  </div>
+
+
+    </body>
+      </html>
