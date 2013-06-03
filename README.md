@@ -55,6 +55,7 @@ Contents
         - [Recovery with snapshots](#recovery-with-snapshots)
     - [Await processing](#await-processing)
     - [Non-blocking recovery](#non-blocking-recovery)
+    - [Channel recovery and usage](#channel-recovery-and-usage)
     - [State dependencies](#state-dependencies)
 - [Snapshots](#snapshots)
 - [Behavior changes](#behavior-changes)
@@ -564,7 +565,9 @@ Code from this section is contained in [SenderReferences.scala](https://github.c
 Channels
 --------
 
-A [channel](#channel) is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. See also section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) in Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article as well as section [Channel usage](#step-5-channel-usage) in the [First steps](#first-steps) guide for an example.
+A [channel](#channel) is an actor that keeps track of successfully delivered event messages. Channels are used by event-sourced actors (processors) to prevent redundant message delivery to destinations during event message replay. Some channels can also be used [standalone](#standalone-usage) i.e. independent of event-sourced actors.
+
+A use case for channels is described in section [External Updates](http://martinfowler.com/eaaDev/EventSourcing.html#ExternalUpdates) of Martin Fowler's [Event Sourcing](http://martinfowler.com/eaaDev/EventSourcing.html) article. A getting-started example is given in section [Channel usage](#step-5-channel-usage) of the [First steps](#first-steps) guide
 
 Currently, the library provides two different channel implementations, [`DefaultChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannel) and [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel), and a pattern on top of `ReliableChannel`, a [reliable request-reply channel](#reliable-request-reply-channel). These are explained in the following subsections.
 
@@ -594,6 +597,8 @@ The `channelId` must be a positive integer and consistently defined across appli
 
 The map of registered named channels can be obtained via the `namedChannels` method which returns a map of type `Map[String, ActorRef]` where the mapping key is the channel name.
 
+A default channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. 
+
 ### `ReliableChannel`
 
 ![Reliable channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-2.png)
@@ -608,6 +613,9 @@ A `ReliableChannel` is created and registered in the same way as a default chann
     val channel: ActorRef = extension.channelOf(ReliableChannelProps(channelId, destination))
 
 This configuration object additionally allows applications to configure a [`RedeliveryPolicy`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.RedeliveryPolicy) for the channel.
+
+
+A reliable channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. A reliable channel also stores sender references along with event messages. A destination can even reply to a sender that was sending an event message in a previous application run (i.e. before the application was restarted or crashed). If that sender doesn't exist any more after recovery or if it's a temporary sender reference (e.g. a `Future` reference), the reply will go to `deadLetters`.
 
 ### Reliable request-reply channel
 
@@ -670,7 +678,7 @@ A less reliable alternative to channels is communication via sender references. 
 Recovery
 --------
 
-Recovery is a procedure that re-creates the state of event-sourced applications consisting of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) actors (processors) and [channels](#channels). Recovery is usually done at application start, either after normal termination or after a crash.
+Recovery is a procedure that re-creates the state of event-sourced applications consisting of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) actors (processors) and [channels](#channels). Recovery is usually done at application start, either after normal termination or after a crash (but can also be done any time later, even for individual processors and channels).
 
     val system: ActorSystem = …
     val journal: ActorRef = …
@@ -796,7 +804,52 @@ The `recover` and `awaitProcessing` methods block the calling thread. This may b
       case _ => // event-sourced processors now ready to use …
     }
 
-The futures returned by `replay`, `deliver` and `completeProcessing` are monadically composed with a for-comprehension which ensures a sequential execution of the corresponding asynchronous operations. When the composite `future` completes, the recovered processors and channels are ready to use. More details in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension). The `replay` method can also be parameterized with a `ReplayParams` sequence (see section [Replay parameters](#replay-parameters)).
+Here, the futures returned by `replay`, `deliver` and `completeProcessing` are monadically composed with a for-comprehension which ensures a sequential execution of the corresponding asynchronous operations. When the composite `future` completes, the recovered processors and channels are ready to use. More details in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension). The `replay` method can also be parameterized with a `ReplayParams` sequence (see section [Replay parameters](#replay-parameters)).
+
+### Channel recovery and usage
+
+Channels can even be used by applications immediately after creation i.e. before activating them. This is especially important when event-sourced (parent) processors create new event-sourced child processors during handling of an event:
+
+    class Parent extends Actor { this: Receiver with Eventsourced =>
+      import context.dispatcher
+
+      var child: Option[ActorRef] = None
+
+      def receive = {
+        case event => {
+            // create child processor wrapped by channel
+            if (child.isEmpty) { child = Some(createChildProcessor(2, 2)) }
+            // channel can be used immediately
+            child.foreach(_ ! message.copy(…))
+        }
+      }
+
+      def createChildProcessor(pid: Int, cid: Int): ActorRef = {
+        implicit val recoveryTimeout = Timeout(10 seconds)
+
+        val childProcessor = extension.processorOf(Props(new Child with Receiver with Eventsourced { val id = pid } ))
+        val childChannel = extension.channelOf(DefaultChannelProps(cid, childProcessor))
+
+        for { // asynchronous, non-blocking recovery
+          _ <- extension.replay(Seq(ReplayParams(pid)))
+          _ <- extension.deliver(cid)
+        } yield ()
+
+        childChannel
+      }
+    }
+
+    class Child extends Actor { this: Receiver =>
+      def receive = {
+        case event => {
+          … 
+          confirm()
+        }
+      }
+    }
+
+
+Here, `Parent` lazily creates a new `childProcessor` (wrapped by a default channel) on receiving an `event`. The `childChannel` is used by `Parent` immediately after creation i.e. concurrently to `childProcessor` message replay and `childChannel` activation. This is possible because a channel internally buffers new messages before its activation and delivers them to its destination after activation. This ensures that new messages will only be delivered to `childProcessor` after `childChannel` has been activated. During `Parent` recovery, `childChannel` will ignore messages that have already been successfully delivered to `childActor` (i.e. confirmed by `childActor`).
 
 ### State dependencies
 
