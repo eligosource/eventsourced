@@ -17,6 +17,12 @@ import sbt._
 import Keys._
 
 import com.typesafe.sbt.osgi.SbtOsgi.{ OsgiKeys, osgiSettings, defaultOsgiSettings }
+import com.typesafe.sbt.SbtGhPages._
+import com.typesafe.sbt.SbtGit.{GitKeys => git}
+import com.typesafe.sbt.SbtSite._
+
+import sbtunidoc.Plugin._
+import sbtunidoc.Plugin.UnidocKeys._
 
 object Version {
   val Scala = "2.10.1"
@@ -106,15 +112,21 @@ object EventsourcedBuild extends Build {
     Osgi.defaultSettings
 
   lazy val unidocExcludeSettings = Seq(
-    Unidoc.unidocExclude := Seq(esCoreTest.id, esExamples.id)
+    excludedProjects in unidoc in ScalaUnidoc ++= Seq(esCoreTest.id, esExamples.id)
   )
-  lazy val unidocSettings =
-    Unidoc.defaultSettings ++ unidocExcludeSettings
+
+  lazy val unidocDefaultSettings =
+    unidocSettings ++ unidocExcludeSettings
+
+  lazy val siteDefaultSettings = site.settings ++ ghpages.settings ++ Seq(
+    git.gitRemoteRepo := "git@github.com:eligosource/eventsourced.git",
+    site.addMappingsToSiteDir(mappings in packageDoc in ScalaUnidoc, "api/snapshot")
+  )
 
   lazy val es = Project(
     id = "eventsourced",
     base = file("."),
-    settings = defaultSettings ++ unidocSettings ++ Publish.parentSettings
+    settings = defaultSettings ++ unidocDefaultSettings ++ siteDefaultSettings ++ Publish.parentSettings
   ) aggregate(esCore, esCoreTest, esExamples, esJournal)
 
   lazy val esCore = Project(
