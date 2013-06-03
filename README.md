@@ -597,7 +597,16 @@ The `channelId` must be a positive integer and consistently defined across appli
 
 The map of registered named channels can be obtained via the `namedChannels` method which returns a map of type `Map[String, ActorRef]` where the mapping key is the channel name.
 
-A default channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. 
+A default channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. However, special care must be taken when using `?`: replayed messages that have already been confirmed by a channel destination will be ignored by the corresponding channel and the destination cannot reply. Hence, the sender will see a reply timeout. This can be avoided by finding out in advance if the channel will ignore a message or not. Applications do that by investigating the `Message.acks` list. If the channel's id is contained in that list, the message will be ignored and should not be used for asking.
+
+    val channelId: Int = … 
+    val channel: ActorRef = … 
+
+    if (!message.acks.contains(channelId)) channel ? message.copy(…) onComplete {
+      case result => … 
+    }
+
+See also [usage-hints](#usage-hints) regarding `message.copy(…)`.
 
 ### `ReliableChannel`
 
@@ -615,7 +624,7 @@ A `ReliableChannel` is created and registered in the same way as a default chann
 This configuration object additionally allows applications to configure a [`RedeliveryPolicy`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.RedeliveryPolicy) for the channel.
 
 
-A reliable channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. A reliable channel also stores sender references along with event messages. A destination can even reply to a sender that was sending an event message in a previous application run (i.e. before the application was restarted or crashed). If that sender doesn't exist any more after recovery or if it's a temporary sender reference (e.g. a `Future` reference), the reply will go to `deadLetters`.
+A reliable channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. Details have already been described in the [default channel](#defaultchannel) section. A reliable channel also stores sender references along with event messages. A destination can even reply to a sender that was sending an event message in a previous application run (i.e. before the application was restarted or crashed). If that sender doesn't exist any more after recovery or if it's a temporary sender reference (e.g. a `Future` reference), the reply will go to `deadLetters`.
 
 ### Reliable request-reply channel
 
