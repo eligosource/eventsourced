@@ -2,7 +2,7 @@
 
 [Eventsourced](https://github.com/eligosource/eventsourced) applications can create a [mongoDB](http://www.mongodb.org/) Casbah & Salat backed journal.
 
-- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
+- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahSalatJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
 
 ## Properties
 
@@ -33,6 +33,14 @@ First, download, install and start a standalone mongoDB instance by following th
     libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.6-SNAPSHOT"
 
     libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-casbah-salat" % "0.6-SNAPSHOT"
+
+### @Salat interfaces
+
+Please extend your events directly (current limitation of Salat annotations) from MongodbEvent trait and your snapshots (states) from MongodbSnapshotState trait. 
+
+### MongoDB queries with Salat
+
+Please refer to [SalatDAO](https://github.com/novus/salat/wiki/SalatDAO) wiki page for the support on making queries to your snapshots.
 
 ### Mongodb Casbah & Salat Based Journal Initialization
 
