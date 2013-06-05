@@ -16,7 +16,7 @@ A mongoDB backed journal has the following properties when running on a real mon
 - Efficient per-channel recovery (applies to reliable channels).
 - Support of snapshoting 
 - Serialization of messages and snapshots to JSON format
-- Support of MongoDB queries for snapshots (one can extend Salat DAO) 
+- Out-of-the-box support of MongoDB queries to snapshots (one can extend [SalatDAO](https://github.com/novus/salat/wiki/SalatDAO)) 
 
 ## Status
 
@@ -37,6 +37,7 @@ First, download, install and start a standalone mongoDB instance by following th
 ### @Salat interfaces
 
 Please extend your events directly (current limitation of Salat annotations) from MongodbEvent trait and your snapshots (states) from MongodbSnapshotState trait. 
+One can process List[MongodbSnapshotState] on receiving SnapshotRequest and by this trick split in-memory model into blocks < 16MB.  
 
 ### MongoDB queries with Salat
 
