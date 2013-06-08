@@ -43,21 +43,25 @@ One can process List[MongodbSnapshotState] on receiving SnapshotRequest and by t
 
 The document being stored with your [MongodbSnapshotState](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.salat.MongodbSnapshotState) in mongoDB has the structure of [MongodbSnapshot](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.salat.MongodbSnapshot):
 
-{
-processorId: 1, 
-timestamp: 1L, 
-snapshotNr: 1, 
-state: MongodbSnapshotState
-}
+	{
+	processorId: 1, 
+	timestamp: 1L, 
+	snapshotNr: 1, 
+	state: {your MongodbSnapshotState structure}
+	}
 
 OR
 
-{
-processorId: 1, 
-timestamp: 1L, 
-snapshotNr: 1, 
-state: List[MongodbSnapshotState]
-}
+	{
+	processorId: 1, 
+	timestamp: 1L, 
+	snapshotNr: 1, 
+	state: [
+		{your MongodbSnapshotState #1 structure},
+		...,
+		{your MongodbSnapshotState #n structure}
+		]
+	}
 
 depending on how you process the SnapshotRequest and how do you split your in-memory model!  
 
