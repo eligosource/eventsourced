@@ -30,11 +30,15 @@ abstract class ReplaySpec2 extends WordSpec with MustMatchers {
 
   class Processor extends Actor { this: Receiver =>
     var counter = 0
+    var outputMultipleStates = false
 
     def receive = {
       case sr: SnapshotRequest => {
         Thread.sleep(10) // ensure that snapshots have different timestamps
-        sr.process(SnapshotClass(counter))
+        if (outputMultipleStates) {
+          sr.process(List(SnapshotClass(counter), SnapshotClass(counter)))
+        }
+        else sr.process(SnapshotClass(counter))
       }
       case so @ SnapshotOffer(Snapshot(_, _, _, SnapshotClass(ctr))) => {
         counter = ctr
@@ -76,7 +80,7 @@ abstract class ReplaySpec2 extends WordSpec with MustMatchers {
     val target = new Target(system)
 
     val processor1 = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = 1 }))
-    val processor2 = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = 2 }))
+    val processor2 = extension.processorOf(Props(new Processor with Receiver with Eventsourced { val id = 2; outputMultipleStates = true }))
 
     import system.dispatcher
 
@@ -212,7 +216,7 @@ abstract class ReplaySpec2 extends WordSpec with MustMatchers {
         journal ! ReplayInMsgs(ReplayParams(2, true), target.actor)
 
         target.awaitReplayProcessed
-        target.receivedOffer.get.snapshot must be(Snapshot(2, 7, ss22.timestamp, SnapshotClass(2)))
+        target.receivedOffer.get.snapshot must be(Snapshot(2, 7, ss22.timestamp, List(SnapshotClass(2), SnapshotClass(2))))
         target.receivedMessages.map(_.withTimestamp(0L)) must be(Nil)
       }
       "only offer snapshot if upper limit excludes messages after snapshot" in { fixture =>

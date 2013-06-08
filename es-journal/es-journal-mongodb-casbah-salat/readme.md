@@ -2,7 +2,7 @@
 
 [Eventsourced](https://github.com/eligosource/eventsourced) applications can create a [mongoDB](http://www.mongodb.org/) Casbah & Salat backed journal.
 
-- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahSalatJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
+- Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahSalatJournalProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.salat.MongodbCasbahSalatJournalProps) configuration object.
 
 ## Properties
 
@@ -14,7 +14,7 @@ A mongoDB backed journal has the following properties when running on a real mon
 - Writes evenly distributed via sharding.
 - Efficient per-processor recovery.
 - Efficient per-channel recovery (applies to reliable channels).
-- Support of snapshoting 
+- Support of snapshotting 
 - Serialization of messages and snapshots to JSON format
 - Out-of-the-box support of MongoDB queries to snapshots (one can extend [SalatDAO](https://github.com/novus/salat/wiki/SalatDAO)) 
 
@@ -36,10 +36,30 @@ First, download, install and start a standalone mongoDB instance by following th
 
 ### @Salat interfaces
 
-Please extend your events directly (current limitation of Salat annotations) from MongodbEvent trait and your snapshots (states) from MongodbSnapshotState trait. 
+Please extend your events directly (current limitation of Salat annotations) from MongodbEvent trait and your snapshots (states) from [MongodbSnapshotState](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.salat.MongodbSnapshotState) trait. 
 One can process List[MongodbSnapshotState] on receiving SnapshotRequest and by this trick split in-memory model into blocks < 16MB.  
 
 ### MongoDB queries with Salat
+
+The document being stored with your [MongodbSnapshotState](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.salat.MongodbSnapshotState) in mongoDB has the structure of [MongodbSnapshot](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.mongodb.casbah.salat.MongodbSnapshot):
+
+{
+processorId: 1, 
+timestamp: 1L, 
+snapshotNr: 1, 
+state: MongodbSnapshotState
+}
+
+OR
+
+{
+processorId: 1, 
+timestamp: 1L, 
+snapshotNr: 1, 
+state: List[MongodbSnapshotState]
+}
+
+depending on how you process the SnapshotRequest and how do you split your in-memory model!  
 
 Please refer to [SalatDAO](https://github.com/novus/salat/wiki/SalatDAO) wiki page for the support on making queries to your snapshots.
 

@@ -37,10 +37,5 @@ object MongodbMessage {
     case _ => None
   }
 
-  //TODO remove when migrating
-  def clear(msg: Message) = msg.copy(
-    posConfirmationTarget = null,
-    posConfirmationMessage = null,
-    negConfirmationTarget = null,
-    negConfirmationMessage = null)
+  def clear(msg: Message) = msg.clearConfirmationSettings.copy(event = Some(0))
 }
