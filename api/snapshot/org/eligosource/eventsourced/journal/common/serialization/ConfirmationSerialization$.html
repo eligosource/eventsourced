@@ -2,9 +2,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html>
         <head>
-          <title>MessageSerialization - org.eligosource.eventsourced.journal.common.serialization.MessageSerialization</title>
-          <meta name="description" content="MessageSerialization - org.eligosource.eventsourced.journal.common.serialization.MessageSerialization" />
-          <meta name="keywords" content="MessageSerialization org.eligosource.eventsourced.journal.common.serialization.MessageSerialization" />
+          <title>ConfirmationSerialization - org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization</title>
+          <meta name="description" content="ConfirmationSerialization - org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization" />
+          <meta name="keywords" content="ConfirmationSerialization org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization" />
           <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
           
       <link href="../../../../../../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
@@ -17,7 +17,7 @@
       <script type="text/javascript">
          if(top === self) {
             var url = '../../../../../../index.html';
-            var hash = 'org.eligosource.eventsourced.journal.common.serialization.MessageSerialization';
+            var hash = 'org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization$';
             var anchor = window.location.hash;
             var anchor_opt = '';
             if (anchor.length >= 1)
@@ -27,33 +27,26 @@
    	  </script>
     
         </head>
-        <body class="type">
+        <body class="value">
       <div id="definition">
-        <a href="MessageSerialization$.html" title="Go to companion"><img src="../../../../../../lib/class_to_object_big.png" /></a>
+        <a href="ConfirmationSerialization.html" title="Go to companion"><img src="../../../../../../lib/object_to_class_big.png" /></a>
         <p id="owner"><a href="../../../../../package.html" class="extype" name="org">org</a>.<a href="../../../../package.html" class="extype" name="org.eligosource">eligosource</a>.<a href="../../../package.html" class="extype" name="org.eligosource.eventsourced">eventsourced</a>.<a href="../../package.html" class="extype" name="org.eligosource.eventsourced.journal">journal</a>.<a href="../package.html" class="extype" name="org.eligosource.eventsourced.journal.common">common</a>.<a href="package.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization">serialization</a></p>
-        <h1><a href="MessageSerialization$.html" title="Go to companion">MessageSerialization</a></h1>
+        <h1><a href="ConfirmationSerialization.html" title="Go to companion">ConfirmationSerialization</a></h1>
       </div>
 
       <h4 id="signature" class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">object</span>
       </span>
       <span class="symbol">
-        <span class="name">MessageSerialization</span><span class="result"> extends <a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></span>
+        <span class="name">ConfirmationSerialization</span><span class="result"> extends <span class="extype" name="akka.actor.ExtensionId">ExtensionId</span>[<a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a>] with <span class="extype" name="akka.actor.ExtensionIdProvider">ExtensionIdProvider</span></span>
       </span>
       </h4>
       
-          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>Extension for protobuf-based (de)serialization of event messages.
-Serializers for events contained in event messages are looked up
-in the Akka <span class="extype" name="akka.serialization.Serialization">akka.serialization.Serialization</span> extension.
-</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">org.eligosource.eventsourced.core.Message</a>
-</p></span></dd></dl><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
-          <div class="superTypes hiddenContent"><a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a>, <span class="extype" name="akka.actor.Extension">Extension</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
-        </div><div class="toggleContainer block">
-          <span class="toggle">Known Subclasses</span>
-          <div class="subClasses hiddenContent"><a href="CommandSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.CommandSerialization">CommandSerialization</a></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="akka.actor.ExtensionIdProvider">ExtensionIdProvider</span>, <span class="extype" name="akka.actor.ExtensionId">ExtensionId</span>[<a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a>], <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -71,7 +64,7 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization"><span>MessageSerialization</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization"><span>ConfirmationSerialization</span></li><li class="in" name="akka.actor.Extension"><span>Extension</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization"><span>ConfirmationSerialization</span></li><li class="in" name="akka.actor.ExtensionIdProvider"><span>ExtensionIdProvider</span></li><li class="in" name="akka.actor.ExtensionId"><span>ExtensionId</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -89,23 +82,7 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
 
       <div id="template">
         <div id="allMembers">
-        <div id="constructors" class="members">
-              <h3>Instance Constructors</h3>
-              <ol><li name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(system:akka.actor.ExtendedActorSystem):org.eligosource.eventsourced.journal.common.serialization.MessageSerialization"></a>
-      <a id="&lt;init&gt;:MessageSerialization"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">new</span>
-      </span>
-      <span class="symbol">
-        <span class="name">MessageSerialization</span><span class="params">(<span name="system">system: <span class="extype" name="akka.actor.ExtendedActorSystem">ExtendedActorSystem</span></span>)</span>
-      </span>
-      </h4>
-      
-    </li></ol>
-            </div>
+        
 
         
 
@@ -178,6 +155,19 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="akka.actor.ExtensionId#apply" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="apply(system:akka.actor.ActorSystem):T"></a>
+      <a id="apply(ActorSystem):ConfirmationSerialization"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">apply</span><span class="params">(<span name="system">system: <span class="extype" name="akka.actor.ActorSystem">ActorSystem</span></span>)</span><span class="result">: <a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>ExtensionId</dd></dl></div>
     </li><li name="scala.Any#asInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <a id="asInstanceOf[T0]:T0"></a>
@@ -207,60 +197,19 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization#confirmation" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="confirmation(confirmationProtocol:org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol):org.eligosource.eventsourced.core.Confirmation"></a>
-      <a id="confirmation(ConfirmationProtocol):Confirmation"></a>
+    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization#createExtension" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="createExtension(system:akka.actor.ExtendedActorSystem):org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization"></a>
+      <a id="createExtension(ExtendedActorSystem):ConfirmationSerialization"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">confirmation</span><span class="params">(<span name="confirmationProtocol">confirmationProtocol: <span class="extype" name="org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol">ConfirmationProtocol</span></span>)</span><span class="result">: <a href="../../../core/Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">Confirmation</a></span>
+        <span class="name">createExtension</span><span class="params">(<span name="system">system: <span class="extype" name="akka.actor.ExtendedActorSystem">ExtendedActorSystem</span></span>)</span><span class="result">: <a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd><a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization#confirmationProtocolBuilder" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="confirmationProtocolBuilder(confirmation:org.eligosource.eventsourced.core.Confirmation):org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder"></a>
-      <a id="confirmationProtocolBuilder(Confirmation):Builder"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">confirmationProtocolBuilder</span><span class="params">(<span name="confirmation">confirmation: <a href="../../../core/Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">Confirmation</a></span>)</span><span class="result">: <span class="extype" name="org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder">Builder</span></span>
-      </span>
-      </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd><a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization#deserializeConfirmation" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="deserializeConfirmation(bytes:Array[Byte]):org.eligosource.eventsourced.core.Confirmation"></a>
-      <a id="deserializeConfirmation(Array[Byte]):Confirmation"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">deserializeConfirmation</span><span class="params">(<span name="bytes">bytes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Byte">Byte</span>]</span>)</span><span class="result">: <a href="../../../core/Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">Confirmation</a></span>
-      </span>
-      </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization#deserializeMessage" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="deserializeMessage(bytes:Array[Byte]):org.eligosource.eventsourced.core.Message"></a>
-      <a id="deserializeMessage(Array[Byte]):Message"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">deserializeMessage</span><span class="params">(<span name="bytes">bytes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Byte">Byte</span>]</span>)</span><span class="result">: <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Deserializes an event <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">org.eligosource.eventsourced.core.Message</a>.</p><div class="fullcomment"><div class="comment cmt"><p>Deserializes an event <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">org.eligosource.eventsourced.core.Message</a>.
-</p></div><dl class="paramcmts block"><dt class="param">bytes</dt><dd class="cmt"><p>serialized event message.</p></dd><dt>returns</dt><dd class="cmt"><p>event message.
-</p></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a> → ExtensionId</dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>
@@ -274,32 +223,19 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="scala.AnyRef#equals" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="equals(x$1:Any):Boolean"></a>
+    </li><li name="akka.actor.ExtensionId#equals" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="equals(other:Any):Boolean"></a>
       <a id="equals(Any):Boolean"></a>
       <h4 class="signature">
       <span class="modifier_kind">
-        <span class="modifier"></span>
+        <span class="modifier">final </span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">equals</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">equals</span><span class="params">(<span name="other">other: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization#extension" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="extension:akka.serialization.Serialization"></a>
-      <a id="extension:Serialization"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">extension</span><span class="result">: <span class="extype" name="akka.serialization.Serialization">Serialization</span></span>
-      </span>
-      </h4>
-      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>ExtensionId → AnyRef → Any</dd></dl></div>
     </li><li name="scala.AnyRef#finalize" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <a id="finalize():Unit"></a>
@@ -316,6 +252,19 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="akka.actor.ExtensionId#get" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="get(system:akka.actor.ActorSystem):T"></a>
+      <a id="get(ActorSystem):ConfirmationSerialization"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">get</span><span class="params">(<span name="system">system: <span class="extype" name="akka.actor.ActorSystem">ActorSystem</span></span>)</span><span class="result">: <a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>ExtensionId</dd></dl></div>
     </li><li name="scala.AnyRef#getClass" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <a id="getClass():Class[_]"></a>
@@ -329,19 +278,19 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
-    </li><li name="scala.AnyRef#hashCode" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="akka.actor.ExtensionId#hashCode" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hashCode():Int"></a>
       <a id="hashCode():Int"></a>
       <h4 class="signature">
       <span class="modifier_kind">
-        <span class="modifier"></span>
+        <span class="modifier">final </span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
         <span class="name">hashCode</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>ExtensionId → AnyRef → Any</dd></dl></div>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <a id="isInstanceOf[T0]:Boolean"></a>
@@ -355,32 +304,19 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization#message" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="message(messageProtocol:org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol):org.eligosource.eventsourced.core.Message"></a>
-      <a id="message(MessageProtocol):Message"></a>
+    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization#lookup" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="lookup():org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization.type"></a>
+      <a id="lookup():ConfirmationSerialization.type"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">message</span><span class="params">(<span name="messageProtocol">messageProtocol: <span class="extype" name="org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol">MessageProtocol</span></span>)</span><span class="result">: <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a></span>
+        <span class="name">lookup</span><span class="params">()</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a>.type</span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization#messageProtocolBuilder" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="messageProtocolBuilder(message:org.eligosource.eventsourced.core.Message):org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol.Builder"></a>
-      <a id="messageProtocolBuilder(Message):Builder"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">messageProtocolBuilder</span><span class="params">(<span name="message">message: <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a></span>)</span><span class="result">: <span class="extype" name="org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol.Builder">Builder</span></span>
-      </span>
-      </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a> → ExtensionIdProvider</dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a>
       <a id="ne(AnyRef):Boolean"></a>
@@ -420,34 +356,6 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization#serializeConfirmation" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="serializeConfirmation(confirmation:org.eligosource.eventsourced.core.Confirmation):Array[Byte]"></a>
-      <a id="serializeConfirmation(Confirmation):Array[Byte]"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">serializeConfirmation</span><span class="params">(<span name="confirmation">confirmation: <a href="../../../core/Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">Confirmation</a></span>)</span><span class="result">: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Byte">Byte</span>]</span>
-      </span>
-      </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization#serializeMessage" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="serializeMessage(message:org.eligosource.eventsourced.core.Message):Array[Byte]"></a>
-      <a id="serializeMessage(Message):Array[Byte]"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">serializeMessage</span><span class="params">(<span name="message">message: <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a></span>)</span><span class="result">: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Byte">Byte</span>]</span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Serializes an event <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">org.eligosource.eventsourced.core.Message</a>.</p><div class="fullcomment"><div class="comment cmt"><p>Serializes an event <a href="../../../core/Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">org.eligosource.eventsourced.core.Message</a>.
-</p></div><dl class="paramcmts block"><dt class="param">message</dt><dd class="cmt"><p>event message.</p></dd><dt>returns</dt><dd class="cmt"><p>serialized event message.
-</p></dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a>
       <a id="synchronized[T0](⇒T0):T0"></a>
@@ -531,10 +439,10 @@ in the Akka <span class="extype" name="akka.serialization.Serialization">akka.se
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">
-              <h3>Inherited from <a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></h3>
-            </div><div class="parent" name="akka.actor.Extension">
-              <h3>Inherited from <span class="extype" name="akka.actor.Extension">Extension</span></h3>
+        <div class="parent" name="akka.actor.ExtensionIdProvider">
+              <h3>Inherited from <span class="extype" name="akka.actor.ExtensionIdProvider">ExtensionIdProvider</span></h3>
+            </div><div class="parent" name="akka.actor.ExtensionId">
+              <h3>Inherited from <span class="extype" name="akka.actor.ExtensionId">ExtensionId</span>[<a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a>]</h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">

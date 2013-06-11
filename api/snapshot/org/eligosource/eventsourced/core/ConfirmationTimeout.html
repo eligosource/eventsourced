@@ -2,9 +2,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html>
         <head>
-          <title>Message - org.eligosource.eventsourced.core.Message</title>
-          <meta name="description" content="Message - org.eligosource.eventsourced.core.Message" />
-          <meta name="keywords" content="Message org.eligosource.eventsourced.core.Message" />
+          <title>ConfirmationTimeout - org.eligosource.eventsourced.core.ConfirmationTimeout</title>
+          <meta name="description" content="ConfirmationTimeout - org.eligosource.eventsourced.core.ConfirmationTimeout" />
+          <meta name="keywords" content="ConfirmationTimeout org.eligosource.eventsourced.core.ConfirmationTimeout" />
           <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
           
       <link href="../../../../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
@@ -17,7 +17,7 @@
       <script type="text/javascript">
          if(top === self) {
             var url = '../../../../index.html';
-            var hash = 'org.eligosource.eventsourced.core.Message';
+            var hash = 'org.eligosource.eventsourced.core.ConfirmationTimeout';
             var anchor = window.location.hash;
             var anchor_opt = '';
             if (anchor.length >= 1)
@@ -31,7 +31,7 @@
       <div id="definition">
         <img src="../../../../lib/class_big.png" />
         <p id="owner"><a href="../../../package.html" class="extype" name="org">org</a>.<a href="../../package.html" class="extype" name="org.eligosource">eligosource</a>.<a href="../package.html" class="extype" name="org.eligosource.eventsourced">eventsourced</a>.<a href="package.html" class="extype" name="org.eligosource.eventsourced.core">core</a></p>
-        <h1>Message</h1>
+        <h1>ConfirmationTimeout</h1>
       </div>
 
       <h4 id="signature" class="signature">
@@ -40,29 +40,13 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Message</span><span class="params">(<span name="event">event: <span class="extype" name="scala.Any">Any</span></span>, <span name="sequenceNr">sequenceNr: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">0L</span></span>, <span name="timestamp">timestamp: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">0L</span></span>, <span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">0</span></span>, <span name="acks">acks: <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="scala.Int">Int</span>] = <span class="symbol">immutable.this.Nil</span></span>, <span name="ack">ack: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>, <span name="senderRef">senderRef: <span class="extype" name="akka.actor.ActorRef">ActorRef</span> = <span class="symbol">null</span></span>, <span name="confirmationTarget">confirmationTarget: <span class="extype" name="akka.actor.ActorRef">ActorRef</span> = <span class="symbol">null</span></span>, <span name="confirmationPrototype">confirmationPrototype: <a href="Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">Confirmation</a> = <span class="symbol">null</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">ConfirmationTimeout</span><span class="params">(<span name="sequenceNr">sequenceNr: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
-          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>A message for communicating application events. Application events are not interpreted
-by the <a href="https://github.com/eligosource/eventsourced" target="_blank">eventsourced library</a> and can have
-any type. Since the library doesn't make any assumptions about the structure and semantics
-of <code>event</code>, applications may also choose to send <i>commands</i> with <a href="" class="extype" name="org.eligosource.eventsourced.core.Message">org.eligosource.eventsourced.core.Message</a>s.
-In other words, the library can be used for both, event-sourcing and command-sourcing.</p><p>Messages sent to an <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processor
-are called <i>input</i> messages. Processors process input messages and optionally
-<i>emit</i> (or send) <i>output</i> messages to one or more destinations, usually via
-<a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>s. Output messages should be derived
-from input messages using the <code>copy(...)</code> method. Processors may also reply to
-initial senders using the actor's current <code>sender</code> reference.
-</p></div><dl class="paramcmts block"><dt class="param">event</dt><dd class="cmt"><p>Application event (or command).</p></dd><dt class="param">sequenceNr</dt><dd class="cmt"><p>Sequence number that is generated when messages are written
-       to the journal. Can also be used for detecting duplicates, in special cases.</p></dd><dt class="param">timestamp</dt><dd class="cmt"><p>time the input message was added to the event log.</p></dd><dt class="param">processorId</dt><dd class="cmt"><p>Id of the event processor that stored (and emitted) this message.</p></dd><dt class="param">ack</dt><dd class="cmt"><p>Whether or not an <i>acknowledgement</i> should be written to the journal during
-       (or after) delivery of this message by a <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>.
-       Used by event processors to indicate a series of output messages (that are derived
-       from a single input message). In this case, output messages 1 to n-1 should have <code>ack</code>
-       set to <code>false</code> and only output message n should have <code>ack</code> set to <code>true</code> (default).
-       If an acknowledgement has been written for a series, all messages of that series will
-       be ignored by the corresponding channel during a replay, otherwise all of them will
-       be delivered again.
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>Confirmation timeout message. System message, not used by applications.
+</p></div><dl class="paramcmts block"><dt class="param">sequenceNr</dt><dd class="cmt"><p>Sequence number of message for which a delivery confirmation timeout
+       occurred.
 </p></dd></dl><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
@@ -83,7 +67,7 @@ initial senders using the actor's current <code>sender</code> reference.
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.core.Message"><span>Message</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.core.ConfirmationTimeout"><span>ConfirmationTimeout</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -103,27 +87,20 @@ initial senders using the actor's current <code>sender</code> reference.
         <div id="allMembers">
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
-              <ol><li name="org.eligosource.eventsourced.core.Message#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="&lt;init&gt;(event:Any,sequenceNr:Long,timestamp:Long,processorId:Int,acks:Seq[Int],ack:Boolean,senderRef:akka.actor.ActorRef,confirmationTarget:akka.actor.ActorRef,confirmationPrototype:org.eligosource.eventsourced.core.Confirmation):org.eligosource.eventsourced.core.Message"></a>
-      <a id="&lt;init&gt;:Message"></a>
+              <ol><li name="org.eligosource.eventsourced.core.ConfirmationTimeout#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="&lt;init&gt;(sequenceNr:Long):org.eligosource.eventsourced.core.ConfirmationTimeout"></a>
+      <a id="&lt;init&gt;:ConfirmationTimeout"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Message</span><span class="params">(<span name="event">event: <span class="extype" name="scala.Any">Any</span></span>, <span name="sequenceNr">sequenceNr: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">0L</span></span>, <span name="timestamp">timestamp: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">0L</span></span>, <span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">0</span></span>, <span name="acks">acks: <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="scala.Int">Int</span>] = <span class="symbol">immutable.this.Nil</span></span>, <span name="ack">ack: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>, <span name="senderRef">senderRef: <span class="extype" name="akka.actor.ActorRef">ActorRef</span> = <span class="symbol">null</span></span>, <span name="confirmationTarget">confirmationTarget: <span class="extype" name="akka.actor.ActorRef">ActorRef</span> = <span class="symbol">null</span></span>, <span name="confirmationPrototype">confirmationPrototype: <a href="Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">Confirmation</a> = <span class="symbol">null</span></span>)</span>
+        <span class="name">ConfirmationTimeout</span><span class="params">(<span name="sequenceNr">sequenceNr: <span class="extype" name="scala.Long">Long</span></span>)</span>
       </span>
       </h4>
-      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="paramcmts block"><dt class="param">event</dt><dd class="cmt"><p>Application event (or command).</p></dd><dt class="param">sequenceNr</dt><dd class="cmt"><p>Sequence number that is generated when messages are written
-       to the journal. Can also be used for detecting duplicates, in special cases.</p></dd><dt class="param">timestamp</dt><dd class="cmt"><p>time the input message was added to the event log.</p></dd><dt class="param">processorId</dt><dd class="cmt"><p>Id of the event processor that stored (and emitted) this message.</p></dd><dt class="param">ack</dt><dd class="cmt"><p>Whether or not an <i>acknowledgement</i> should be written to the journal during
-       (or after) delivery of this message by a <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>.
-       Used by event processors to indicate a series of output messages (that are derived
-       from a single input message). In this case, output messages 1 to n-1 should have <code>ack</code>
-       set to <code>false</code> and only output message n should have <code>ack</code> set to <code>true</code> (default).
-       If an acknowledgement has been written for a series, all messages of that series will
-       be ignored by the corresponding channel during a replay, otherwise all of them will
-       be delivered again.
+      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="paramcmts block"><dt class="param">sequenceNr</dt><dd class="cmt"><p>Sequence number of message for which a delivery confirmation timeout
+       occurred.
 </p></dd></dl></div>
     </li></ol>
             </div>
@@ -199,41 +176,6 @@ initial senders using the actor's current <code>sender</code> reference.
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.core.Message#ack" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="ack:Boolean"></a>
-      <a id="ack:Boolean"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">ack</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Whether or not an <i>acknowledgement</i> should be written to the journal during
-       (or after) delivery of this message by a <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>.</p><div class="fullcomment"><div class="comment cmt"><p>Whether or not an <i>acknowledgement</i> should be written to the journal during
-       (or after) delivery of this message by a <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>.
-       Used by event processors to indicate a series of output messages (that are derived
-       from a single input message). In this case, output messages 1 to n-1 should have <code>ack</code>
-       set to <code>false</code> and only output message n should have <code>ack</code> set to <code>true</code> (default).
-       If an acknowledgement has been written for a series, all messages of that series will
-       be ignored by the corresponding channel during a replay, otherwise all of them will
-       be delivered again.
-</p></div></div>
-    </li><li name="org.eligosource.eventsourced.core.Message#acks" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="acks:Seq[Int]"></a>
-      <a id="acks:Seq[Int]"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">acks</span><span class="result">: <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="scala.Int">Int</span>]</span>
-      </span>
-      </h4>
-      
     </li><li name="scala.Any#asInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <a id="asInstanceOf[T0]:T0"></a>
@@ -263,50 +205,6 @@ initial senders using the actor's current <code>sender</code> reference.
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.core.Message#confirm" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="confirm(pos:Boolean):Unit"></a>
-      <a id="confirm(Boolean):Unit"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">confirm</span><span class="params">(<span name="pos">pos: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Should be called by <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a> destinations to
-(positively or negatively) confirm the receipt of this event message.</p><div class="fullcomment"><div class="comment cmt"><p>Should be called by <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a> destinations to
-(positively or negatively) confirm the receipt of this event message. Destinations
-may also delegate this call other actors or threads.
-</p></div><dl class="paramcmts block"><dt class="param">pos</dt><dd class="cmt"><p><code>true</code> for a positive receipt confirmation, <code>false</code> for a negative one.
-</p></dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.core.Message#confirmationPrototype" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="confirmationPrototype:org.eligosource.eventsourced.core.Confirmation"></a>
-      <a id="confirmationPrototype:Confirmation"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">confirmationPrototype</span><span class="result">: <a href="Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">Confirmation</a></span>
-      </span>
-      </h4>
-      
-    </li><li name="org.eligosource.eventsourced.core.Message#confirmationTarget" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="confirmationTarget:akka.actor.ActorRef"></a>
-      <a id="confirmationTarget:ActorRef"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">confirmationTarget</span><span class="result">: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>
-      </span>
-      </h4>
-      
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>
@@ -320,19 +218,6 @@ may also delegate this call other actors or threads.
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.core.Message#event" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="event:Any"></a>
-      <a id="event:Any"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">event</span><span class="result">: <span class="extype" name="scala.Any">Any</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Application event (or command).</p>
     </li><li name="scala.AnyRef#finalize" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <a id="finalize():Unit"></a>
@@ -414,33 +299,7 @@ may also delegate this call other actors or threads.
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.core.Message#processorId" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="processorId:Int"></a>
-      <a id="processorId:Int"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">processorId</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Id of the event processor that stored (and emitted) this message.</p>
-    </li><li name="org.eligosource.eventsourced.core.Message#senderRef" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="senderRef:akka.actor.ActorRef"></a>
-      <a id="senderRef:ActorRef"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">senderRef</span><span class="result">: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>
-      </span>
-      </h4>
-      
-    </li><li name="org.eligosource.eventsourced.core.Message#sequenceNr" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="org.eligosource.eventsourced.core.ConfirmationTimeout#sequenceNr" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="sequenceNr:Long"></a>
       <a id="sequenceNr:Long"></a>
       <h4 class="signature">
@@ -452,9 +311,8 @@ may also delegate this call other actors or threads.
         <span class="name">sequenceNr</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Sequence number that is generated when messages are written
-       to the journal.</p><div class="fullcomment"><div class="comment cmt"><p>Sequence number that is generated when messages are written
-       to the journal. Can also be used for detecting duplicates, in special cases.</p></div></div>
+      <p class="shortcomment cmt">Sequence number of message for which a delivery confirmation timeout
+       occurred.</p>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a>
       <a id="synchronized[T0](⇒T0):T0"></a>
@@ -468,19 +326,6 @@ may also delegate this call other actors or threads.
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.core.Message#timestamp" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="timestamp:Long"></a>
-      <a id="timestamp:Long"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">timestamp</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">time the input message was added to the event log.</p>
     </li><li name="scala.AnyRef#wait" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <a id="wait():Unit"></a>

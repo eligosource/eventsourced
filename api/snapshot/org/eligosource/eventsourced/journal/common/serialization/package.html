@@ -99,6 +99,32 @@
       </span>
       </h4>
       <p class="comment cmt">Extension for protobuf-based (de)serialization of journal commands.</p>
+    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ConfirmationSerializationextendsExtension"></a>
+      <a id="ConfirmationSerialization:ConfirmationSerialization"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="ConfirmationSerialization.html"><span class="name">ConfirmationSerialization</span></a><span class="result"> extends <span class="extype" name="akka.actor.Extension">Extension</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Extension for protobuf-based (de)serialization of confirmation messages.</p>
+    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerializer" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ConfirmationSerializerextendsSerializer"></a>
+      <a id="ConfirmationSerializer:ConfirmationSerializer"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="ConfirmationSerializer.html"><span class="name">ConfirmationSerializer</span></a><span class="result"> extends <span class="extype" name="akka.serialization.Serializer">Serializer</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Protobuf-based <a href="../../../core/Confirmation.html" class="extype" name="org.eligosource.eventsourced.core.Confirmation">org.eligosource.eventsourced.core.Confirmation</a> serialize.</p>
     </li><li name="org.eligosource.eventsourced.journal.common.serialization.JournalProtocol" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="JournalProtocolextendsObject"></a>
       <a id="JournalProtocol:JournalProtocol"></a>
@@ -113,7 +139,7 @@
       </h4>
       
     </li><li name="org.eligosource.eventsourced.journal.common.serialization.MessageSerialization" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MessageSerializationextendsExtension"></a>
+      <a id="MessageSerializationextendsConfirmationSerialization"></a>
       <a id="MessageSerialization:MessageSerialization"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -121,7 +147,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a href="MessageSerialization.html"><span class="name">MessageSerialization</span></a><span class="result"> extends <span class="extype" name="akka.actor.Extension">Extension</span></span>
+        <a href="MessageSerialization.html"><span class="name">MessageSerialization</span></a><span class="result"> extends <a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a></span>
       </span>
       </h4>
       <p class="comment cmt">Extension for protobuf-based (de)serialization of event messages.</p>
@@ -196,6 +222,19 @@ an event contained in an event message.</p>
       </span>
       <span class="symbol">
         <a href="CommandSerialization$.html"><span class="name">CommandSerialization</span></a><span class="result"> extends <span class="extype" name="akka.actor.ExtensionId">ExtensionId</span>[<a href="CommandSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.CommandSerialization">CommandSerialization</a>] with <span class="extype" name="akka.actor.ExtensionIdProvider">ExtensionIdProvider</span></span>
+      </span>
+      </h4>
+      
+    </li><li name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ConfirmationSerialization"></a>
+      <a id="ConfirmationSerialization:ConfirmationSerialization"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="ConfirmationSerialization$.html"><span class="name">ConfirmationSerialization</span></a><span class="result"> extends <span class="extype" name="akka.actor.ExtensionId">ExtensionId</span>[<a href="ConfirmationSerialization.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.ConfirmationSerialization">ConfirmationSerialization</a>] with <span class="extype" name="akka.actor.ExtensionIdProvider">ExtensionIdProvider</span></span>
       </span>
       </h4>
       
