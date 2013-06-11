@@ -120,6 +120,32 @@
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>FutureTimeoutSupport</dd></dl></div>
     </li><li name="akka.pattern.AskSupport#ask" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ask(actorSelection:akka.actor.ActorSelection,message:Any)(implicittimeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
+      <a id="ask(ActorSelection,Any)(Timeout):Future[Any]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ask</span><span class="params">(<span name="actorSelection">actorSelection: <span class="extype" name="akka.actor.ActorSelection">ActorSelection</span></span>, <span name="message">message: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="timeout">timeout: <span class="extype" name="akka.util.Timeout">Timeout</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Any">Any</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AskSupport</dd></dl></div>
+    </li><li name="akka.pattern.AskSupport#ask" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ask(actorSelection:akka.actor.ActorSelection):akka.pattern.AskableActorSelection"></a>
+      <a id="ask(ActorSelection):AskableActorSelection"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ask</span><span class="params">(<span name="actorSelection">actorSelection: <span class="extype" name="akka.actor.ActorSelection">ActorSelection</span></span>)</span><span class="result">: <span class="extype" name="akka.pattern.AskableActorSelection">AskableActorSelection</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AskSupport</dd></dl></div>
+    </li><li name="akka.pattern.AskSupport#ask" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ask(actorRef:akka.actor.ActorRef,message:Any)(implicittimeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
       <a id="ask(ActorRef,Any)(Timeout):Future[Any]"></a>
       <h4 class="signature">
@@ -133,7 +159,7 @@
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AskSupport</dd></dl></div>
     </li><li name="akka.pattern.AskSupport#ask" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="ask(actorRef:akka.actor.ActorRef):AskSupport.this.AskableActorRef"></a>
+      <a id="ask(actorRef:akka.actor.ActorRef):akka.pattern.AskableActorRef"></a>
       <a id="ask(ActorRef):AskableActorRef"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -141,20 +167,20 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">ask</span><span class="params">(<span name="actorRef">actorRef: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>)</span><span class="result">: <span class="extype" name="akka.pattern.AskSupport.AskableActorRef">AskableActorRef</span></span>
+        <span class="name">ask</span><span class="params">(<span name="actorRef">actorRef: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>)</span><span class="result">: <span class="extype" name="akka.pattern.AskableActorRef">AskableActorRef</span></span>
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AskSupport</dd></dl></div>
     </li><li name="akka.pattern.GracefulStopSupport#gracefulStop" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="gracefulStop(target:&lt;?&gt;,timeout:&lt;?&gt;)(implicitsystem:&lt;?&gt;):scala.concurrent.Future[Boolean]"></a>
-      <a id="gracefulStop(ActorRef,FiniteDuration)(ActorSystem):Future[Boolean]"></a>
+      <a id="gracefulStop(target:&lt;?&gt;,timeout:&lt;?&gt;,stopMessage:&lt;?&gt;):scala.concurrent.Future[Boolean]"></a>
+      <a id="gracefulStop(ActorRef,FiniteDuration,Any):Future[Boolean]"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">gracefulStop</span><span class="params">(<span name="target">target: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>, <span name="timeout">timeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="system">system: <span class="extype" name="akka.actor.ActorSystem">ActorSystem</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Boolean">Boolean</span>]</span>
+        <span class="name">gracefulStop</span><span class="params">(<span name="target">target: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>, <span name="timeout">timeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>, <span name="stopMessage">stopMessage: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Boolean">Boolean</span>]</span>
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>GracefulStopSupport</dd></dl></div>

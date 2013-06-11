@@ -57,10 +57,10 @@ and starts again with re-deliveries. If the maximum number of restarts has been 
 by <code>policy.restartMax</code>) the channel stops message delivery and publishes a
 <a href="Channel$$DeliveryStopped.html" class="extype" name="org.eligosource.eventsourced.core.Channel.DeliveryStopped">org.eligosource.eventsourced.core.Channel.DeliveryStopped</a> event to the event stream of the
 <span class="extype" name="akka.actor.ActorSystem">akka.actor.ActorSystem</span> this channel belongs to. Applications can then re-activate the channel
-by calling <code>EventsourcingExtension.deliver(Int)</code> with the channel id as argument.</p><p>A <code>ReliableChannel</code> stores <code>sender</code> references along with event messages. A destination can even
-reply to a sender that was sending an event message in a previous application run (e.g. before the
-application crashed). If that sender doesn't exist any more after recovery, the reply will go to
-<code>deadLetters</code>.</p><p>Usually, a <code>ReliableChannel</code> is used in combination with an <code>Eventsourced</code> processor, as described
+by calling <code>EventsourcingExtension.deliver(Int)</code> with the channel id as argument.</p><p>A <code>ReliableChannel</code> stores <code>sender</code> references along with event messages so that they can be forwarded
+to destinations even after the channel has been restarted. If a stored sender reference is a remote
+reference, it remains valid even after recovery from a JVM crash (i.e. a crash of the JVM the channel
+is running in) provided the remote sender is still available.</p><p>Usually, a <code>ReliableChannel</code> is used in combination with an <code>Eventsourced</code> processor, as described
 in the documentation of <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>. A <code>ReliableChannel</code> can also
 be used independently of an <code>Eventsourced</code> processor (i.e. standalone). For standalone channel usage,
 senders must set the <code>Message.processorId</code> of the sent <code>Message</code> to <code>0</code> (which is the default value):</p><pre>channel ! Message(<span class="lit">"my event"</span>) <span class="cmt">// processorId == 0</span></pre><p>This is equivalent to directly sending the <code>Message.event</code>:</p><pre>channel ! <span class="lit">"my event"</span></pre><p>A <code>ReliableChannel</code> internally wraps a received event into a <code>Message</code> with <code>processorId</code> set to <code>0</code>.
@@ -295,15 +295,15 @@ no need to write one in this case.
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.Channel#executionContext" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="executionContext:akka.dispatch.MessageDispatcher"></a>
-      <a id="executionContext:MessageDispatcher"></a>
+      <a id="executionContext:scala.concurrent.ExecutionContext"></a>
+      <a id="executionContext:ExecutionContext"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier">implicit </span>
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">executionContext</span><span class="result">: <span class="extype" name="akka.dispatch.MessageDispatcher">MessageDispatcher</span></span>
+        <span class="name">executionContext</span><span class="result">: <span class="extype" name="scala.concurrent.ExecutionContext">ExecutionContext</span></span>
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">Channel</a></dd></dl></div>
@@ -440,7 +440,10 @@ no need to write one in this case.
         <span class="name">postRestart</span><span class="params">(<span name="reason">reason: <span class="extype" name="scala.Throwable">Throwable</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Actor</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Actor</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.Channel#postStop" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="postStop():Unit"></a>
       <a id="postStop():Unit"></a>
@@ -469,7 +472,10 @@ no need to write one in this case.
         <span class="name">preRestart</span><span class="params">(<span name="reason">reason: <span class="extype" name="scala.Throwable">Throwable</span></span>, <span name="message">message: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Any">Any</span>]</span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Actor</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Actor</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="akka.actor.Actor#preStart" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="preStart():Unit"></a>
       <a id="preStart():Unit"></a>
@@ -482,7 +488,10 @@ no need to write one in this case.
         <span class="name">preStart</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Actor</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Actor</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.ReliableChannel#receive" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="receive:PartialFunction[Any,Unit]"></a>
       <a id="receive:PartialFunction[Any,Unit]"></a>
