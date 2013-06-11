@@ -61,8 +61,8 @@ class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
       c ! Deliver
       c ! Message("b", processorId = 3, sequenceNr = 11)
 
-      dequeue { m => m.posConfirmationTarget must be(journal); m.posConfirmationMessage must be(WriteAck(3, 1, 10)) }
-      dequeue { m => m.posConfirmationTarget must be(journal); m.posConfirmationMessage must be(WriteAck(3, 1, 11)) }
+      dequeue { m => m.confirmationTarget must be(c); m.confirmationPrototype must be(Confirmation(3, 1, 10, true)) }
+      dequeue { m => m.confirmationTarget must be(c); m.confirmationPrototype must be(Confirmation(3, 1, 11, true)) }
     }
     "not set posConfirmationTarget and posConfirmationMessage on delivered message if ack is not required" in { fixture =>
       import fixture._
@@ -74,9 +74,9 @@ class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
       c ! Message("b", processorId = 3, sequenceNr = 11, ack = false)
       c ! Message("c", processorId = 3, sequenceNr = 12)
 
-      dequeue { m => m.posConfirmationTarget must be(null) }
-      dequeue { m => m.posConfirmationTarget must be(null) }
-      dequeue { m => m.posConfirmationTarget must be(journal); m.posConfirmationMessage must be(WriteAck(3, 1, 12)) }
+      dequeue { m => m.confirmationTarget must be(null) }
+      dequeue { m => m.confirmationTarget must be(null) }
+      dequeue { m => m.confirmationTarget must be(c); m.confirmationPrototype must be(Confirmation(3, 1, 12, true)) }
     }
     "not set negConfirmationTarget and negConfirmationMessage on delivered message" in { fixture =>
       import fixture._
@@ -88,9 +88,6 @@ class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
       c ! Deliver
       c ! Message("a", processorId = 3, sequenceNr = 10)
       c ! Message("b", processorId = 3, sequenceNr = 11)
-
-      // destination only enqueues received messages on success
-      dequeue { m => m.negConfirmationTarget must be(null) }
 
       // doesn't happen because destination calls msg.confirm(false)
       //dequeue(writeAckListenerQueue) must be (WriteAck(3, 1, 10))

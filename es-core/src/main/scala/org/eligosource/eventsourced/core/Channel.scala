@@ -118,7 +118,7 @@ object Channel {
  * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
  */
 class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorRef) extends Channel {
-  import Channel.Deliver
+  import Channel._
 
   private var retain = true
   private var buffer = List.empty[Message]
@@ -128,6 +128,9 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
       if (retain) buffer = msg :: buffer
       else send(msg)
     }
+    case Confirmation(pid, `id`, snr, true) => {
+      journal forward WriteAck(pid, id, snr)
+    }
     case Deliver => {
       retain = false
       buffer.reverse.foreach(send)
@@ -136,9 +139,9 @@ class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorR
   }
 
   def send(msg: Message) {
-    val pct = if (msg.ack) journal else null
-    val pcm = if (msg.ack) WriteAck(msg.processorId, id, msg.sequenceNr) else null
-    destination forward msg.copy(posConfirmationTarget = pct, posConfirmationMessage = pcm)
+    val ct = if (msg.ack) self else null
+    val cp = if (msg.ack) Confirmation(msg.processorId, id, msg.sequenceNr, true) else null
+    destination forward msg.copy(confirmationTarget = ct, confirmationPrototype = cp)
   }
 }
 
@@ -285,7 +288,7 @@ class ReliableChannel(val id: Int, val journal: ActorRef, val destination: Actor
     context.watch(actor(new ReliableChannelBuffer(id, journal, destination, policy, dispatcherName), dispatcherName = dispatcherName))
 }
 
-private [core] object ReliableChannel {
+private [eventsourced] object ReliableChannel {
   case class Buffered(queue: Queue[Message])
   case class Next(retries: Int)
   case class Retry(msg: Message, sdr: ActorRef)
@@ -293,9 +296,6 @@ private [core] object ReliableChannel {
   case object Trigger
   case object FeedMe
   case object ResetRestartCounter
-
-  case class Confirmed(snr: Long, pos: Boolean = true)
-  case class ConfirmationTimeout(snr: Long)
 }
 
 private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String]) extends Actor {
@@ -354,10 +354,8 @@ private [core] class ReliableChannelDeliverer(channelId: Int, channel: ActorRef,
       val (msg, q) = queue.dequeue
       val m = msg.copy(
         senderRef = null,
-        posConfirmationTarget = self,
-        negConfirmationTarget = self,
-        posConfirmationMessage = Confirmed(msg.sequenceNr, true),
-        negConfirmationMessage = Confirmed(msg.sequenceNr, false))
+        confirmationTarget = self,
+        confirmationPrototype = Confirmation(msg.processorId, channelId, msg.sequenceNr, true))
 
       val sdr = if (msg.senderRef == null) context.system.deadLetters else msg.senderRef
 
@@ -381,13 +379,13 @@ private [core] class ReliableChannelDeliverer(channelId: Int, channel: ActorRef,
       }
     }
 
-    case Confirmed(snr, true) => currentDelivery match {
+    case Confirmation(_, _, snr, true) => currentDelivery match {
       case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
         currentDelivery = None; task.cancel(); journal ! DeleteOutMsg(channelId, snr); self ! Next(0); redeliveries = 0; delivered = true
       }
       case None => ()
     }
-    case Confirmed(snr, false) => currentDelivery match {
+    case Confirmation(_, _, snr, false) => currentDelivery match {
       case Some((cm, cs, task)) => if (cm.sequenceNr == snr) {
         currentDelivery = None; task.cancel(); scheduler.scheduleOnce(policy.redeliveryDelay, self, Retry(cm, cs))
       }

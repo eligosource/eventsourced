@@ -22,17 +22,43 @@ import akka.serialization.{Serializer, Serialization, SerializationExtension}
 
 import com.google.protobuf.ByteString
 
-import org.eligosource.eventsourced.core.Message
+import org.eligosource.eventsourced.core.{Confirmation, Message}
 import org.eligosource.eventsourced.core.Journal._
 import org.eligosource.eventsourced.journal.common.serialization.JournalProtocol._
+
+/**
+ * Extension for protobuf-based (de)serialization of confirmation messages.
+ *
+ * @see [[org.eligosource.eventsourced.core.Confirmation]]
+ */
+class ConfirmationSerialization(system: ExtendedActorSystem) extends Extension {
+  def serializeConfirmation(confirmation: Confirmation): Array[Byte] =
+    confirmationProtocolBuilder(confirmation).build().toByteArray
+
+  def deserializeConfirmation(bytes: Array[Byte]): Confirmation =
+    confirmation(ConfirmationProtocol.parseFrom(bytes))
+
+  protected def confirmationProtocolBuilder(confirmation: Confirmation) = ConfirmationProtocol.newBuilder
+    .setProcessorId(confirmation.processorId)
+    .setChannelId(confirmation.channelId)
+    .setSequenceNr(confirmation.sequenceNr)
+    .setPositive(confirmation.positive)
+
+  protected def confirmation(confirmationProtocol: ConfirmationProtocol): Confirmation = Confirmation(
+    confirmationProtocol.getProcessorId,
+    confirmationProtocol.getChannelId,
+    confirmationProtocol.getSequenceNr,
+    confirmationProtocol.getPositive)
+}
 
 /**
  * Extension for protobuf-based (de)serialization of event messages.
  * Serializers for events contained in event messages are looked up
  * in the Akka [[akka.serialization.Serialization]] extension.
+ *
+ * @see [[org.eligosource.eventsourced.core.Message]]
  */
-class MessageSerialization(system: ExtendedActorSystem) extends Extension {
-
+class MessageSerialization(system: ExtendedActorSystem) extends ConfirmationSerialization(system) {
   val extension = SerializationExtension(system)
 
   /**
@@ -63,6 +89,10 @@ class MessageSerialization(system: ExtendedActorSystem) extends Extension {
       .setSequenceNr(message.sequenceNr)
       .setTimestamp(message.timestamp)
 
+    if (message.confirmationTarget != null && message.confirmationPrototype != null) {
+      builder.setConfirmationTarget(Serialization.serializedActorPath(message.confirmationTarget))
+      builder.setConfirmationPrototype(confirmationProtocolBuilder(message.confirmationPrototype))
+    }
 
     if (message.senderRef != null) {
       builder.setSenderRef(Serialization.serializedActorPath(message.senderRef))
@@ -84,13 +114,22 @@ class MessageSerialization(system: ExtendedActorSystem) extends Extension {
       messageProtocol.getEventSerializerId,
       eventClass).get
 
-    val senderRef = if (messageProtocol.hasSenderRef) system.provider.resolveActorRef(messageProtocol.getSenderRef) else null
+    val confirmationTarget =
+      if (messageProtocol.hasConfirmationTarget) system.provider.resolveActorRef(messageProtocol.getConfirmationTarget) else null
+
+    val confirmationPrototype =
+      if (messageProtocol.hasConfirmationPrototype) confirmation(messageProtocol.getConfirmationPrototype) else null
+
+    val senderRef =
+      if (messageProtocol.hasSenderRef) system.provider.resolveActorRef(messageProtocol.getSenderRef) else null
 
     Message(
       event = event,
       processorId = messageProtocol.getProcessorId,
       sequenceNr = messageProtocol.getSequenceNr,
       timestamp = messageProtocol.getTimestamp,
+      confirmationTarget = confirmationTarget,
+      confirmationPrototype = confirmationPrototype,
       senderRef = senderRef)
   }
 }
@@ -167,6 +206,11 @@ class CommandSerialization(system: ExtendedActorSystem) extends MessageSerializa
   }
 }
 
+object ConfirmationSerialization  extends ExtensionId[ConfirmationSerialization] with ExtensionIdProvider {
+  override def lookup = ConfirmationSerialization
+  override def createExtension(system: ExtendedActorSystem) = new ConfirmationSerialization(system)
+}
+
 object MessageSerialization  extends ExtensionId[MessageSerialization] with ExtensionIdProvider {
   override def lookup = MessageSerialization
   override def createExtension(system: ExtendedActorSystem) = new MessageSerialization(system)
@@ -178,9 +222,48 @@ object CommandSerialization  extends ExtensionId[CommandSerialization] with Exte
 }
 
 /**
+ * Protobuf-based [[org.eligosource.eventsourced.core.Confirmation]] serialize. The
+ * Eventsourced library configures this serializer as default serializer for confirmation
+ * messages.
+ */
+class ConfirmationSerializer(system: ExtendedActorSystem) extends Serializer {
+  lazy val serialization = ConfirmationSerialization(system)
+
+  /**
+   * Returns `43872`.
+   */
+  def identifier = 43872
+
+  /**
+   * Returns `false`.
+   */
+  def includeManifest = false
+
+  /**
+   * Serializes a [[org.eligosource.eventsourced.core.Confirmation]] message.
+   *
+   * @param msg confirmation message.
+   * @return serialized confirmation message.
+   */
+  def toBinary(msg: AnyRef) = msg match {
+    case c: Confirmation => serialization.serializeConfirmation(c)
+    case _               => throw new IllegalArgumentException("Cannot serialize %s" format msg.getClass)
+  }
+
+  /**
+   * Deserializes a [[org.eligosource.eventsourced.core.Confirmation]] message.
+   *
+   * @param bytes serialized confirmation message.
+   * @return deserialized confirmation message.
+   */
+  def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) =
+    serialization.deserializeConfirmation(bytes)
+}
+
+/**
  * Protobuf-based [[org.eligosource.eventsourced.core.Message]] serializer that uses
  * the Akka [[akka.serialization.Serialization]] extension to find a serializer for
- * an event contained in an event message. The eventsourced library configures this
+ * an event contained in an event message. The Eventsourced library configures this
  * serializer as default serializer for event messages.
  */
 class MessageSerializer(system: ExtendedActorSystem) extends Serializer {
@@ -215,7 +298,7 @@ class MessageSerializer(system: ExtendedActorSystem) extends Serializer {
    * @return deserialized event message.
    */
   def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = manifest match {
-    case Some(c) if (c == classOf[Message]) =>  serialization.deserializeMessage(bytes)
+    case Some(c) if (c == classOf[Message]) => serialization.deserializeMessage(bytes)
     case Some(c) => throw new IllegalArgumentException("Cannot deserialize %s" format c)
     case None    => throw new IllegalArgumentException("Manifest not available")
   }

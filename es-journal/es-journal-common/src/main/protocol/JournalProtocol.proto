@@ -11,7 +11,7 @@ enum CommandType {
 }
 
 /**
- * Journal command. Only used for persistence.
+ * Journal command. Used for persistence only.
  */
 message CommandProtocol {
   required CommandType commandType = 1;
@@ -32,5 +32,16 @@ message MessageProtocol {
   optional int64 sequenceNr = 7;
   optional int64 timestamp = 9;
   optional string senderRef = 8;
+  optional string confirmationTarget = 20;
+  optional ConfirmationProtocol confirmationPrototype = 21;
 }
 
+/**
+ * Confirmation message. Used for remoting only.
+ */
+message ConfirmationProtocol {
+  optional int32 processorId = 1;
+  optional int32 channelId = 2;
+  optional int64 sequenceNr = 3;
+  optional bool positive = 4;
+}

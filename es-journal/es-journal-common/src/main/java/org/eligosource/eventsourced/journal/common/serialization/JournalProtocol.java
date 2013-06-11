@@ -779,6 +779,15 @@ public final class JournalProtocol {
     // optional string senderRef = 8;
     boolean hasSenderRef();
     String getSenderRef();
+    
+    // optional string confirmationTarget = 20;
+    boolean hasConfirmationTarget();
+    String getConfirmationTarget();
+    
+    // optional .ConfirmationProtocol confirmationPrototype = 21;
+    boolean hasConfirmationPrototype();
+    org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol getConfirmationPrototype();
+    org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocolOrBuilder getConfirmationPrototypeOrBuilder();
   }
   public static final class MessageProtocol extends
       com.google.protobuf.GeneratedMessage
@@ -901,6 +910,51 @@ public final class JournalProtocol {
       }
     }
     
+    // optional string confirmationTarget = 20;
+    public static final int CONFIRMATIONTARGET_FIELD_NUMBER = 20;
+    private java.lang.Object confirmationTarget_;
+    public boolean hasConfirmationTarget() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public String getConfirmationTarget() {
+      java.lang.Object ref = confirmationTarget_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          confirmationTarget_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getConfirmationTargetBytes() {
+      java.lang.Object ref = confirmationTarget_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        confirmationTarget_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional .ConfirmationProtocol confirmationPrototype = 21;
+    public static final int CONFIRMATIONPROTOTYPE_FIELD_NUMBER = 21;
+    private org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol confirmationPrototype_;
+    public boolean hasConfirmationPrototype() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol getConfirmationPrototype() {
+      return confirmationPrototype_;
+    }
+    public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocolOrBuilder getConfirmationPrototypeOrBuilder() {
+      return confirmationPrototype_;
+    }
+    
     private void initFields() {
       event_ = com.google.protobuf.ByteString.EMPTY;
       eventManifest_ = com.google.protobuf.ByteString.EMPTY;
@@ -909,6 +963,8 @@ public final class JournalProtocol {
       sequenceNr_ = 0L;
       timestamp_ = 0L;
       senderRef_ = "";
+      confirmationTarget_ = "";
+      confirmationPrototype_ = org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -942,6 +998,12 @@ public final class JournalProtocol {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeInt64(9, timestamp_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeBytes(20, getConfirmationTargetBytes());
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeMessage(21, confirmationPrototype_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -979,6 +1041,14 @@ public final class JournalProtocol {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(9, timestamp_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(20, getConfirmationTargetBytes());
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(21, confirmationPrototype_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1096,6 +1166,7 @@ public final class JournalProtocol {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getConfirmationPrototypeFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1118,6 +1189,14 @@ public final class JournalProtocol {
         bitField0_ = (bitField0_ & ~0x00000020);
         senderRef_ = "";
         bitField0_ = (bitField0_ & ~0x00000040);
+        confirmationTarget_ = "";
+        bitField0_ = (bitField0_ & ~0x00000080);
+        if (confirmationPrototypeBuilder_ == null) {
+          confirmationPrototype_ = org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDefaultInstance();
+        } else {
+          confirmationPrototypeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       
@@ -1184,6 +1263,18 @@ public final class JournalProtocol {
           to_bitField0_ |= 0x00000040;
         }
         result.senderRef_ = senderRef_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.confirmationTarget_ = confirmationTarget_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        if (confirmationPrototypeBuilder_ == null) {
+          result.confirmationPrototype_ = confirmationPrototype_;
+        } else {
+          result.confirmationPrototype_ = confirmationPrototypeBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1220,6 +1311,12 @@ public final class JournalProtocol {
         }
         if (other.hasSenderRef()) {
           setSenderRef(other.getSenderRef());
+        }
+        if (other.hasConfirmationTarget()) {
+          setConfirmationTarget(other.getConfirmationTarget());
+        }
+        if (other.hasConfirmationPrototype()) {
+          mergeConfirmationPrototype(other.getConfirmationPrototype());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1285,6 +1382,20 @@ public final class JournalProtocol {
             case 72: {
               bitField0_ |= 0x00000020;
               timestamp_ = input.readInt64();
+              break;
+            }
+            case 162: {
+              bitField0_ |= 0x00000080;
+              confirmationTarget_ = input.readBytes();
+              break;
+            }
+            case 170: {
+              org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder subBuilder = org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.newBuilder();
+              if (hasConfirmationPrototype()) {
+                subBuilder.mergeFrom(getConfirmationPrototype());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setConfirmationPrototype(subBuilder.buildPartial());
               break;
             }
           }
@@ -1461,6 +1572,132 @@ public final class JournalProtocol {
         onChanged();
       }
       
+      // optional string confirmationTarget = 20;
+      private java.lang.Object confirmationTarget_ = "";
+      public boolean hasConfirmationTarget() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public String getConfirmationTarget() {
+        java.lang.Object ref = confirmationTarget_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          confirmationTarget_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setConfirmationTarget(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
+        confirmationTarget_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearConfirmationTarget() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        confirmationTarget_ = getDefaultInstance().getConfirmationTarget();
+        onChanged();
+        return this;
+      }
+      void setConfirmationTarget(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000080;
+        confirmationTarget_ = value;
+        onChanged();
+      }
+      
+      // optional .ConfirmationProtocol confirmationPrototype = 21;
+      private org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol confirmationPrototype_ = org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol, org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder, org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocolOrBuilder> confirmationPrototypeBuilder_;
+      public boolean hasConfirmationPrototype() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol getConfirmationPrototype() {
+        if (confirmationPrototypeBuilder_ == null) {
+          return confirmationPrototype_;
+        } else {
+          return confirmationPrototypeBuilder_.getMessage();
+        }
+      }
+      public Builder setConfirmationPrototype(org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol value) {
+        if (confirmationPrototypeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          confirmationPrototype_ = value;
+          onChanged();
+        } else {
+          confirmationPrototypeBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000100;
+        return this;
+      }
+      public Builder setConfirmationPrototype(
+          org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder builderForValue) {
+        if (confirmationPrototypeBuilder_ == null) {
+          confirmationPrototype_ = builderForValue.build();
+          onChanged();
+        } else {
+          confirmationPrototypeBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000100;
+        return this;
+      }
+      public Builder mergeConfirmationPrototype(org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol value) {
+        if (confirmationPrototypeBuilder_ == null) {
+          if (((bitField0_ & 0x00000100) == 0x00000100) &&
+              confirmationPrototype_ != org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDefaultInstance()) {
+            confirmationPrototype_ =
+              org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.newBuilder(confirmationPrototype_).mergeFrom(value).buildPartial();
+          } else {
+            confirmationPrototype_ = value;
+          }
+          onChanged();
+        } else {
+          confirmationPrototypeBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000100;
+        return this;
+      }
+      public Builder clearConfirmationPrototype() {
+        if (confirmationPrototypeBuilder_ == null) {
+          confirmationPrototype_ = org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDefaultInstance();
+          onChanged();
+        } else {
+          confirmationPrototypeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000100);
+        return this;
+      }
+      public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder getConfirmationPrototypeBuilder() {
+        bitField0_ |= 0x00000100;
+        onChanged();
+        return getConfirmationPrototypeFieldBuilder().getBuilder();
+      }
+      public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocolOrBuilder getConfirmationPrototypeOrBuilder() {
+        if (confirmationPrototypeBuilder_ != null) {
+          return confirmationPrototypeBuilder_.getMessageOrBuilder();
+        } else {
+          return confirmationPrototype_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol, org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder, org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocolOrBuilder> 
+          getConfirmationPrototypeFieldBuilder() {
+        if (confirmationPrototypeBuilder_ == null) {
+          confirmationPrototypeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol, org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder, org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocolOrBuilder>(
+                  confirmationPrototype_,
+                  getParentForChildren(),
+                  isClean());
+          confirmationPrototype_ = null;
+        }
+        return confirmationPrototypeBuilder_;
+      }
+      
       // @@protoc_insertion_point(builder_scope:MessageProtocol)
     }
     
@@ -1470,6 +1707,515 @@ public final class JournalProtocol {
     }
     
     // @@protoc_insertion_point(class_scope:MessageProtocol)
+  }
+  
+  public interface ConfirmationProtocolOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional int32 processorId = 1;
+    boolean hasProcessorId();
+    int getProcessorId();
+    
+    // optional int32 channelId = 2;
+    boolean hasChannelId();
+    int getChannelId();
+    
+    // optional int64 sequenceNr = 3;
+    boolean hasSequenceNr();
+    long getSequenceNr();
+    
+    // optional bool positive = 4;
+    boolean hasPositive();
+    boolean getPositive();
+  }
+  public static final class ConfirmationProtocol extends
+      com.google.protobuf.GeneratedMessage
+      implements ConfirmationProtocolOrBuilder {
+    // Use ConfirmationProtocol.newBuilder() to construct.
+    private ConfirmationProtocol(Builder builder) {
+      super(builder);
+    }
+    private ConfirmationProtocol(boolean noInit) {}
+    
+    private static final ConfirmationProtocol defaultInstance;
+    public static ConfirmationProtocol getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public ConfirmationProtocol getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.internal_static_ConfirmationProtocol_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.internal_static_ConfirmationProtocol_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // optional int32 processorId = 1;
+    public static final int PROCESSORID_FIELD_NUMBER = 1;
+    private int processorId_;
+    public boolean hasProcessorId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public int getProcessorId() {
+      return processorId_;
+    }
+    
+    // optional int32 channelId = 2;
+    public static final int CHANNELID_FIELD_NUMBER = 2;
+    private int channelId_;
+    public boolean hasChannelId() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public int getChannelId() {
+      return channelId_;
+    }
+    
+    // optional int64 sequenceNr = 3;
+    public static final int SEQUENCENR_FIELD_NUMBER = 3;
+    private long sequenceNr_;
+    public boolean hasSequenceNr() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public long getSequenceNr() {
+      return sequenceNr_;
+    }
+    
+    // optional bool positive = 4;
+    public static final int POSITIVE_FIELD_NUMBER = 4;
+    private boolean positive_;
+    public boolean hasPositive() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public boolean getPositive() {
+      return positive_;
+    }
+    
+    private void initFields() {
+      processorId_ = 0;
+      channelId_ = 0;
+      sequenceNr_ = 0L;
+      positive_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt32(1, processorId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt32(2, channelId_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(3, sequenceNr_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBool(4, positive_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, processorId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(2, channelId_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, sequenceNr_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(4, positive_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocolOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.internal_static_ConfirmationProtocol_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.internal_static_ConfirmationProtocol_fieldAccessorTable;
+      }
+      
+      // Construct using org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        processorId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        channelId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        sequenceNr_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        positive_ = false;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDescriptor();
+      }
+      
+      public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol getDefaultInstanceForType() {
+        return org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDefaultInstance();
+      }
+      
+      public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol build() {
+        org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol buildPartial() {
+        org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol result = new org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.processorId_ = processorId_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.channelId_ = channelId_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.sequenceNr_ = sequenceNr_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.positive_ = positive_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol) {
+          return mergeFrom((org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol other) {
+        if (other == org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.getDefaultInstance()) return this;
+        if (other.hasProcessorId()) {
+          setProcessorId(other.getProcessorId());
+        }
+        if (other.hasChannelId()) {
+          setChannelId(other.getChannelId());
+        }
+        if (other.hasSequenceNr()) {
+          setSequenceNr(other.getSequenceNr());
+        }
+        if (other.hasPositive()) {
+          setPositive(other.getPositive());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              processorId_ = input.readInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              channelId_ = input.readInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              sequenceNr_ = input.readInt64();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              positive_ = input.readBool();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // optional int32 processorId = 1;
+      private int processorId_ ;
+      public boolean hasProcessorId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public int getProcessorId() {
+        return processorId_;
+      }
+      public Builder setProcessorId(int value) {
+        bitField0_ |= 0x00000001;
+        processorId_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearProcessorId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        processorId_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional int32 channelId = 2;
+      private int channelId_ ;
+      public boolean hasChannelId() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public int getChannelId() {
+        return channelId_;
+      }
+      public Builder setChannelId(int value) {
+        bitField0_ |= 0x00000002;
+        channelId_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearChannelId() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        channelId_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional int64 sequenceNr = 3;
+      private long sequenceNr_ ;
+      public boolean hasSequenceNr() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public long getSequenceNr() {
+        return sequenceNr_;
+      }
+      public Builder setSequenceNr(long value) {
+        bitField0_ |= 0x00000004;
+        sequenceNr_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearSequenceNr() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        sequenceNr_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional bool positive = 4;
+      private boolean positive_ ;
+      public boolean hasPositive() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public boolean getPositive() {
+        return positive_;
+      }
+      public Builder setPositive(boolean value) {
+        bitField0_ |= 0x00000008;
+        positive_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearPositive() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        positive_ = false;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:ConfirmationProtocol)
+    }
+    
+    static {
+      defaultInstance = new ConfirmationProtocol(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:ConfirmationProtocol)
   }
   
   private static com.google.protobuf.Descriptors.Descriptor
@@ -1482,6 +2228,11 @@ public final class JournalProtocol {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_MessageProtocol_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ConfirmationProtocol_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ConfirmationProtocol_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1495,14 +2246,19 @@ public final class JournalProtocol {
       "col\022!\n\013commandType\030\001 \002(\0162\014.CommandType\022!" +
       "\n\007message\030\002 \001(\0132\020.MessageProtocol\022\023\n\013pro" +
       "cessorId\030\003 \001(\005\022\021\n\tchannelId\030\004 \001(\005\022\022\n\nseq" +
-      "uenceNr\030\005 \001(\003\"\241\001\n\017MessageProtocol\022\r\n\005eve" +
+      "uenceNr\030\005 \001(\003\"\363\001\n\017MessageProtocol\022\r\n\005eve" +
       "nt\030\002 \001(\014\022\025\n\reventManifest\030\003 \001(\014\022\031\n\021event" +
       "SerializerId\030\004 \001(\005\022\023\n\013processorId\030\006 \001(\005\022" +
       "\022\n\nsequenceNr\030\007 \001(\003\022\021\n\ttimestamp\030\t \001(\003\022\021" +
-      "\n\tsenderRef\030\010 \001(\t*9\n\013CommandType\022\014\n\010WRIT" +
-      "E_IN\020\001\022\r\n\tWRITE_OUT\020\002\022\r\n\tWRITE_ACK\020\003BL\n9",
-      "org.eligosource.eventsourced.journal.com" +
-      "mon.serializationB\017JournalProtocol"
+      "\n\tsenderRef\030\010 \001(\t\022\032\n\022confirmationTarget\030" +
+      "\024 \001(\t\0224\n\025confirmationPrototype\030\025 \001(\0132\025.C",
+      "onfirmationProtocol\"d\n\024ConfirmationProto" +
+      "col\022\023\n\013processorId\030\001 \001(\005\022\021\n\tchannelId\030\002 " +
+      "\001(\005\022\022\n\nsequenceNr\030\003 \001(\003\022\020\n\010positive\030\004 \001(" +
+      "\010*9\n\013CommandType\022\014\n\010WRITE_IN\020\001\022\r\n\tWRITE_" +
+      "OUT\020\002\022\r\n\tWRITE_ACK\020\003BL\n9org.eligosource." +
+      "eventsourced.journal.common.serializatio" +
+      "nB\017JournalProtocol"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1522,9 +2278,17 @@ public final class JournalProtocol {
           internal_static_MessageProtocol_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MessageProtocol_descriptor,
-              new java.lang.String[] { "Event", "EventManifest", "EventSerializerId", "ProcessorId", "SequenceNr", "Timestamp", "SenderRef", },
+              new java.lang.String[] { "Event", "EventManifest", "EventSerializerId", "ProcessorId", "SequenceNr", "Timestamp", "SenderRef", "ConfirmationTarget", "ConfirmationPrototype", },
               org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol.class,
               org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.MessageProtocol.Builder.class);
+          internal_static_ConfirmationProtocol_descriptor =
+            getDescriptor().getMessageTypes().get(2);
+          internal_static_ConfirmationProtocol_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ConfirmationProtocol_descriptor,
+              new java.lang.String[] { "ProcessorId", "ChannelId", "SequenceNr", "Positive", },
+              org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.class,
+              org.eligosource.eventsourced.journal.common.serialization.JournalProtocol.ConfirmationProtocol.Builder.class);
           return null;
         }
       };
