@@ -33,7 +33,7 @@ object SenderReferences extends App {
   import system.dispatcher
 
   // create a journal
-  val journal: ActorRef = Journal(LeveldbJournalProps(new File("target/guide-3")))
+  val journal: ActorRef = LeveldbJournalProps(new File("target/guide-3")).createJournal
 
   // create an event-sourcing extension
   val extension = EventsourcingExtension(system, journal)

@@ -21,8 +21,12 @@ import scala.concurrent.duration._
 
 import akka.actor.Actor
 
-import org.eligosource.eventsourced.core._
+import org.apache.hadoop.fs.{FileSystem, Path}
+
+import org.eligosource.eventsourced.journal.common.JournalProps
 import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem
 
 /**
  * Configuration object for a [[https://github.com/sbtourist/Journal.IO Journal.IO]] based journal. It
@@ -66,9 +70,18 @@ case class JournalioJournalProps(
   dispatcherName: Option[String] = None,
   fsync: Boolean = false,
   checksum: Boolean = false,
-  snapshotDir: File = new File("snapshots"),
+  snapshotDir: Path = new Path("snapshots"),
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
-  snapshotSaveTimeout: FiniteDuration = 1 hour) extends JournalProps {
+  snapshotLoadTimeout: FiniteDuration = 1 hour,
+  snapshotSaveTimeout: FiniteDuration = 1 hour,
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem) extends JournalProps with HadoopFilesystemSnapshottingProps {
+
+  val snapshotPath =
+    if (!snapshotDir.isAbsolute && snapshotFilesystem == defaultLocalFilesystem) {
+      // default local file system and relative snapshot dir:
+      // store snapshots relative to journal dir
+      new Path(new Path(dir.toURI), snapshotDir)
+    } else snapshotDir
 
   /**
    * Returns a new `JournalioJournalProps` with specified journal actor name.
@@ -95,9 +108,9 @@ case class JournalioJournalProps(
     copy(checksum = checksum)
 
   /**
-   * Returns a new `JournalioJournalProps` with specified snapshot directory.
+   * Returns a new `JournalioJournalProps` with specified snapshot dir.
    */
-  def withSnapshotDir(snapshotDir: File) =
+  def withSnapshotDir(snapshotDir: Path) =
     copy(snapshotDir = snapshotDir)
 
   /**
@@ -107,11 +120,17 @@ case class JournalioJournalProps(
     copy(snapshotSerializer = snapshotSerializer)
 
   /**
+   * Returns a new `JournalioJournalProps` with specified snapshot load timeout.
+   */
+  def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration) =
+    copy(snapshotLoadTimeout = snapshotLoadTimeout)
+
+  /**
    * Returns a new `JournalioJournalProps` with specified snapshot save timeout.
    */
   def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) =
     copy(snapshotSaveTimeout = snapshotSaveTimeout)
 
-  def journal: Actor =
+  def createJournalActor: Actor =
     new JournalioJournal(this)
 }

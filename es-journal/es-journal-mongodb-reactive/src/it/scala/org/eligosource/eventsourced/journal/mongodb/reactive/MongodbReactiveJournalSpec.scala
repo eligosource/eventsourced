@@ -20,7 +20,7 @@ import de.flapdoodle.embed.mongo.{Command, MongodProcess, MongodExecutable, Mong
 import de.flapdoodle.embed.process.runtime.Network
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 

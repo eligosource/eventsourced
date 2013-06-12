@@ -15,11 +15,19 @@
  */
 package org.eligosource.eventsourced.journal.dynamodb
 
+import scala.concurrent.duration._
+
 import akka.actor.{ActorRefFactory, ActorSystem}
 import akka.util.Timeout
+
 import com.sclasen.spray.aws.dynamodb.DynamoDBClientProps
-import concurrent.duration._
-import org.eligosource.eventsourced.core.JournalProps
+
+import org.apache.hadoop.fs.{FileSystem, Path}
+
+import org.eligosource.eventsourced.journal.common.JournalProps
+import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem
 
 /*
 counterShards should be set to at least a 10x multiple of the expected throughput of the journal
@@ -34,12 +42,17 @@ case class DynamoDBJournalProps(journalTable: String, eventSourcedApp: String,
                                 counterShards:Int=10000,
                                 system: ActorSystem, factory: Option[ActorRefFactory] = None,
                                 dynamoEndpoint:String = "dynamodb.us-east-1.amazonaws.com",
-                                val name: Option[String] = None, val dispatcherName: Option[String] = None) extends JournalProps {
+                                name: Option[String] = None, dispatcherName: Option[String] = None,
+                                snapshotPath: Path = new Path("snapshots"),
+                                snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
+                                snapshotLoadTimeout: FiniteDuration = 1 hour,
+                                snapshotSaveTimeout: FiniteDuration = 1 hour,
+                                snapshotFilesystem: FileSystem = defaultLocalFilesystem) extends JournalProps with HadoopFilesystemSnapshottingProps {
 
   /**
    * Creates a [[org.eligosource.eventsourced.core.Journal]] actor instance.
    */
-  def journal = new DynamoDBJournal(this)
+  def createJournalActor = new DynamoDBJournal(this)
 
   def clientProps = DynamoDBClientProps(key, secret, operationTimeout, system, factory.getOrElse(system), dynamoEndpoint)
 

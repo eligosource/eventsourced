@@ -1,7 +1,13 @@
 libraryDependencies ++= Seq(
-  "com.google.protobuf"  %  "protobuf-java" % "2.4.1"       % "compile",
-  "com.typesafe.akka"   %% "akka-remote"    % Version.Akka  % "test",
-  "commons-io"           % "commons-io"     % "2.3"         % "test"
+  "com.google.protobuf"  %  "protobuf-java" % "2.4.1"         % "compile",
+  "org.apache.hadoop"    %  "hadoop-core"   % Version.Hadoop  % "compile" excludeAll(
+    ExclusionRule(organization = "commons-httpclient"),
+    ExclusionRule(organization = "org.mortbay.jetty"),
+    ExclusionRule(organization = "tomcat"),
+    ExclusionRule(organization = "junit")
+  ),
+  "com.typesafe.akka"   %% "akka-remote"    % Version.Akka    % "test",
+  "commons-io"           % "commons-io"     % "2.3"           % "test"
 )
 
 OsgiKeys.importPackage := Seq(

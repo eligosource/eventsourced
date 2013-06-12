@@ -23,7 +23,8 @@ import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
-import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
+import org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
 
 /**
@@ -42,10 +43,10 @@ import org.eligosource.eventsourced.journal.common.util._
  */
 private [eventsourced] class LeveldbJournalPS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport
     with LeveldbJournal
-    with LeveldbSnapshotting {
+    with HadoopFilesystemSnapshotting {
 
   import LeveldbJournalPS._
-  import Journal._
+  import JournalProtocol._
 
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)

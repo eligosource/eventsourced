@@ -27,6 +27,7 @@ import sbtunidoc.Plugin.UnidocKeys._
 object Version {
   val Scala = "2.10.1"
   val Akka = "2.2.0-RC1"
+  val Hadoop = "1.1.1"
   val ScalaTest = "1.9.1"
 }
 

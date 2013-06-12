@@ -19,11 +19,13 @@ import scala.concurrent.duration._
 
 import akka.actor.Actor
 
-import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-import org.eligosource.eventsourced.core.JournalProps
+import org.eligosource.eventsourced.journal.common.JournalProps
 import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem
+
 
 /**
  * Configuration object for a [[http://hbase.apache.org/ HBase]] backed journal. Journal
@@ -48,21 +50,6 @@ import org.eligosource.eventsourced.journal.common.serialization.SnapshotSeriali
  *
  * Event messages will be evenly distributed (partitioned) across table regions.
  *
- * The HBase journal uses a Hadoop
- * [[http://hadoop.apache.org/docs/r1.1.2/api/org/apache/hadoop/fs/FileSystem.html `FileSystem`]]
- * instance for saving snapshots. By default, snapshots are saved to the local filesystem.
- * Applications may also provide other `FileSystem` instances (e.g. for saving snapshots to
- * HDFS), as shown in the following example:
- *
- * {{{
- *  ...
- *  import org.apache.hadoop.fs.FileSystem
- *
- *  ...
- *  val hdfs: FileSystem = FileSystem.get(...)
- *  val journal: ActorRef = Journal(HBaseJournalProps(..., snapshotFilesystem = hdfs))
- * }}}
- *
  * @param zookeeperQuorum Comma separated list of servers in the ZooKeeper quorum.
  *        See also the `hbase.zookeeper.quorum`
  *        [[http://hbase.apache.org/book/config.files.html configuration]] property.
@@ -72,14 +59,6 @@ import org.eligosource.eventsourced.journal.common.serialization.SnapshotSeriali
  * @param replayChunkSize Maximum number of event messages to keep in memory during replay.
  * @param initTimeout Timeout for journal initialization. During initialization
  *        the highest stored sequence number is loaded from the event message table.
- * @param snapshotDir Path of directory where snapshots are stored on `snapshotFilesystem`.
- *        A relative path is relative to `snapshotFilesystem`'s working directory.
- * @param snapshotSerializer Serializer for writing and reading snapshots.
- * @param snapshotLoadTimeout Timeout for loading a snapshot.
- * @param snapshotSaveTimeout Timeout for saving a snapshot.
- * @param snapshotFilesystem Hadoop filesystem for storing snapshots. Defaults to the local
- *        file system. Should be set to [[org.apache.hadoop.hdfs.DistributedFileSystem]] in
- *        production.
  */
 case class HBaseJournalProps(
   zookeeperQuorum: String,
@@ -88,11 +67,11 @@ case class HBaseJournalProps(
   dispatcherName: Option[String] = None,
   replayChunkSize: Int = 16 * 100,
   initTimeout: FiniteDuration = 30 seconds,
-  snapshotDir: Path = new Path("snapshots"),
+  snapshotPath: Path = new Path("snapshots"),
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
-  snapshotFilesystem: FileSystem = FileSystem.getLocal(new Configuration)) extends JournalProps {
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem) extends JournalProps with HadoopFilesystemSnapshottingProps {
 
   def withTableName(tableName: String) =
     copy(tableName = tableName)
@@ -109,8 +88,8 @@ case class HBaseJournalProps(
   def withInitTimeout(initTimeout: FiniteDuration) =
     copy(initTimeout = initTimeout)
 
-  def withSnapshotDir(snapshotDir: Path) =
-    copy(snapshotDir = snapshotDir)
+  def withSnapshotPath(snapshotPath: Path) =
+    copy(snapshotPath = snapshotPath)
 
   def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer) =
     copy(snapshotSerializer = snapshotSerializer)
@@ -124,6 +103,6 @@ case class HBaseJournalProps(
   def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
     copy(snapshotFilesystem = snapshotFilesystem)
 
-  def journal: Actor =
+  def createJournalActor: Actor =
     new HBaseJournal(this)
 }

@@ -16,7 +16,7 @@
 package org.eligosource.eventsourced.journal.mongodb.reactive
 
 import akka.actor.Actor
-import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.common.JournalProps
 import scala.concurrent.duration._
 import reactivemongo.core.actors.Authenticate
 
@@ -90,5 +90,5 @@ case class MongodbReactiveJournalProps(
   def withReplayChunkSize(replayChunkSize: Int) = copy(replayChunkSize = replayChunkSize)
 
   /** Returns a new `MongodbRactiveJournal`. */
-  def journal: Actor = new MongodbReactiveJournal(this)
+  def createJournalActor: Actor = new MongodbReactiveJournal(this)
 }

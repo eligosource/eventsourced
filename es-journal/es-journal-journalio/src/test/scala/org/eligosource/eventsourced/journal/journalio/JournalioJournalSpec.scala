@@ -22,9 +22,10 @@ import akka.actor.ActorSystem
 import org.apache.commons.io.FileUtils
 import org.scalatest.BeforeAndAfterEach
 
-import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
 import akka.actor.ActorRef
-import org.eligosource.eventsourced.core.Journal.ReplayInMsgs
+
+import org.eligosource.eventsourced.core.JournalProtocol.ReplayInMsgs
+import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
 
 class JournalioJournalSpec extends PersistentJournalSpec with BeforeAndAfterEach {
   def journalProps = JournalioJournalProps(JournalioJournalSpec.journalDir)

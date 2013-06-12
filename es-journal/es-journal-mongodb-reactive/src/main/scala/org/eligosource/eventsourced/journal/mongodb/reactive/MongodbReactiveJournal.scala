@@ -19,9 +19,9 @@ import akka.actor._
 import akka.event.Logging
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
 
 import reactivemongo.api._

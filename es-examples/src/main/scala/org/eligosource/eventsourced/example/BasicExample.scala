@@ -33,7 +33,7 @@ object BasicExample extends App {
   import system.dispatcher
 
   // Event sourcing extension
-  val extension = EventsourcingExtension(system, Journal(LeveldbJournalProps(new File("target/example-2"))))
+  val extension = EventsourcingExtension(system, LeveldbJournalProps(new File("target/example-2")).createJournal)
 
   // Register event-sourced processors
   val processorA = extension.processorOf(ProcessorProps(1, pid => new ProcessorA with Receiver with Confirm with Eventsourced { val id = pid } ))

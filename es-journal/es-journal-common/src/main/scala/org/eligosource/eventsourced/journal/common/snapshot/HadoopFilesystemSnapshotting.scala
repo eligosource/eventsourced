@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.hbase.serialization
+package org.eligosource.eventsourced.journal.common.snapshot
 
 import java.io._
 
 import scala.annotation.tailrec
 import scala.collection.SortedSet
 import scala.collection.JavaConverters._
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.util._
 
@@ -28,36 +28,102 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{Path, FileSystem}
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.common.JournalProps
 import org.eligosource.eventsourced.journal.common.serialization._
 
-private [journal] trait HadoopFilesystemSnapshotting { outer: Actor =>
+/**
+ * Snapshotting configuration object.
+ */
+trait HadoopFilesystemSnapshottingProps { this: JournalProps =>
+  /**
+   * Path where snapshots are stored on `snapshotFilesystem`. A relative path is relative to
+   * `snapshotFilesystem`'s working directory.
+   */
+  def snapshotPath: Path
+
+  /**
+   * Serializer for writing and reading snapshots.
+   */
+  def snapshotSerializer: SnapshotSerializer
+
+  /**
+   * Timeout for loading a snapshot.
+   */
+  def snapshotLoadTimeout: FiniteDuration
+
+  /**
+   * Timeout for saving a snapshot.
+   */
+  def snapshotSaveTimeout: FiniteDuration
+
+  /**
+   * Hadoop filesystem for storing snapshots.
+   */
+  def snapshotFilesystem: FileSystem
+}
+
+object HadoopFilesystemSnapshotting {
+  /**
+   * Default local `FileSystem` for snapshot storage.
+   */
+  val defaultLocalFilesystem = FileSystem.getLocal(new Configuration)
+}
+
+/**
+ * Hadopp `FileSystem` based snapshotting. Journal actors (i.e. actors that either extend
+ * [[org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport]] or
+ * [[org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport]])
+ * can implement snapshotting by extending this trait and call `initSnapshotting()` in their
+ * `start()` method. The snapshotting configuration is specified by `props`.
+ *
+ * @see [[org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps]]
+ */
+trait HadoopFilesystemSnapshotting { this: Actor =>
+  /**
+   * Snapshotting configuration object.
+   */
+  val props: HadoopFilesystemSnapshottingProps
+
+  import props._
+
   private val FilenamePattern = """^snapshot-(\d+)-(\d+)-(\d+)""".r
   private var snapshotMetadata = Map.empty[Int, SortedSet[SnapshotMetadata]]
 
-  lazy val snapshotSerialization = new SnapshotSerialization {
-    val snapshotAccess = new HadoopFilesystemSnapshotAccess(snapshotDir, snapshotFilesystem)
-    val snapshotSerializer = outer.snapshotSerializer
+  private lazy val snapshotSerialization = new SnapshotSerialization {
+    val snapshotAccess = new HadoopFilesystemSnapshotAccess(snapshotPath, snapshotFilesystem)
+    val snapshotSerializer = props.snapshotSerializer
   }
 
-  def snapshotDir: Path
-  def snapshotFilesystem: FileSystem
-  def snapshotSerializer: SnapshotSerializer
-
-  def snapshotSaveTimeout: FiniteDuration
-  def snapshotLoadTimeout: FiniteDuration
-
-  def createSnapshotter =
+  private def createSnapshotter =
     context.actorOf(Props(new SnapshotIO(snapshotMetadata)).withDispatcher("eventsourced.journal.snapshot-dispatcher"))
 
+  /**
+   * @see [[org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport.loadSnapshotSync()]]
+   */
+  def loadSnapshotSync(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot] =
+    Await.result(loadSnapshot(processorId, snapshotFilter), snapshotLoadTimeout)
+
+  /**
+   * @see [[org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport.Snapshotter.loadSnapshot()]]
+   */
   def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Future[Option[Snapshot]] =
     createSnapshotter.ask(SnapshotIO.LoadSnapshot(processorId, snapshotFilter))(Timeout(snapshotLoadTimeout)).mapTo[Option[Snapshot]]
 
+  /**
+   * @see [[org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport.loadSnapshotSync()]]
+   * @see [[org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport.Snapshotter.loadSnapshot()]]
+   */
   def saveSnapshot(snapshot: Snapshot): Future[SnapshotSaved] =
     createSnapshotter.ask(SnapshotIO.SaveSnapshot(snapshot))(Timeout(snapshotSaveTimeout)).mapTo[SnapshotSaved]
 
+  /**
+   * @see [[org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport.snapshotSaved()]]
+   * @see [[org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport.Snapshotter.snapshotSaved()]]
+   */
   def snapshotSaved(metadata: SnapshotMetadata) {
     snapshotMetadata.get(metadata.processorId) match {
       case None      => snapshotMetadata = snapshotMetadata + (metadata.processorId -> SortedSet(metadata))
@@ -65,10 +131,13 @@ private [journal] trait HadoopFilesystemSnapshotting { outer: Actor =>
     }
   }
 
+  /**
+   * Initializes snapshotting. Must be called in the implementing journal's `start()` method.
+   */
   def initSnapshotting() {
-    if (!snapshotFilesystem.exists(snapshotDir)) snapshotFilesystem.mkdirs(snapshotDir)
+    if (!snapshotFilesystem.exists(snapshotPath)) snapshotFilesystem.mkdirs(snapshotPath)
 
-    val metadata = snapshotFilesystem.listStatus(snapshotDir).map(_.getPath.getName).collect {
+    val metadata = snapshotFilesystem.listStatus(snapshotPath).map(_.getPath.getName).collect {
       case FilenamePattern(pid, snr, tms) => SnapshotSaved(pid.toInt, snr.toLong, tms.toLong)
     }
 
@@ -117,7 +186,7 @@ private [journal] trait HadoopFilesystemSnapshotting { outer: Actor =>
   }
 }
 
-private [hbase] class HadoopFilesystemSnapshotAccess(snapshotDir: Path, snapshotFilesystem: FileSystem) extends SnapshotAccess {
+private [journal] class HadoopFilesystemSnapshotAccess(snapshotPath: Path, snapshotFilesystem: FileSystem) extends SnapshotAccess {
   def withOutputStream(metadata: SnapshotMetadata)(p: (OutputStream) => Unit) =
     withStream(snapshotFilesystem.create(snapshotFile(metadata)), p)
 
@@ -128,6 +197,6 @@ private [hbase] class HadoopFilesystemSnapshotAccess(snapshotDir: Path, snapshot
     try { p(stream) } finally { stream.close() }
 
   private def snapshotFile(metadata: SnapshotMetadata): Path =
-    new Path(snapshotDir, s"snapshot-${metadata.processorId}-${metadata.sequenceNr}-${metadata.timestamp}")
+    new Path(snapshotPath, s"snapshot-${metadata.processorId}-${metadata.sequenceNr}-${metadata.timestamp}")
 }
 

@@ -15,13 +15,10 @@
  */
 package org.eligosource.eventsourced.journal.leveldb
 
-import java.io.File
-
 import akka.actor._
 
 import org.iq80.leveldb._
 
-import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common.serialization.CommandSerialization
 
 trait LeveldbJournal { this: Actor =>
@@ -42,21 +39,4 @@ trait LeveldbJournal { this: Actor =>
     val options = new Options().createIfMissing(true)
     if (props.native) options else options.compressionType(CompressionType.NONE)
   }
-}
-
-/**
- * @see [[org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps]]
- */
-object LeveldbJournal {
-  @deprecated("use Journal(LeveldbJournalProps(dir)) instead", "0.5")
-  def processorStructured(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
-    Journal(LeveldbJournalProps(dir, name, dispatcherName))
-
-  @deprecated("use Journal(LeveldbJournalProps(dir).withSequenceStructure) instead", "0.5")
-  def sequenceStructured(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
-    Journal(LeveldbJournalProps(dir, name, dispatcherName).withSequenceStructure)
-
-  @deprecated("use Journal(LeveldbJournalProps(dir)) instead", "0.5")
-  def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem) =
-    processorStructured(dir, name = name, dispatcherName = dispatcherName)
 }

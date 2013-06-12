@@ -23,7 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import akka.actor._
 
 import org.eligosource.eventsourced.core.Channel._
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.core.ReliableChannelSpec._
 
 class ReliableChannelSpec extends EventsourcingSpec[Fixture] {

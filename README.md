@@ -58,6 +58,7 @@ Contents
     - [Channel recovery and usage](#channel-recovery-and-usage)
     - [State dependencies](#state-dependencies)
 - [Snapshots](#snapshots)
+    - [Configuration](#configuration)
 - [Behavior changes](#behavior-changes)
 - [Event series](#event-series)
 - [Idempotency](#idempotency)
@@ -219,7 +220,7 @@ An `EventsourcingExtension` is initialized with an `ActorSystem` and a journal `
     import org.eligosource.eventsourced.journal.leveldb._
 
     val system: ActorSystem = ActorSystem("example")
-    val journal: ActorRef = Journal(LeveldbJournalProps(new File("target/example-1")))
+    val journal: ActorRef = LeveldbJournalProps(new File("target/example-1")).createJournal
     val extension: EventsourcingExtension = EventsourcingExtension(system, journal)
 
 This example uses a [LevelDB](http://code.google.com/p/leveldb/) based journal but any other [journal implementation](#journals) can be used as well.
@@ -866,14 +867,7 @@ The behavior of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/
 Snapshots
 ---------
 
-Snapshots represent processor state at a certain point in time and can dramatically reduce [recovery](#recovery) times. Snapshot capturing and saving is triggered by applications. Saving is done in a journal-specific way. At the moment, the following journals support snapshotting:
-
-- [HBase journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps): saves snapshots to a configurable Hadoop [`FileSystem`](http://hadoop.apache.org/docs/r1.1.2/api/org/apache/hadoop/fs/FileSystem.html). By default the local filesystem is used. Production deployments should use another filesystem (HDFS, for example).
-- [LevelDB journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps): saves snapshots to the local filesystem.
-- [Journal.IO journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.journalio.JournalioJournalProps): saves snapshots to the local filesystem.
-- [In-memory journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.inmem.InmemJournalProps): keeps snapshots in-memory only.
-
-Snapshot capturing and saving does not delete entries from the event message history unless explicitly requested by an application.
+Snapshots represent processor state at a certain point in time and can dramatically reduce [recovery](#recovery) times. Snapshot capturing and saving is triggered by applications and does not delete entries from the event message history unless explicitly requested by an application.
 
 Applications can create snapshots by sending a processor the [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest$) message.
 
@@ -915,10 +909,24 @@ To participate in snapshot capturing, a processor must process [`SnapshotRequest
 
 Calling `process` will asynchronously save the `state` argument together with (generated) snapshot metadata. Creating a new snapshot does not delete older snapshots unless explicitly requested by an application. Hence, there can be n snapshots per processor.
 
+
 An example that demonstrates snapshot creation and [snapshot based recovery](#recovery-with-snapshots) is contained in [SnapshotExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/SnapshotExample.scala). It can be executed from the sbt prompt with
 
     > project eventsourced-examples
     > run-nobootcp org.eligosource.eventsourced.example.SnapshotExample
+
+### Configuration
+
+Snapshotting is supported by all journals via the Hadoop [`FileSystem`](http://hadoop.apache.org/docs/r1.1.2/api/org/apache/hadoop/fs/FileSystem.html) abstraction. The default `FileSystem` instance is the local filesystem i.e. snapshots are by default written locally unless configured otherwise by the application. Please refer to the Hadoop documentation how to create `FileSystem` instances for HDFS, FTP, S3 etc. Application-defined `FileSystem` instances can be configured in the following way:
+
+    ...
+    import org.apache.hadoop.fs.FileSystem
+
+    ...
+    val hdfs: FileSystem = FileSystem.get(...)
+    val journal: ActorRef = LeveldbJournalProps(..., snapshotFilesystem = hdfs).createJournal
+
+Find out more in the [HadoopFilesystemSnapshottingProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps) API docs.
 
 Behavior changes
 ----------------

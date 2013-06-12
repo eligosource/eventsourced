@@ -28,7 +28,7 @@ import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.core.Eventsourced.CompleteProcessing
 
 abstract class ReplaySpec extends WordSpec with MustMatchers {
@@ -86,7 +86,7 @@ abstract class ReplaySpec extends WordSpec with MustMatchers {
   class Fixture {
     implicit val system = ActorSystem("test")
 
-    val journal = Journal(journalProps)
+    val journal = journalProps.createJournal
     val extension = EventsourcingExtension(system, journal)
     val target = new Target(system)
 
@@ -340,7 +340,7 @@ abstract class PersistentReplaySpec extends ReplaySpec {
     system.awaitTermination(duration)
 
     val anotherSystem = akka.actor.ActorSystem("test")
-    val anotherJournal = Journal(journalProps)(anotherSystem)
+    val anotherJournal = journalProps.createJournal(anotherSystem)
     val anotherExtension = EventsourcingExtension(anotherSystem, anotherJournal)
     val anotherTarget1 = new Target(anotherSystem)
     val anotherTarget2 = new Target(anotherSystem)

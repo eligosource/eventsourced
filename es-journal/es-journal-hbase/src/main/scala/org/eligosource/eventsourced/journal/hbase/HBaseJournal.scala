@@ -25,15 +25,16 @@ import org.apache.hadoop.hbase.util.Bytes
 import org.hbase.async.{KeyValue, DeleteRequest, HBaseClient, PutRequest}
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common._
+import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
+import org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
 
 /**
  * HBase journal with asynchronous, non-blocking IO and concurrent reads/writes.
  */
-private [hbase] class HBaseJournal(val props: HBaseJournalProps) extends AsynchronousWriteReplaySupport with HBaseSnapshotting { outer =>
+private [hbase] class HBaseJournal(val props: HBaseJournalProps) extends AsynchronousWriteReplaySupport with HadoopFilesystemSnapshotting { outer =>
   import context.dispatcher
 
   val serialization = MessageSerialization(context.system)

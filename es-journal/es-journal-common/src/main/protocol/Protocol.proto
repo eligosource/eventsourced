@@ -1,5 +1,5 @@
 option java_package = "org.eligosource.eventsourced.journal.common.serialization";
-option java_outer_classname = "JournalProtocol";
+option java_outer_classname = "Protocol";
 
 /**
  * Journal command type. Only used for persistence.

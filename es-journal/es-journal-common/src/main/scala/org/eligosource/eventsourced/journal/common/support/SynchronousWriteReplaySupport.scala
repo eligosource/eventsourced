@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.common
+package org.eligosource.eventsourced.journal.common.support
 
 import scala.concurrent.Future
 import scala.util._
@@ -24,7 +24,7 @@ import org.eligosource.eventsourced.core._
 
 trait SynchronousWriteReplaySupport extends Actor {
   import Channel.Deliver
-  import Journal._
+  import JournalProtocol._
 
   import context.dispatcher
 
@@ -72,7 +72,7 @@ trait SynchronousWriteReplaySupport extends Actor {
       sender ! ReplayDone
     }
     case cmd: ReplayOutMsgs => {
-      executeReplayOutMsgs(cmd, util.resetPromiseActorRef(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)))
+      executeReplayOutMsgs(cmd, resetPromiseActorRef(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)))
     }
     case BatchDeliverOutMsgs(channels) => {
       channels.foreach(_ ! Deliver)
@@ -137,7 +137,7 @@ trait SynchronousWriteReplaySupport extends Actor {
    * @param snapshotFilter predicate for selecting saved snapshots.
    * @return youngest snapshots of those selected by `p`, if any.
    */
-  def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot]
+  def loadSnapshotSync(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot]
 
   /**
    * Saves a snapshot asynchronously.
@@ -159,7 +159,7 @@ trait SynchronousWriteReplaySupport extends Actor {
    *
    * @param cmd command to be executed by the journal provider.
    *
-   * @see [[org.eligosource.eventsourced.core.Journal.WriteInMsg]]
+   * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteInMsg]]
    */
   def executeWriteInMsg(cmd: WriteInMsg)
 
@@ -169,7 +169,7 @@ trait SynchronousWriteReplaySupport extends Actor {
    *
    * @param cmd command to be executed by the journal provider.
    *
-   * @see [[org.eligosource.eventsourced.core.Journal.WriteInMsg]]
+   * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteInMsg]]
    */
   def executeWriteOutMsg(cmd: WriteOutMsg)
 
@@ -178,7 +178,7 @@ trait SynchronousWriteReplaySupport extends Actor {
    *
    * @param cmd command to be executed by the journal provider.
    *
-   * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+   * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
    * @see [[org.eligosource.eventsourced.core.DefaultChannel]]
    * @see [[org.eligosource.eventsourced.core.ReliableChannel]]
    */
@@ -189,7 +189,7 @@ trait SynchronousWriteReplaySupport extends Actor {
    *
    * @param cmd command to be executed by the journal provider.
    *
-   * @see [[org.eligosource.eventsourced.core.Journal.DeleteOutMsg]]
+   * @see [[org.eligosource.eventsourced.core.JournalProtocol.DeleteOutMsg]]
    * @see [[org.eligosource.eventsourced.core.ReliableChannel]]
    */
   def executeDeleteOutMsg(cmd: DeleteOutMsg)
@@ -201,10 +201,10 @@ trait SynchronousWriteReplaySupport extends Actor {
    * @param p function to be called by the provider for every replayed input message.
    *        The `acks` field of a replayed input message must contain the channel ids
    *        of all acknowledgements for that input message. The replay `target` of the
-   *        currently processed [[org.eligosource.eventsourced.core.Journal.ReplayInMsgs]]
+   *        currently processed [[org.eligosource.eventsourced.core.JournalProtocol.ReplayInMsgs]]
    *        command must be passed as second argument.
    *
-   * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+   * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
    * @see [[org.eligosource.eventsourced.core.EventsourcingExtension]]
    */
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit)
@@ -217,7 +217,7 @@ trait SynchronousWriteReplaySupport extends Actor {
    *        The `acks` field of a replayed input message must contain the channel ids
    *        of all acknowledgements for that input message.
    *
-   * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+   * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
    * @see [[org.eligosource.eventsourced.core.EventsourcingExtension]]
    */
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit)
@@ -242,8 +242,10 @@ trait SynchronousWriteReplaySupport extends Actor {
    */
   protected def stop() = {}
 
+
+
   private def offerSnapshot(cmd: ReplayInMsgs): ReplayInMsgs = {
-    if (cmd.params.snapshot) loadSnapshot(cmd.processorId, cmd.params.snapshotFilter) match {
+    if (cmd.params.snapshot) loadSnapshotSync(cmd.processorId, cmd.params.snapshotFilter) match {
       case Some(s) => {
         cmd.target ! SnapshotOffer(s)
         ReplayInMsgs(ReplayParams(cmd.processorId, s.sequenceNr + 1L, cmd.toSequenceNr), cmd.target)

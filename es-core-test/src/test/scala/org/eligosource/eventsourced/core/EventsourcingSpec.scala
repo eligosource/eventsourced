@@ -28,6 +28,7 @@ import akka.util.Timeout
 import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
+import org.eligosource.eventsourced.journal.common.JournalProps
 import org.eligosource.eventsourced.journal.leveldb._
 
 abstract class EventsourcingSpec[T <: EventsourcingFixture[_] : ClassTag] extends WordSpec with MustMatchers {
@@ -73,7 +74,7 @@ class EventsourcingFixture[A] extends EventsourcingFixtureOps[A] with LeveldbSup
   implicit val timeout = Timeout(10 seconds)
   implicit val system = ActorSystem("test")
 
-  val journal = Journal(journalProps)
+  val journal = journalProps.createJournal
   val extension = EventsourcingExtension(system, journal)
 
   def shutdown() {
@@ -96,7 +97,7 @@ class CommandListener(latch: CountDownLatch, predicate: PartialFunction[Any, Boo
 object CommandListener {
   def apply(journal: ActorRef, count: Int)(predicate: PartialFunction[Any, Boolean])(implicit system: ActorSystem): FutureCommands = {
     val latch = new CountDownLatch(count)
-    journal ! Journal.SetCommandListener(Some(system.actorOf(Props(new CommandListener(latch, predicate)))))
+    journal ! JournalProtocol.SetCommandListener(Some(system.actorOf(Props(new CommandListener(latch, predicate)))))
     new FutureCommands {
       def await() = latch.await(5, TimeUnit.SECONDS)
     }

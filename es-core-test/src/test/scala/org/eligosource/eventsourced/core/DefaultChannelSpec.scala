@@ -22,7 +22,7 @@ import akka.actor._
 
 import org.eligosource.eventsourced.core.DefaultChannelSpec._
 import org.eligosource.eventsourced.core.Channel._
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 
 class DefaultChannelSpec extends EventsourcingSpec[Fixture] {
   "A default channel" must {

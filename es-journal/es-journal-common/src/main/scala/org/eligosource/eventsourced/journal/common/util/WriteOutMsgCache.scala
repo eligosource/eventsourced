@@ -18,7 +18,7 @@ package org.eligosource.eventsourced.journal.common.util
 import scala.collection.immutable.SortedMap
 
 import org.eligosource.eventsourced.core.Message
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 
 /**
  * Cache for WriteOutMsg commands.

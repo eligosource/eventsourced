@@ -20,7 +20,7 @@ import scala.collection.immutable.Queue
 
 import akka.actor._
 
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 
 /**
  * A channel keeps track of successfully delivered event [[org.eligosource.eventsourced.core.Message]]s.
@@ -115,7 +115,7 @@ object Channel {
  * @param destination delivery destination of event messages added to this channel.
  *
  * @see [[org.eligosource.eventsourced.core.Channel]]
- * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+ * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
  */
 class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorRef) extends Channel {
   import Channel._
@@ -240,8 +240,8 @@ object RedeliveryPolicy {
  *
  * @see [[org.eligosource.eventsourced.core.Channel]]
  * @see [[org.eligosource.eventsourced.core.RedeliveryPolicy]]
- * @see [[org.eligosource.eventsourced.core.Journal.WriteOutMsg]]
- * @see [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+ * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteOutMsg]]
+ * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
  */
 class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String] = None) extends Channel {
   import ReliableChannel._

@@ -17,7 +17,7 @@ package org.eligosource.eventsourced.journal.common.util
 
 import scala.collection.immutable.Queue
 
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 
 /**
  * Queue for WriteInMsg commands including a mechanism for matching acknowledgements.

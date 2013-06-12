@@ -13,27 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.core
-
-import scala.language.reflectiveCalls
+package org.eligosource.eventsourced.journal.common
 
 import akka.actor._
 
+import org.eligosource.eventsourced.core.actor
+
 /**
- * Only exists for backwards compatibility.
+ * Journal configuration object.
  */
-object Journal {
+trait JournalProps {
   /**
-   * Creates a journal actor from the specified journal configuration object.
-   *
-   * @param props journal configuration object.
-   * @return journal actor.
+   * Optional journal name.
    */
-  @deprecated("use JournalProps.createJournal instead", "0.6")
-  def apply(props: {
-    def name: Option[String]
-    def dispatcherName: Option[String]
-    def createJournalActor: Actor
-  })(implicit actorRefFactory: ActorRefFactory): ActorRef =
-    actor(props.createJournalActor, props.name, props.dispatcherName)
+  def name: Option[String]
+
+  /**
+   * Optional dispatcher name.
+   */
+  def dispatcherName: Option[String]
+
+  /**
+   * Creates and starts a new journal using the settings of this configuration object.
+   */
+  def createJournal(implicit actorRefFactory: ActorRefFactory): ActorRef =
+    actor(createJournalActor, name, dispatcherName)
+
+  /**
+   * Creates a journal actor instance.
+   */
+  protected def createJournalActor: Actor
 }

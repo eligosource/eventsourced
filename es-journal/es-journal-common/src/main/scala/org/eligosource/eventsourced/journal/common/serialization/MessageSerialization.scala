@@ -23,8 +23,8 @@ import akka.serialization.{Serializer, Serialization, SerializationExtension}
 import com.google.protobuf.ByteString
 
 import org.eligosource.eventsourced.core.{Confirmation, Message}
-import org.eligosource.eventsourced.core.Journal._
-import org.eligosource.eventsourced.journal.common.serialization.JournalProtocol._
+import org.eligosource.eventsourced.core.JournalProtocol._
+import org.eligosource.eventsourced.journal.common.serialization.Protocol._
 
 /**
  * Extension for protobuf-based (de)serialization of confirmation messages.
@@ -143,9 +143,9 @@ class CommandSerialization(system: ExtendedActorSystem) extends MessageSerializa
   /**
    * Serializes journal commands.
    *
-   *  - [[org.eligosource.eventsourced.core.Journal.WriteInMsg]]
-   *  - [[org.eligosource.eventsourced.core.Journal.WriteOutMsg]]
-   *  - [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+   *  - [[org.eligosource.eventsourced.core.JournalProtocol.WriteInMsg]]
+   *  - [[org.eligosource.eventsourced.core.JournalProtocol.WriteOutMsg]]
+   *  - [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
    *
    * @param command journal command.
    * @return serialized journal command.
@@ -176,9 +176,9 @@ class CommandSerialization(system: ExtendedActorSystem) extends MessageSerializa
   /**
    * Deserializes journal commands.
    *
-   *  - [[org.eligosource.eventsourced.core.Journal.WriteInMsg]]
-   *  - [[org.eligosource.eventsourced.core.Journal.WriteOutMsg]]
-   *  - [[org.eligosource.eventsourced.core.Journal.WriteAck]]
+   *  - [[org.eligosource.eventsourced.core.JournalProtocol.WriteInMsg]]
+   *  - [[org.eligosource.eventsourced.core.JournalProtocol.WriteOutMsg]]
+   *  - [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
    *
    * @param bytes serialized journal command.
    * @return journal command.

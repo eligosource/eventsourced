@@ -22,8 +22,8 @@ import akka.actor._
 import org.iq80.leveldb._
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.journal.common._
-import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
+import org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
 
 /**
@@ -42,10 +42,10 @@ import org.eligosource.eventsourced.journal.common.util._
  */
 private [eventsourced] class LeveldbJournalSS(val props: LeveldbJournalProps) extends SynchronousWriteReplaySupport
     with LeveldbJournal
-    with LeveldbSnapshotting {
+    with HadoopFilesystemSnapshotting {
 
   import LeveldbJournalSS._
-  import Journal._
+  import JournalProtocol._
 
   val writeOutMsgCache = new WriteOutMsgCache[Long]
 

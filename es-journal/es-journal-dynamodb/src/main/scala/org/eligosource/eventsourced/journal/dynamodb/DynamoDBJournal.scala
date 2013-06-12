@@ -29,17 +29,14 @@ import concurrent.{Future, Await}
 import java.nio.ByteBuffer
 import java.util.Collections
 import java.util.{List => JList, Map => JMap, HashMap => JHMap}
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.core.Message
-import org.eligosource.eventsourced.journal.common.AsynchronousWriteReplaySupport._
-import org.eligosource.eventsourced.journal.common._
 import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
+import org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
 
-
-private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
-
-
+private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging with HadoopFilesystemSnapshotting {
   val serialization = MessageSerialization(context.system)
 
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
@@ -91,6 +88,10 @@ private [dynamodb] class DynamoDBJournal(props: DynamoDBJournalProps) extends As
     val counter = Await.result(findStoredCounter, props.operationTimeout.duration)
     log.debug(s"found stored counter $counter")
     counter
+  }
+
+  override def start() {
+    initSnapshotting()
   }
 
   private def findStoredCounter: Future[Long] = {

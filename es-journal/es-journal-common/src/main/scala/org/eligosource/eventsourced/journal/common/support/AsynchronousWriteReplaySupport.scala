@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.common
+package org.eligosource.eventsourced.journal.common.support
 
 import scala.concurrent._
 import scala.util._
@@ -21,12 +21,13 @@ import scala.util._
 import akka.actor._
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Journal.{BatchReplayInMsgs, ReplayInMsgs, ReplayOutMsgs, RequestSnapshot}
+import org.eligosource.eventsourced.core.JournalProtocol._
+import org.eligosource.eventsourced.journal.common.JournalProps
 
 trait AsynchronousWriteReplaySupport extends Actor {
   import AsynchronousWriteReplaySupport._
   import Channel.Deliver
-  import Journal._
+  import JournalProtocol._
 
   private val deadLetters = context.system.deadLetters
 
@@ -207,7 +208,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
         }
       }
       case cmd: ReplayOutMsgs => {
-        replayer.executeReplayOutMsgs(cmd, util.resetPromiseActorRef(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)), sdr) onComplete {
+        replayer.executeReplayOutMsgs(cmd, resetPromiseActorRef(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)), sdr) onComplete {
           case Success(_) => self ! (seqnr + 1L, ReplayDone)
           case Failure(e) => self ! (seqnr + 1L, ReplayFailed(cmd, e))
         }

@@ -20,7 +20,7 @@ import scala.concurrent._
 import akka.actor._
 import akka.pattern.ask
 
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 
 import AggregatorSpec._
 

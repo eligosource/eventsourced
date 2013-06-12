@@ -157,7 +157,7 @@ object Destination extends App {
 
   // create a journal and register that journal actor actor under name "journal"
   // in the underlying actor system (needed for remote lookup).
-  val journal = Journal(LeveldbJournalProps(new File("target/cluster")).withName("journal").withNative(false))
+  val journal = LeveldbJournalProps(new File("target/cluster")).withName("journal").withNative(false).createJournal
 
   // create a destination and register that destination actor under name "destination"
   // in the underlying actor system (needed for remote lookup).

@@ -32,7 +32,7 @@ object SnapshotExample extends App {
   implicit val timeout = Timeout(5 seconds)
 
   val journalDir: File = new File("target/snapshots")
-  val journal: ActorRef = Journal(LeveldbJournalProps(journalDir))
+  val journal: ActorRef = LeveldbJournalProps(journalDir).createJournal
   val extension = EventsourcingExtension(system, journal)
 
   case class Increment(by: Int)

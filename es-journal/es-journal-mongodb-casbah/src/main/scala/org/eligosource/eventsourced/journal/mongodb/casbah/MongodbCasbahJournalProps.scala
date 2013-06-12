@@ -19,7 +19,7 @@ import akka.actor._
 
 import com.mongodb.casbah.Imports._
 
-import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.common.JournalProps
 
 /**
  * Configuration object for an Mongodb/Casbah based journal.
@@ -60,5 +60,5 @@ case class MongodbCasbahJournalProps(
    */
   def withDispatcherName(dispatcherName: String) = copy(dispatcherName = Some(dispatcherName))
 
-  def journal: Actor = new MongodbCasbahJournal(this)
+  def createJournalActor: Actor = new MongodbCasbahJournal(this)
 }

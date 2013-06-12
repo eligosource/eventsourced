@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eligosource.eventsourced.journal.common.serialization
+package org.eligosource.eventsourced.journal.common.snapshot
 
 import java.io._
 
@@ -28,6 +28,7 @@ import akka.pattern.ask
 import akka.util._
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.common.serialization._
 
 private [journal] trait LocalFilesystemSnapshotting { outer: Actor =>
   private val FilenamePattern = """^snapshot-(\d+)-(\d+)-(\d+)""".r
@@ -42,7 +43,7 @@ private [journal] trait LocalFilesystemSnapshotting { outer: Actor =>
   def snapshotSerializer: SnapshotSerializer
   def snapshotSaveTimeout: FiniteDuration
 
-  def loadSnapshot(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot] = {
+  def loadSnapshotSync(processorId: Int, snapshotFilter: SnapshotMetadata => Boolean): Option[Snapshot] = {
     @tailrec
     def go(metadata: SortedSet[SnapshotMetadata]): Option[Snapshot] = metadata.lastOption match {
       case None     => None

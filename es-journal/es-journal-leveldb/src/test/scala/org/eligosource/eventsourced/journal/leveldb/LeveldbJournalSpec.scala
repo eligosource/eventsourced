@@ -18,7 +18,7 @@ package org.eligosource.eventsourced.journal.leveldb
 import java.io.File
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.journal.common._
 
 abstract class LeveldbJournalSpec extends PersistentJournalSpec {

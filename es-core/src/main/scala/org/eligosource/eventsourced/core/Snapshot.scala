@@ -51,7 +51,7 @@ case class SnapshotRequest(processorId: Int, sequenceNr: Long, requestor: ActorR
    * @param state current processor state.
    */
   def process(state: Any)(implicit context: ActorContext) = {
-    context.sender.tell(Journal.SaveSnapshot(Snapshot(processorId, sequenceNr, 0L, state)), requestor)
+    context.sender.tell(JournalProtocol.SaveSnapshot(Snapshot(processorId, sequenceNr, 0L, state)), requestor)
   }
 }
 

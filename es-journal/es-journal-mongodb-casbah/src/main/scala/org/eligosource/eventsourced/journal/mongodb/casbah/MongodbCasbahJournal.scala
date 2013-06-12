@@ -23,12 +23,12 @@ import akka.event.Logging
 import com.mongodb.casbah.Imports._
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.journal.common._
 import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
 
 private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalProps) extends SynchronousWriteReplaySupport {
-  import Journal._
+  import JournalProtocol._
 
   val log = Logging(context.system, this.getClass)
   val serialization = MessageSerialization(context.system)
@@ -78,7 +78,7 @@ private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalPro
     replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, p)
   }
 
-  def loadSnapshot(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) = None
+  def loadSnapshotSync(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) = None
 
   def saveSnapshot(snapshot: Snapshot) =
     Future.failed(new SnapshotNotSupportedException(s"Snapshotting not supported by ${this}"))

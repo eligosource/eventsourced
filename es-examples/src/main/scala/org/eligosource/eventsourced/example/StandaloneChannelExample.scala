@@ -33,7 +33,7 @@ object StandaloneChannelExample extends App {
 
   import system.dispatcher
 
-  val journal: ActorRef = Journal(JournalioJournalProps(new File("target/standalone")))
+  val journal: ActorRef = JournalioJournalProps(new File("target/standalone")).createJournal
   val extension = EventsourcingExtension(system, journal)
 
   class Destination extends Actor { this: Receiver =>

@@ -17,8 +17,6 @@ package org.eligosource.eventsourced.journal.common
 
 import java.nio.ByteBuffer
 
-import org.eligosource.eventsourced.core.Message
-
 package object util {
   private [journal] implicit val ordering = new Ordering[Key] {
     def compare(x: Key, y: Key) =
@@ -38,25 +36,4 @@ package object util {
 
   implicit def counterFromBytes(bytes: Array[Byte]): Long =
     ByteBuffer.wrap(bytes).getLong
-
-  /**
-   * Decorates `p` to reset `Message.senderRef`. The `senderRef` is reset if the event message
-   *
-   *  - has a `sequenceNr < initialCounter` and
-   *  - has a `senderRef` of type `PromiseActorRef`
-   *
-   * Otherwise, the `senderRef` is not changed. This ensures that references to temporary system
-   * actors from previous application runs are not resolved.
-   *
-   * @param initialCounter initial counter value after journal recovery.
-   * @param p event message handler.
-   * @return decorated event message handler.
-   */
-  def resetPromiseActorRef(initialCounter: Long)(p: Message => Unit): Message => Unit = msg =>
-    if (msg.senderRef == null) p(msg)
-    // TODO: change to isInstanceOf[PromiseActorRef]
-    else if (msg.senderRef.getClass.getSimpleName == "PromiseActorRef" && msg.sequenceNr < initialCounter) {
-      p(msg.copy(senderRef = null))
-    }
-    else p(msg)
 }

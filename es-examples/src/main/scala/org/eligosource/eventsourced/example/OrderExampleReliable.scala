@@ -192,7 +192,7 @@ object OrderProcessor extends App {
   import system.dispatcher
 
   val log = Logging(system, this.getClass)
-  val journal = Journal(JournalioJournalProps(new File("target/orders")))
+  val journal = JournalioJournalProps(new File("target/orders")).createJournal
   val extension = EventsourcingExtension(system, journal)
 
   val processor = extension.processorOf(ProcessorProps(1, id => new OrderProcessor(id) with Receiver with Eventsourced, Some("processor")))

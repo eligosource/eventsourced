@@ -26,7 +26,7 @@ object FirstSteps extends App {
   implicit val system = ActorSystem("guide")
 
   // create a journal
-  val journal: ActorRef = Journal(LeveldbJournalProps(new File("target/guide-1")))
+  val journal: ActorRef = LeveldbJournalProps(new File("target/guide-1")).createJournal
 
   // create an event-sourcing extension
   val extension = EventsourcingExtension(system, journal)

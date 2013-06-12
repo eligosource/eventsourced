@@ -21,8 +21,12 @@ import scala.concurrent.duration._
 
 import akka.actor.Actor
 
-import org.eligosource.eventsourced.core._
+import org.apache.hadoop.fs.{FileSystem, Path}
+
+import org.eligosource.eventsourced.journal.common.JournalProps
 import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem
 
 /**
  * Configuration object for a [[http://code.google.com/p/leveldb/ LevelDB]] based journal.
@@ -59,10 +63,6 @@ import org.eligosource.eventsourced.journal.common.serialization.SnapshotSeriali
  *        [[https://github.com/dain/leveldb Java port]].
  * @param processorStructured `true` if entries are primarily ordered by processor
  *        id, `false` if entries are ordered by sequence number.  Default is `true`.
- * @param snapshotDir Directory where the journal will store snapshots. A relative
- *        path is relative to `dir`.
- * @param snapshotSerializer Serializer for writing and reading snapshots.
- * @param snapshotSaveTimeout Timeout for saving a snapshot.
  */
 case class LeveldbJournalProps(
   dir: File,
@@ -72,9 +72,18 @@ case class LeveldbJournalProps(
   checksum: Boolean = false,
   native: Boolean = true,
   processorStructured: Boolean = true,
-  snapshotDir: File = new File("snapshots"),
+  snapshotDir: Path = new Path("snapshots"),
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
-  snapshotSaveTimeout: FiniteDuration = 1 hour) extends JournalProps {
+  snapshotLoadTimeout: FiniteDuration = 1 hour,
+  snapshotSaveTimeout: FiniteDuration = 1 hour,
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem) extends JournalProps with HadoopFilesystemSnapshottingProps {
+
+  val snapshotPath =
+    if (!snapshotDir.isAbsolute && snapshotFilesystem == defaultLocalFilesystem) {
+      // default local file system and relative snapshot dir:
+      // store snapshots relative to journal dir
+      new Path(new Path(dir.toURI), snapshotDir)
+    } else snapshotDir
 
   /**
    *  Returns `false` if entries are primarily ordered by processor id,
@@ -152,7 +161,7 @@ case class LeveldbJournalProps(
   /**
    * Returns a new `LeveldbJournalProps` with specified snapshot directory.
    */
-  def withSnapshotDir(snapshotDir: File) =
+  def withSnapshotDir(snapshotDir: Path) =
     copy(snapshotDir = snapshotDir)
 
   /**
@@ -162,12 +171,18 @@ case class LeveldbJournalProps(
     copy(snapshotSerializer = snapshotSerializer)
 
   /**
+   * Returns a new `LeveldbJournalProps` with specified snapshot load timeout.
+   */
+  def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration) =
+    copy(snapshotLoadTimeout = snapshotLoadTimeout)
+
+  /**
    * Returns a new `LeveldbJournalProps` with specified snapshot save timeout.
    */
   def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) =
     copy(snapshotSaveTimeout = snapshotSaveTimeout)
 
-  def journal: Actor = {
+  def createJournalActor: Actor = {
     if (processorStructured) {
       new LeveldbJournalPS(this)
     } else {

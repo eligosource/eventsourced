@@ -15,7 +15,6 @@
  */
 package org.eligosource.eventsourced.journal.journalio
 
-import java.io.File
 import java.util.concurrent.{Executor, Executors}
 
 import scala.collection.JavaConverters._
@@ -26,6 +25,8 @@ import journal.io.api.{Journal => JournalIO, _}
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common._
 import org.eligosource.eventsourced.journal.common.serialization._
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
+import org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
 
 /**
@@ -41,8 +42,8 @@ import org.eligosource.eventsourced.journal.common.util._
  *
  *  - replay of input messages for a single processor requires full scan (with optional lower bound)
  */
-private [eventsourced] class JournalioJournal(val props: JournalioJournalProps) extends SynchronousWriteReplaySupport with JournalioSnapshotting {
-  import Journal._
+private [eventsourced] class JournalioJournal(val props: JournalioJournalProps) extends SynchronousWriteReplaySupport with HadoopFilesystemSnapshotting {
+  import JournalProtocol._
 
   val writeInMsgQueue = new WriteInMsgQueue
   val writeOutMsgCache = new WriteOutMsgCache[Location]
@@ -156,13 +157,4 @@ private [eventsourced] class JournalioJournal(val props: JournalioJournalProps) 
     journal.close()
     disposer.shutdown()
   }
-}
-
-/**
- * @see [[org.eligosource.eventsourced.journal.JournalioJournalProps]]
- */
-object JournalioJournal {
-  @deprecated("use Journal(JournalioJournalProps(dir)) instead", "0.5")
-  def apply(dir: File, name: Option[String] = None, dispatcherName: Option[String] = None)(implicit system: ActorSystem): ActorRef =
-    Journal(JournalioJournalProps(dir, name, dispatcherName))
 }

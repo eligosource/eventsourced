@@ -31,7 +31,7 @@ import org.scalatest.fixture._
 import org.scalatest.matchers.MustMatchers
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Journal._
+import org.eligosource.eventsourced.core.JournalProtocol._
 
 abstract class JournalSpec extends WordSpec with MustMatchers {
   import JournalSpec._
@@ -43,7 +43,7 @@ abstract class JournalSpec extends WordSpec with MustMatchers {
     implicit val duration = 10 seconds
     implicit val timeout = Timeout(duration)
 
-    val journal = Journal(journalProps)
+    val journal = journalProps.createJournal
 
     val writeQueue = new LinkedBlockingQueue[Message]
     val writeTarget = system.actorOf(Props(new CommandTarget(writeQueue)))
@@ -215,7 +215,7 @@ abstract class PersistentJournalSpec extends JournalSpec {
     system.awaitTermination(duration)
 
     val anotherSystem = ActorSystem("test")
-    val anotherJournal = Journal(journalProps)(anotherSystem)
+    val anotherJournal = journalProps.createJournal(anotherSystem)
     val anotherReplayTarget = anotherSystem.actorOf(Props(new CommandTarget(replayQueue)))
 
     anotherJournal ! WriteInMsg(1, Message("test-4"), writeTarget)
@@ -256,7 +256,7 @@ abstract class PersistentJournalSpec extends JournalSpec {
     system.awaitTermination(duration)
 
     val anotherSystem = ActorSystem("test")
-    val anotherJournal = Journal(journalProps)(anotherSystem)
+    val anotherJournal = journalProps.createJournal(anotherSystem)
     val anotherReplayTarget = anotherSystem.actorOf(Props(new CommandTarget(replayQueue)))
     val anotherR1 = anotherSystem.actorOf(Props(new A(anotherJournal)))
 
