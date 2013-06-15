@@ -15,11 +15,18 @@
  */
 package org.eligosource.eventsourced.journal.mongodb.casbah
 
-import akka.actor._
+import scala.concurrent.duration._
+
+import akka.actor.Actor
 
 import com.mongodb.casbah.Imports._
 
+import org.apache.hadoop.fs.{FileSystem, Path}
+
 import org.eligosource.eventsourced.journal.common.JournalProps
+import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem
 
 /**
  * Configuration object for an Mongodb/Casbah based journal.
@@ -47,8 +54,12 @@ case class MongodbCasbahJournalProps(
   mongoClient: MongoClient,
   dbName: String,
   collName: String,
-  name: Option[String] = None,
-  dispatcherName: Option[String] = None) extends JournalProps {
+  snapshotPath: Path = new Path("snapshots"),
+  snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
+  snapshotLoadTimeout: FiniteDuration = 1 hour,
+  snapshotSaveTimeout: FiniteDuration = 1 hour,
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem,
+  name: Option[String] = None, dispatcherName: Option[String] = None) extends JournalProps with HadoopFilesystemSnapshottingProps {
 
   /**
    * Returns a new `MongodbCasbahJournalProps` with specified journal actor name.

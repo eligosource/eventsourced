@@ -15,8 +15,6 @@
  */
 package org.eligosource.eventsourced.journal.mongodb.casbah
 
-import scala.concurrent.Future
-
 import akka.actor._
 import akka.event.Logging
 
@@ -26,8 +24,9 @@ import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.common.serialization._
 import org.eligosource.eventsourced.journal.common.support.SynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
 
-private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalProps) extends SynchronousWriteReplaySupport {
+private [eventsourced] class MongodbCasbahJournal(val props: MongodbCasbahJournalProps) extends SynchronousWriteReplaySupport with HadoopFilesystemSnapshotting {
   import JournalProtocol._
 
   val log = Logging(context.system, this.getClass)
@@ -67,30 +66,23 @@ private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalPro
   }
 
   def executeBatchReplayInMsgs(cmds: Seq[ReplayInMsgs], p: (Message, ActorRef) => Unit) {
-    cmds.foreach(cmd => replay(cmd.processorId, 0, cmd.fromSequenceNr, msg => p(msg, cmd.target)))
+    cmds.foreach(cmd => replay(cmd.processorId, 0, cmd.fromSequenceNr, cmd.toSequenceNr, msg => p(msg, cmd.target)))
   }
 
   def executeReplayInMsgs(cmd: ReplayInMsgs, p: Message => Unit) {
-    replay(cmd.processorId, 0, cmd.fromSequenceNr, p)
+    replay(cmd.processorId, 0, cmd.fromSequenceNr, cmd.toSequenceNr, p)
   }
 
   def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: Message => Unit) {
-    replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, p)
+    replay(Int.MaxValue, cmd.channelId, cmd.fromSequenceNr, Long.MaxValue, p)
   }
-
-  def loadSnapshotSync(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) = None
-
-  def saveSnapshot(snapshot: Snapshot) =
-    Future.failed(new SnapshotNotSupportedException(s"Snapshotting not supported by ${this}"))
-
-  def snapshotSaved(metadata: SnapshotMetadata) {}
 
   def storedCounter = {
     val cursor = collection.find().sort(MongoDBObject("sequenceNr" -> -1)).limit(1)
     if (cursor.hasNext) cursor.next().getAs[Long]("sequenceNr").get else 0L
   }
 
-  private def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, p: Message => Unit) {
+  private def replay(processorId: Int, channelId: Int, fromSequenceNr: Long, toSequenceNr: Long, p: Message => Unit) {
 
     val query = MongoDBObject(
       "processorId"         -> processorId,
@@ -107,23 +99,25 @@ private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalPro
     val cursor = collection.find(query).sort(sortKey)
     val iter = cursor.toIterator.buffered
 
-    replay(iter, startKey, p)
+    replay(iter, startKey, toSequenceNr, p)
   }
 
   @scala.annotation.tailrec
-  private def replay(iter: BufferedIterator[DBObject], key: Key, p: Message => Unit) {
+  private def replay(iter: BufferedIterator[DBObject], key: Key, toSequenceNr: Long, p: Message => Unit) {
     if (iter.hasNext) {
       val nextEntry = iter.next()
       val nextKey = createKey(nextEntry)
-      if (nextKey.confirmingChannelId != 0) {
+      if (nextKey.sequenceNr > toSequenceNr) {
+        // end iteration here
+      } else if (nextKey.confirmingChannelId != 0) {
         // phantom ack (just advance iterator)
-        replay(iter, nextKey, p)
+        replay(iter, nextKey, toSequenceNr, p)
       } else if (key.processorId         == nextKey.processorId &&
                  key.initiatingChannelId == nextKey.initiatingChannelId) {
         val msg = msgFromBytes(nextEntry.getAs[Array[Byte]]("message").get)
         val channelIds = confirmingChannelIds(iter, nextKey, Nil)
         p(msg.copy(acks = channelIds))
-        replay(iter, nextKey, p)
+        replay(iter, nextKey, toSequenceNr, p)
       }
     }
   }
@@ -167,6 +161,7 @@ private [eventsourced] class MongodbCasbahJournal(props: MongodbCasbahJournalPro
   }
 
   override def start() {
+    initSnapshotting()
 
     client = props.mongoClient
     collection = client(props.dbName)(props.collName)
