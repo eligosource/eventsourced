@@ -32,7 +32,7 @@ object OrderExample extends App {
   import system.dispatcher
 
   val journalDir = new java.io.File("target/example-1")
-  val journal = LeveldbJournalProps(journalDir).createJournal
+  val journal = LeveldbJournalProps(journalDir, native = false).createJournal
 
   val extension = EventsourcingExtension(system, journal)
 

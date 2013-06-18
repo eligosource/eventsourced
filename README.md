@@ -157,7 +157,7 @@ For persisting messages, Eventsourced currently provides the following journal i
     <th align="left">Usage</th>
   </tr>
   <tr>
-    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps">LevelDB journal</a>. A <a href="http://code.google.com/p/leveldb/">LevelDB</a> and <a href="https://github.com/fusesource/leveldbjni">leveldbjni</a> backed journal. Because LevelDB is a native library, this journal requires a special <a href="http://www.scala-sbt.org/">sbt</a> project <a href="https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native">configuration</a>. It is be used in the following examples.</td>
+    <td><a href="http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps">LevelDB journal</a>. It can be configured either with a <a href="http://code.google.com/p/leveldb/">native LevelDB</a> (accessed via <a href="https://github.com/fusesource/leveldbjni">leveldbjni</a>) or a <a href="https://github.com/dain/leveldb">LevelDB Java port</a> as storage backend. Running a native LevelDB from sbt requires <a href="https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb">special settings</a>. All examples in this user guide use the LevelDB Java port.
     <td>Production</td>
   </tr>
   <tr>
@@ -197,13 +197,9 @@ First steps
 This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the usage of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed from the sbt prompt with
 
     > project eventsourced-examples
-    > run-nobootcp org.eligosource.eventsourced.guide.FirstSteps
-
-Details about the `run-nobootcp` task are described [here](https://github.com/eligosource/eventsourced/wiki/Installation#wiki-native). It is needed to run a [native LevelDB](https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb) instance. There's also an option to use a [LevelDB Java port](https://github.com/eligosource/eventsourced/wiki/Installation#leveldb-java-port) that allows running the example with
-
     > run-main org.eligosource.eventsourced.guide.FirstSteps
 
-The example in this section and most of the other examples in this user guide use a native LevelDB instance. The legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
+The example in this section and all further examples use a journal that is backed by a [LevelDB Java port](https://github.com/eligosource/eventsourced/wiki/Installation#leveldb-java-port). For running a [native LevelDB](https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb) instance from sbt, [additional settings](https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb) are required. A legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
 
 ### Step 1: `EventsourcingExtension` initialization
 
@@ -221,10 +217,10 @@ An `EventsourcingExtension` is initialized with an `ActorSystem` and a journal `
     import org.eligosource.eventsourced.journal.leveldb._
 
     val system: ActorSystem = ActorSystem("example")
-    val journal: ActorRef = LeveldbJournalProps(new File("target/example-1")).createJournal
+    val journal: ActorRef = LeveldbJournalProps(new File("target/example-1"), native = false).createJournal
     val extension: EventsourcingExtension = EventsourcingExtension(system, journal)
 
-This example uses a [LevelDB](http://code.google.com/p/leveldb/) based journal but any other [journal implementation](#journals) can be used as well.
+This example uses a [LevelDB journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps) but any other [journal implementation](#journals) can be used as well.
 
 ### Step 2: Event-sourced actor definition
 
@@ -454,7 +450,7 @@ This section modifies (and simplifies) the example from section [First steps](#f
 Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed from the sbt prompt with
 
     > project eventsourced-examples
-    > run-nobootcp org.eligosource.eventsourced.guide.StackableTraits
+    > run-main org.eligosource.eventsourced.guide.StackableTraits
 
 The new definition of `Processor`
 
@@ -562,7 +558,7 @@ When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/s
 Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed from the sbt prompt with
 
     > project eventsourced-examples
-    > run-nobootcp org.eligosource.eventsourced.guide.SenderReferences
+    > run-main org.eligosource.eventsourced.guide.SenderReferences
 
 Channels
 --------
@@ -914,7 +910,7 @@ Calling `process` will asynchronously save the `state` argument together with (g
 An example that demonstrates snapshot creation and [snapshot based recovery](#recovery-with-snapshots) is contained in [SnapshotExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/SnapshotExample.scala). It can be executed from the sbt prompt with
 
     > project eventsourced-examples
-    > run-nobootcp org.eligosource.eventsourced.example.SnapshotExample
+    > run-main org.eligosource.eventsourced.example.SnapshotExample
 
 ### Configuration
 
@@ -1180,7 +1176,7 @@ to `stdout`. You may observe a different line ordering when running the example.
 The example code is contained in [OrderExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/OrderExample.scala) and can be executed from the sbt prompt with
 
     > project eventsourced-examples
-    > run-nobootcp org.eligosource.eventsourced.example.OrderExample
+    > run-main org.eligosource.eventsourced.example.OrderExample
 
 An advanced version of this example, using a [reliable request-reply channel](#reliable-request-reply-channel), is discussed in [Event sourcing and external service integration](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html).
 

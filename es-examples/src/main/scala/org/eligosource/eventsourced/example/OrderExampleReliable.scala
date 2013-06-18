@@ -29,7 +29,7 @@ import com.typesafe.config.ConfigFactory
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.Channel._
-import org.eligosource.eventsourced.journal.journalio._
+import org.eligosource.eventsourced.journal.leveldb._
 import org.eligosource.eventsourced.patterns.reliable.requestreply._
 
 // ------------------------------------
@@ -192,7 +192,7 @@ object OrderProcessor extends App {
   import system.dispatcher
 
   val log = Logging(system, this.getClass)
-  val journal = JournalioJournalProps(new File("target/orders")).createJournal
+  val journal = LeveldbJournalProps(new File("target/orders"), native = false).createJournal
   val extension = EventsourcingExtension(system, journal)
 
   val processor = extension.processorOf(ProcessorProps(1, id => new OrderProcessor(id) with Receiver with Eventsourced, Some("processor")))

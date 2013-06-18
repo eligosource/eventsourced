@@ -22,7 +22,7 @@ import org.scalatest.{Suite, BeforeAndAfterEach}
 
 trait LeveldbSupport {
   val journalDir = new File("es-core-test/target/journal")
-  val journalProps = LeveldbJournalProps(journalDir)
+  val journalProps = LeveldbJournalProps(journalDir) // use native LevelDB
 
   def cleanup() {
     FileUtils.deleteDirectory(journalDir)

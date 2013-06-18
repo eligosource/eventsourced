@@ -25,7 +25,7 @@ import akka.pattern.ask
 import akka.util._
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.journal.journalio.JournalioJournalProps
+import org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps
 
 object StandaloneChannelExample extends App {
   implicit val system = ActorSystem("example")
@@ -33,7 +33,7 @@ object StandaloneChannelExample extends App {
 
   import system.dispatcher
 
-  val journal: ActorRef = JournalioJournalProps(new File("target/standalone")).createJournal
+  val journal: ActorRef = LeveldbJournalProps(new File("target/standalone"), native = false).createJournal
   val extension = EventsourcingExtension(system, journal)
 
   class Destination extends Actor { this: Receiver =>

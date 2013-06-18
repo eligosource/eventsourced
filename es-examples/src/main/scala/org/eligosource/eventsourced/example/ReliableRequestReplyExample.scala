@@ -70,7 +70,7 @@ object ReliableRequestReplyExample extends App {
 
   implicit val system = ActorSystem("patterns")
 
-  val journal: ActorRef = LeveldbJournalProps(new File("target/patterns")).createJournal
+  val journal: ActorRef = LeveldbJournalProps(new File("target/patterns"), native = false).createJournal
   val extension = EventsourcingExtension(system, journal)
 
   val destination = system.actorOf(Props(new Destination with Receiver))

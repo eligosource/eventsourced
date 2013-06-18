@@ -26,7 +26,7 @@ object StackableTraits extends App {
   implicit val system = ActorSystem("guide")
 
   // create a journal
-  val journal: ActorRef = LeveldbJournalProps(new File("target/guide-2")).createJournal
+  val journal: ActorRef = LeveldbJournalProps(new File("target/guide-2"), native = false).createJournal
 
   // create an event-sourcing extension
   val extension = EventsourcingExtension(system, journal)
