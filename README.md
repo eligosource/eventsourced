@@ -130,6 +130,7 @@ Eventsourced provides three different channel types (more are planned).
     - Re-delivers unconfirmed messages based on a configurable re-delivery policy.
     - Order of messages as sent by a processor is preserved, even in failure cases.
     - Often used to deal with unreliable remote destinations.
+    - Can recover from crashes of the JVM it is running in.
 - Reliable request-reply channel
     - Same as reliable channel but additionally guarantees at-least-once delivery of replies.
     - Order of replies not guaranteed to correspond to the order of sent request messages.
@@ -613,7 +614,7 @@ See also [usage-hints](#usage-hints) regarding `message.copy(…)`.
 
 ![Reliable channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-2.png)
 
-A reliable channel is a persistent channel that writes event messages to a journal before delivering them to a destination actor. In contrast to a default channel, a reliable channel preserves the order of messages as produced by an event-sourced processor and attempts to re-deliver event messages on destination failures. Therefore, a reliable channel enables applications to recover from temporary destination failures without having to run an event message replay.
+A reliable channel is a persistent channel that writes event messages to a journal before delivering them to a destination actor. In contrast to a default channel, a reliable channel preserves the order of messages as produced by an event-sourced processor and attempts to re-deliver event messages on destination failures. Therefore, a reliable channel enables applications to recover from temporary destination failures without having to run an event message replay. Furthermore, a reliable channel can also recover from crashes of the JVM it is running in. This allows applications to guarantee at-least-once message delivery in case of both, destination failures and sender failures. 
 
 If a destination positively confirms the receipt of an event message, the stored message is removed from the channel and the next one is delivered. If a destination negatively confirms the receipt of an event message or if no confirmation is made (i.e. a timeout occurs), a re-delivery attempt is made after a certain *redelivery delay*. If the maximum number of re-delivery attempts have been made, the channel restarts itself after a certain *restart delay* and starts again with re-deliveries. If the maximum number of restarts has been reached, the channel stops message delivery and publishes a [`DeliveryStopped`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Channel$$DeliveryStopped) event to the event stream of the actor system this channel belongs to. Applications can then re-activate the channel by calling the `deliver(Int)` method of `EventsourcingExtension` with the channel id as argument. Refer to the [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) API docs for details.
 
