@@ -623,6 +623,7 @@ This configuration object additionally allows applications to configure a [`Rede
 
 A reliable channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. Details have already been described in the [default channel](#defaultchannel) section. A reliable channel also stores sender references along with event messages so that they can be forwarded to destinations even after the channel has been restarted. If a stored sender reference is a remote reference, it remains valid even after recovery from a JVM crash (i.e. a crash of the JVM the reliable channel is running in) provided the remote sender is still available.
 
+For those familiar with Akka, a reliable channel is similar to an [Akka reliable proxy](http://doc.akka.io/docs/akka/snapshot/contrib/reliable-proxy.html) except that it additionally can recover from sender JVM crashes.
 ### Reliable request-reply channel
 
 ![Reliable request-reply channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-3.png)
