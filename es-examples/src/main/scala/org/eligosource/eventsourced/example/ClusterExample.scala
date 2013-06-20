@@ -104,7 +104,7 @@ class NodeActor(destination: ActorRef, selfAddress: Address) extends Actor {
  * created `NodeActor`. Users can enter commands on any cluster node. Application
  * argument is an optional port number (needed for seed nodes).
  */
-object Node {
+object NodeApp {
   def main(args: Array[String]) {
     if (args.nonEmpty) System.setProperty("akka.remote.netty.tcp.port", args(0))
 
@@ -151,7 +151,7 @@ object Node {
  * are used by the cluster. This application is a standalone application
  * that is remotely accessed but not part of the cluster.
  */
-object Destination extends App {
+object DestinationApp extends App {
   // create an actor system with a configruation loaded from "cluster.conf"
   implicit val system = ActorSystem("journal", ConfigFactory.load("journal"))
 

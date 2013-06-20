@@ -48,6 +48,7 @@ Contents
     - [Usage hints](#usage-hints)
         - [Eventsourced usage](#eventsourced-usage)
         - [Standalone usage](#standalone-usage)
+        - [Remote destinations](#remote-destinations)
     - [Channel alternatives](#channel-alternatives)
 - [Recovery](#recovery)
     - [Replay parameters](#replay-parameters) 
@@ -623,7 +624,8 @@ This configuration object additionally allows applications to configure a [`Rede
 
 A reliable channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. Details have already been described in the [default channel](#defaultchannel) section. A reliable channel also stores sender references along with event messages so that they can be forwarded to destinations even after the channel has been restarted. If a stored sender reference is a remote reference, it remains valid even after recovery from a JVM crash (i.e. a crash of the JVM the reliable channel is running in) provided the remote sender is still available.
 
-For those familiar with Akka, a reliable channel is similar to an [Akka reliable proxy](http://doc.akka.io/docs/akka/snapshot/contrib/reliable-proxy.html) except that it additionally can recover from sender JVM crashes.
+For those familiar with Akka, a reliable channel is similar to an [Akka reliable proxy](http://doc.akka.io/docs/akka/snapshot/contrib/reliable-proxy.html) except that it additionally can recover from sender JVM crashes (see also section [Remote destinations](#remote-destinations)).
+
 ### Reliable request-reply channel
 
 ![Reliable request-reply channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-3.png)
@@ -677,6 +679,87 @@ This is equivalent to directly sending the `Message.event`:
     channel ! "my event"
 
 A reliable channel internally wraps a received event into a `Message` with `processorId` set to `0`. Setting the `processorId` to `0` causes a reliable channel to skip writing an acknowledgement. An acknowledgement always refers to an event message received by an `Eventsourced` processor, so there's no need to write one in this case. Another (unrelated) use case for turning off writing acknowledgements is the emission of [event message series](#event-series) in context of [event-sourced channel usage](#eventsourced-usage).
+
+#### Remote destinations
+
+Applications should consider using reliable channels whenever a sender processor should deliver messages to a **remote** destination at-least-once and in sending order, even in cases of 
+
+1. network errors between sender and destination (remote actor ref remains valid but remote actor is temporarily unavailable)
+2. destination JVM crashes (remote actor ref becomes invalid) and
+3. sender JVM crashes (messages already received by a sender processor but not yet delivered to the remote destination must be automatically delivered when the sender [recovers](#recovery) from a crash)
+
+Using a remote actor ref as channel destination would work in case 1 but not in case 2. One possible way to deal with case 2, is to use a local actor (a destination proxy) that communicates with the remote destination via an `ActorSelection`. An `ActorSelection` can be created from an actor path and is not bound to the remote destination's life-cycle.  
+
+    class DestinationProxy(destinationPath: String) extends Actor {
+      val destinationSelection: ActorSelection = context.actorSelection(destinationPath)
+    
+      def receive = {
+        case msg => destinationSelection tell (msg, sender) // forward
+      }
+    }
+
+    val destinationPath: String = …
+    val proxy = system.actorOf(Props(new DestinationProxy(destinationPath)))
+    val channel = extension.channelOf(ReliableChannelProps(1, proxy))
+
+Using an `ActorSelection` also covers case 1, of course. Case 3 is automatically covered by the fact that a sender processor uses a reliable channel for sending messages to a destination. Here's an example:
+
+    class Sender extends Actor {
+      val id = 1
+      val ext = EventsourcingExtension(context.system)
+      val proxy = context.actorOf(Props(new DestinationProxy("akka.tcp://example@127.0.0.1:2852/user/destination")))
+      val channel = ext.channelOf(ReliableChannelProps(1, proxy))
+    
+      def receive = {
+        case msg: Message => channel forward msg
+      }
+    }
+
+    // create and recover sender and its channel
+    val sender = extension.processorOf(Props(new Sender with Eventsourced))
+
+    sender ! Message("hello")
+
+Special care must be taken if the remote destination actor is an `Eventsourced` actor. In this case, the application must ensure that the destination actor can only be accessed remotely **after** it has been successfully recovered. This can be achieved, for example, by using an additional *endpoint* actor that simply forwards to the destination actor. The endpoint actor is registered under the destination path after the destination actor has been successfully recovered. 
+
+    class DestinationEndpoint(destination: ActorRef) extends Actor {
+      def receive = {
+        case msg => destination forward msg
+      }
+    }
+    
+    class Destination extends Actor {
+      val id = 2
+    
+      def receive = {
+        case msg: Message => {
+          println(s"received ${msg.event}")
+          msg.confirm()
+        }
+      }
+    }
+
+    val destination = extension.processorOf(Props(new Destination with Eventsourced))
+
+    // wait for destination recovery to complete
+    extension.recover()
+
+    // make destination remotely accessible after recovery
+    system.actorOf(Props(new DestinationEndpoint(destination)), "destination")
+
+This ensures that new remote messages never interleave with messages that are replayed to the destination actor during recovery. 
+
+Code from this section is contained in [ReliableChannelExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ReliableChannelExample.scala). The sender application can be started from sbt with 
+
+    > project eventsourced-examples
+    > run-main org.eligosource.eventsourced.example.Sender
+
+The (remote) destination can be started with
+
+    > project eventsourced-examples
+    > run-main org.eligosource.eventsourced.example.Destination
+
+The sender application prompts the user to enter messages on `stdin` which are then reliably sent to the remote destination.
 
 ### Channel alternatives
 
@@ -1290,19 +1373,19 @@ When the master crashes, another node in the cluster becomes the master and reco
 
 Code from this section is contained in [ClusterExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ClusterExample.scala), the configuration files used are [journal.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/journal.conf) and [cluster.conf](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/resources/cluster.conf). For a more detailed description of the example code, refer to the code comments. To run the distributed example application from sbt, first start the application that hosts the `Destination` actor and the journal:
 
-    > run-main org.eligosource.eventsourced.example.Destination
+    > run-main org.eligosource.eventsourced.example.DestinationApp
 
 Then start the first seed node of the cluster
 
-    > run-main org.eligosource.eventsourced.example.Node 2561
+    > run-main org.eligosource.eventsourced.example.NodeApp 2561
 
 then the second seed node
 
-    > run-main org.eligosource.eventsourced.example.Node 2562
+    > run-main org.eligosource.eventsourced.example.NodeApp 2562
 
 and finally a third cluster node
 
-    > run-main org.eligosource.eventsourced.example.Node
+    > run-main org.eligosource.eventsourced.example.NodeApp
 
 The above commands require that you're in the `eventsourced-examples` project. You can switch to it via
 
