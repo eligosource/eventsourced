@@ -43,12 +43,16 @@ case class InmemJournalProps(
   dispatcherName: Option[String] = None) extends JournalProps {
 
   /**
+   * Java API.
+   *
    * Returns a new `InmemJournalProps` with specified journal actor name.
    */
   def withName(name: String) =
     copy(name = Some(name))
 
   /**
+   * Java API.
+   *
    * Returns a new `InmemJournalProps` with specified journal actor dispatcher name.
    */
   def withDispatcherName(dispatcherName: String) =
@@ -56,4 +60,12 @@ case class InmemJournalProps(
 
   def createJournalActor: Actor =
     new InmemJournal
+}
+
+object InmemJournalProps {
+  /**
+   * Java API.
+   */
+  def create =
+    new InmemJournalProps()
 }

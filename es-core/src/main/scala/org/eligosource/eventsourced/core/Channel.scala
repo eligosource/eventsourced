@@ -57,7 +57,6 @@ import org.eligosource.eventsourced.core.JournalProtocol._
  */
 trait Channel extends Actor {
   private val extension = EventsourcingExtension(context.system)
-  implicit val executionContext = context.dispatcher
 
   /**
    * Channel id.
@@ -78,25 +77,29 @@ trait Channel extends Actor {
   }
 }
 
-object Channel {
-
+/**
+ * Channel command for starting delivery of pending event messages.
+ */
+case object Deliver {
   /**
-   * Channel command for starting delivery of pending event messages.
-   */
-  case object Deliver
-
-  /**
-   * Channel event that is published when a reliable channel (identified by `channelId`)
-   * stops event message delivery. The event is published to the event stream of the
-   * [[akka.actor.ActorSystem]] the reliable channel belongs to.
+   * Java API.
    *
-   * @param channelId id of the reliable channel that stopped event message
-   *        delivery.
-   *
-   * @see [[org.eligosource.eventsourced.core.ReliableChannel]]
+   * Returns this object.
    */
-  case class DeliveryStopped(channelId: Int)
+  def get = this
 }
+
+/**
+ * Channel event that is published when a reliable channel (identified by `channelId`)
+ * stops event message delivery. The event is published to the event stream of the
+ * [[akka.actor.ActorSystem]] the reliable channel belongs to.
+ *
+ * @param channelId id of the reliable channel that stopped event message
+ *        delivery.
+ *
+ * @see [[org.eligosource.eventsourced.core.ReliableChannel]]
+ */
+case class DeliveryStopped(channelId: Int)
 
 /**
  * A transient channel that sends event [[org.eligosource.eventsourced.core.Message]]s
@@ -118,8 +121,6 @@ object Channel {
  * @see [[org.eligosource.eventsourced.core.JournalProtocol.WriteAck]]
  */
 class DefaultChannel(val id: Int, val journal: ActorRef, val destination: ActorRef) extends Channel {
-  import Channel._
-
   private var retain = true
   private var buffer = List.empty[Message]
 
@@ -161,7 +162,23 @@ case class RedeliveryPolicy(
   restartDelay: FiniteDuration,
   restartMax: Int,
   redeliveryDelay: FiniteDuration,
-  redeliveryMax: Int)
+  redeliveryMax: Int) {
+
+  def withConfirmationTimeout(confirmationTimeout: FiniteDuration) =
+    copy(confirmationTimeout = confirmationTimeout)
+
+  def withRestartDelay(restartDelay: FiniteDuration) =
+    copy(restartDelay = restartDelay)
+
+  def withRestartMax(restartMax: Int) =
+    copy(restartMax = restartMax)
+
+  def withRedeliveryDelay(redeliveryDelay: FiniteDuration) =
+    copy(redeliveryDelay = redeliveryDelay)
+
+  def withRedeliveryMax(redeliveryMax: Int) =
+    copy(redeliveryMax = redeliveryMax)
+}
 
 object RedeliveryPolicy {
   /** Default confirmation timeout: 5 seconds */
@@ -184,6 +201,13 @@ object RedeliveryPolicy {
     DefaultRestartMax,
     DefaultRedeliveryDelay,
     DefaultRedeliveryMax)
+
+  /**
+   * Java API.
+   *
+   * Returns a [[org.eligosource.eventsourced.core.RedeliveryPolicy]] with default settings.
+   */
+  def create = apply()
 }
 
 /**
@@ -202,7 +226,7 @@ object RedeliveryPolicy {
  * the channel restarts itself after a certain ''restart delay'' (specified by `policy.restartDelay`)
  * and starts again with re-deliveries. If the maximum number of restarts has been reached (specified
  * by `policy.restartMax`) the channel stops message delivery and publishes a
- * [[org.eligosource.eventsourced.core.Channel.DeliveryStopped]] event to the event stream of the
+ * [[org.eligosource.eventsourced.core.DeliveryStopped]] event to the event stream of the
  * [[akka.actor.ActorSystem]] this channel belongs to. Applications can then re-activate the channel
  * by calling `EventsourcingExtension.deliver(Int)` with the channel id as argument.
  *
@@ -245,7 +269,7 @@ object RedeliveryPolicy {
  */
 class ReliableChannel(val id: Int, val journal: ActorRef, val destination: ActorRef, policy: RedeliveryPolicy, dispatcherName: Option[String] = None) extends Channel {
   import ReliableChannel._
-  import Channel._
+  import context.dispatcher
 
   private var buffer: Option[ActorRef] = None
   private var restarts = 0
@@ -330,8 +354,8 @@ private [core] class ReliableChannelBuffer(channelId: Int, journal: ActorRef, de
 
 private [core] class ReliableChannelDeliverer(channelId: Int, channel: ActorRef, journal: ActorRef, destination: ActorRef, policy: RedeliveryPolicy) extends Actor {
   import ReliableChannel._
+  import context.dispatcher
 
-  implicit val executionContext = context.dispatcher
   val scheduler = context.system.scheduler
 
   var buffer: Option[ActorRef] = None

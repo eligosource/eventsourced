@@ -21,22 +21,38 @@ import BehaviorSpec._
 
 class BehaviorSpec extends EventsourcingSpec[Fixture] {
   "A eventsourced processor" must {
-    "be able to change behavior without loosing event-sourcing functionality" in { fixture =>
+    "be able to change behavior without loosing event-sourcing functionality (Scala API)" in { fixture =>
       import fixture._
 
-      processor ! Message("foo")
-      processor ! Message("bar")
-      processor ! Message("baz")
+      val p = scalaProcessor
+
+      p ! Message("foo")
+      p ! Message("bar")
+      p ! Message("baz")
 
       dequeue() must be ("foo (1)")
       dequeue() must be ("bar (2)")
       dequeue() must be ("baz (3)")
+    }
+    "be able to change behavior without loosing event-sourcing functionality (Java API)" in { fixture =>
+      import fixture._
 
+      val p = javaProcessor
+
+      p ! Message("foo")
+      p ! Message("bar")
+      p ! Message("baz")
+
+      dequeue() must be ("foo (1)")
+      dequeue() must be ("bar (2)")
+      dequeue() must be ("baz (3)")
     }
     "call unhandled() for messages for which receive() is not defined" in { fixture =>
       import fixture._
 
-      processor ! Message("xyz")
+      val p = scalaProcessor
+
+      p ! Message("xyz")
 
       dequeue() must be ("unhandled (1)")
     }
@@ -46,7 +62,9 @@ class BehaviorSpec extends EventsourcingSpec[Fixture] {
 object BehaviorSpec {
   class Fixture extends EventsourcingFixture[Any] {
     val destination = system.actorOf(Props(new Destination(queue) with Receiver with Confirm))
-    val processor = extension.processorOf(Props(new Processor(destination) with Receiver with Eventsourced { val id = 1 } ))
+
+    def scalaProcessor = extension.processorOf(Props(new Processor(destination) with Receiver with Eventsourced { val id = 1 } ))
+    def javaProcessor = extension.processorOf(Props(new BehaviorSpecProcessor(destination)))
   }
 
   class Processor(destination: ActorRef) extends Actor { this: Receiver =>

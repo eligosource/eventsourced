@@ -16,6 +16,7 @@
 package org.eligosource.eventsourced.core
 
 import akka.actor._
+import akka.japi.{Function => JFunction}
 
 /**
  * Stackable modification for actors to provide ''convenient'' access to registered
@@ -176,19 +177,46 @@ class MessageEmitter(val channel: ActorRef, val message: Message) {
    * @param sender sender reference.
    */
   def send(f: Message => Message)(implicit sender: ActorRef = null) = {
-    channel ! f(message)
+    channel tell (f(message), sender)
+  }
+
+  /**
+   * Java API.
+   *
+   * Updates `message` with function `f` and emits the updated
+   * message to `channel` using `sender` as sender reference.
+   *
+   * @param f message update function.
+   * @param sender sender reference.
+   */
+  def send(f: JFunction[Message, Message], sender: ActorRef) = {
+    channel tell (f(message), sender)
   }
 
   /**
    * Updates `message` with function `f` and emits the updated
-   * message to `channel` passing the original sender actor as
+   * message to `channel` using the original sender actor as
    * the sender.
    *
    * @param f message update function.
    * @param context actor context.
    */
   def forward(f: Message => Message)(implicit context: ActorContext) = {
-    channel forward f(message)
+    channel.forward(f(message))
+  }
+
+  /**
+   * Java API.
+   *
+   * Updates `message` with function `f` and emits the updated
+   * message to `channel` using the original sender actor as
+   * the sender.
+   *
+   * @param f message update function.
+   * @param context actor context.
+   */
+  def forward(f: JFunction[Message, Message], context: ActorContext) = {
+    channel.forward(f(message))(context)
   }
 
   /**

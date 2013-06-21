@@ -73,6 +73,19 @@ case class DefaultChannelProps(
     actor(new DefaultChannel(id, journal, destination), name, dispatcherName)
 }
 
+object DefaultChannelProps {
+  /**
+   * Java API.
+   *
+   * Creates a new `DefaultChannelProps` object with specified `id` and `destination`.
+   *
+   * @param id channel id.
+   * @param destination channel destination.
+   */
+  def create(id: Int, destination: ActorRef): DefaultChannelProps =
+    DefaultChannelProps(id, destination)
+}
+
 /**
  * [[org.eligosource.eventsourced.core.ReliableChannel]] configuration object.
  */
@@ -131,4 +144,17 @@ case class ReliableChannelProps(
    */
   def createChannel(journal: ActorRef)(implicit actorRefFactory: ActorRefFactory) =
     actor(new ReliableChannel(id, journal, destination, policy, dispatcherName), name, dispatcherName)
+}
+
+object ReliableChannelProps {
+  /**
+   * Java API.
+   *
+   * Creates a new `ReliableChannelProps` object with specified `id` and `destination`.
+   *
+   * @param id channel id.
+   * @param destination channel destination.
+   */
+  def create(id: Int, destination: ActorRef): ReliableChannelProps =
+    ReliableChannelProps(id, destination)
 }

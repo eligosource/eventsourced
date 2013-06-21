@@ -67,11 +67,33 @@ case class Message(
     if (confirmationTarget != null && confirmationPrototype != null) confirmationTarget ! confirmationPrototype.copy(positive = pos)
   }
 
+  /**
+   * Returns a copy of this message with an updated `event` value.
+   */
+  def withEvent(event: Any): Message =
+    copy(event = event)
+
+  /**
+   * Returns a copy of this message with an updated `ack` value.
+   */
+  def withAck(ack: Boolean): Message =
+    copy(ack = ack)
+
   private [eventsourced] def withTimestamp: Message = withTimestamp(System.currentTimeMillis)
   private [eventsourced] def withTimestamp(timestamp: Long): Message = copy(timestamp = timestamp)
   private [eventsourced] def clearConfirmationSettings = copy(
     confirmationTarget = null,
     confirmationPrototype = null)
+}
+
+object Message {
+  /**
+   * Creates a new message from specified `event`.
+   *
+   * @param event an event object.
+   */
+  def create(event: Any): Message =
+    Message(event)
 }
 
 /**

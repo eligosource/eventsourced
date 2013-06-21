@@ -22,6 +22,16 @@ import akka.actor._
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps
 
+class MyActor extends Actor {
+  def receive = {
+    case _ =>
+  }
+}
+
+class MyERActor extends MyActor with Receiver with Eventsourced {
+  val id = 1
+}
+
 object FirstSteps extends App {
   implicit val system = ActorSystem("guide")
 

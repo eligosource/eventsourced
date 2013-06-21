@@ -59,17 +59,60 @@ case class MongodbCasbahJournalProps(
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
   snapshotFilesystem: FileSystem = defaultLocalFilesystem,
-  name: Option[String] = None, dispatcherName: Option[String] = None) extends JournalProps with HadoopFilesystemSnapshottingProps {
+  name: Option[String] = None, dispatcherName: Option[String] = None)
+  extends JournalProps with HadoopFilesystemSnapshottingProps[MongodbCasbahJournalProps] {
 
   /**
+   * Java API.
+   *
    * Returns a new `MongodbCasbahJournalProps` with specified journal actor name.
    */
   def withName(name: String) = copy(name = Some(name))
 
   /**
+   * Java API.
+   *
    * Returns a new `MongodbCasbahJournalProps` with specified journal actor dispatcher name.
    */
   def withDispatcherName(dispatcherName: String) = copy(dispatcherName = Some(dispatcherName))
 
+  /**
+   * Java API.
+   */
+  def withSnapshotPath(snapshotPath: Path) =
+    copy(snapshotPath = snapshotPath)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer) =
+    copy(snapshotSerializer = snapshotSerializer)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration) =
+    copy(snapshotLoadTimeout = snapshotLoadTimeout)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) =
+    copy(snapshotSaveTimeout = snapshotSaveTimeout)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
+    copy(snapshotFilesystem = snapshotFilesystem)
+
   def createJournalActor: Actor = new MongodbCasbahJournal(this)
+}
+
+object MongodbCasbahJournalProps {
+  /**
+   * Java API.
+   */
+  def create(mongoClient: MongoClient, dbName: String, collName: String) =
+    MongodbCasbahJournalProps(mongoClient, dbName, collName)
 }

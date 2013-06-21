@@ -16,6 +16,7 @@
 package org.eligosource.eventsourced.core
 
 import akka.actor._
+import akka.japi.Procedure
 
 /**
  * Allows actors with a stackable [[org.eligosource.eventsourced.core.Receiver]],
@@ -41,19 +42,44 @@ trait Behavior extends Actor {
   }
 
   /**
-   * Puts `behavior` on the hotswap stack. This will only affect the behavior of the actor
-   * that has been modified with this stackable trait.
+   * Puts `behavior` on the hotswap stack. This will preserve the behavior of this stackable
+   * trait. Actors that additionally want to replace the behavior of this stackable trait should
+   * call `context.become(...)`.
    *
    * @param behavior new behavior
-   * @param discardOld if `true`, an `unbecome()` will be issued prior to pushing `behavior`.
+   * @param discardOld if `true`, `unbecome()` will be called prior to pushing `behavior`.
    */
   def become(behavior: Actor.Receive, discardOld: Boolean = true) {
     behaviorStack = behavior :: (if (discardOld && behaviorStack.nonEmpty) behaviorStack.tail else behaviorStack)
   }
 
   /**
-   * Reverts the behavior to the previous one on the hotswap stack. This will only affect the
-   * behavior of the actor that has been modified with this stackable trait.
+   * Java API.
+   *
+   * Puts `behavior` on the hotswap stack. This will preserve the behavior of this stackable
+   * trait. Actors that additionally want to replace the behavior of this stackable trait should
+   * call `getContext().become(...)`. The existing (old) behavior will be discarded.
+   *
+   * @param behavior new behavior
+   */
+  def become(behavior: Procedure[Any]): Unit = become(behavior, true)
+
+  /**
+   * Java API.
+   *
+   * Puts `behavior` on the hotswap stack. This will preserve the behavior of this stackable
+   * trait. Actors that additionally want to replace the behavior of this stackable trait should
+   * call `getContext().become(...)`.
+   *
+   * @param behavior new behavior
+   * @param discardOld if `true`, `unbecome()` will be called prior to pushing `behavior`.
+   */
+  def become(behavior: Procedure[Any], discardOld: Boolean): Unit =
+    become({ case msg => behavior.apply(msg) }: Actor.Receive, discardOld)
+
+  /**
+   * Reverts the behavior to the previous one on the hotswap stack. This will preserve the behavior
+   * of this stackable trait.
    */
   def unbecome() {
     behaviorStack = if (behaviorStack.isEmpty || behaviorStack.tail.isEmpty) super.receive :: emptyBehaviorStack else behaviorStack.tail

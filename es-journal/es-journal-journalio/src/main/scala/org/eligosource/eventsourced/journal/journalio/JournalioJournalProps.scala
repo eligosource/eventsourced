@@ -74,7 +74,8 @@ case class JournalioJournalProps(
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
-  snapshotFilesystem: FileSystem = defaultLocalFilesystem) extends JournalProps with HadoopFilesystemSnapshottingProps {
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+  extends JournalProps with HadoopFilesystemSnapshottingProps[JournalioJournalProps] {
 
   val snapshotPath =
     if (!snapshotDir.isAbsolute && snapshotFilesystem == defaultLocalFilesystem) {
@@ -84,53 +85,85 @@ case class JournalioJournalProps(
     } else snapshotDir
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified journal actor name.
    */
   def withName(name: String) =
     copy(name = Some(name))
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified journal actor dispatcher name.
    */
   def withDispatcherName(dispatcherName: String) =
     copy(dispatcherName = Some(dispatcherName))
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified physical sync setting.
    */
   def withFsync(fsync: Boolean) =
     copy(fsync = fsync)
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified checksum verification setting.
    */
   def withChecksum(checksum: Boolean) =
     copy(checksum = checksum)
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified snapshot dir.
    */
   def withSnapshotDir(snapshotDir: Path) =
     copy(snapshotDir = snapshotDir)
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified snapshot serializer.
    */
   def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer) =
     copy(snapshotSerializer = snapshotSerializer)
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified snapshot load timeout.
    */
   def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration) =
     copy(snapshotLoadTimeout = snapshotLoadTimeout)
 
   /**
+   * Java API.
+   *
    * Returns a new `JournalioJournalProps` with specified snapshot save timeout.
    */
   def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) =
     copy(snapshotSaveTimeout = snapshotSaveTimeout)
 
+  /**
+   * Java API.
+   *
+   * Returns a new `JournalioJournalProps` with specified snapshot filesystem.
+   */
+  def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
+    copy(snapshotFilesystem = snapshotFilesystem)
+
   def createJournalActor: Actor =
     new JournalioJournal(this)
+}
+
+object JournalioJournalProps {
+  /**
+   * Java API.
+   */
+  def create(dir: File) =
+    JournalioJournalProps(dir)
 }

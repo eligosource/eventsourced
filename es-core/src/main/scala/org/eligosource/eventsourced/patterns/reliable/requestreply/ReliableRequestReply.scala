@@ -148,6 +148,19 @@ case class ReliableRequestReplyChannelProps(
   }
 }
 
+object ReliableRequestReplyChannelProps {
+  /**
+   * Java API.
+   *
+   * Creates a new `ReliableRequestReplyChannelProps` object with specified `id` and `destination`.
+   *
+   * @param id channel id.
+   * @param destination channel destination.
+   */
+  def create(id: Int, destination: ActorRef): ReliableRequestReplyChannelProps =
+    ReliableRequestReplyChannelProps(id, destination)
+}
+
 /**
  * Destination proxy that mediates reliable request-reply interactions with a destination that is
  * specified by `props.destination`.

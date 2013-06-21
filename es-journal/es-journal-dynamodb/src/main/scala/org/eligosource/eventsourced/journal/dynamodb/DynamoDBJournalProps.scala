@@ -29,31 +29,96 @@ import org.eligosource.eventsourced.journal.common.serialization.SnapshotSeriali
 import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps
 import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem
 
-/*
-counterShards should be set to at least a 10x multiple of the expected throughput of the journal
-during the lifetime of a journal the counterShards can only be increased. Decreases in counterShards will be ignored.
-
-the larger the value of counterShards, the longer it takes to recover the storedCounter
-*/
-case class DynamoDBJournalProps(journalTable: String, eventSourcedApp: String,
-                                key: String, secret: String,
-                                operationTimeout: Timeout = Timeout(10 seconds),
-                                replayOperationTimeout: Timeout = Timeout(1 minute),
-                                counterShards:Int=10000,
-                                system: ActorSystem, factory: Option[ActorRefFactory] = None,
-                                dynamoEndpoint:String = "dynamodb.us-east-1.amazonaws.com",
-                                name: Option[String] = None, dispatcherName: Option[String] = None,
-                                snapshotPath: Path = new Path("snapshots"),
-                                snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
-                                snapshotLoadTimeout: FiniteDuration = 1 hour,
-                                snapshotSaveTimeout: FiniteDuration = 1 hour,
-                                snapshotFilesystem: FileSystem = defaultLocalFilesystem) extends JournalProps with HadoopFilesystemSnapshottingProps {
+/**
+ * CounterShards should be set to at least a 10x multiple of the expected throughput
+ * of the journal during the lifetime of a journal the counterShards can only be
+ * increased. Decreases in counterShards will be ignored. The larger the value of
+ * counterShards, the longer it takes to recover the storedCounter.
+ */
+case class DynamoDBJournalProps(
+  journalTable: String,
+  eventSourcedApp: String,
+  key: String,
+  secret: String,
+  operationTimeout: Timeout = Timeout(10 seconds),
+  replayOperationTimeout: Timeout = Timeout(1 minute),
+  counterShards:Int=10000,
+  system: ActorSystem,
+  factory: Option[ActorRefFactory] = None,
+  dynamoEndpoint:String = "dynamodb.us-east-1.amazonaws.com",
+  name: Option[String] = None, dispatcherName: Option[String] = None,
+  snapshotPath: Path = new Path("snapshots"),
+  snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
+  snapshotLoadTimeout: FiniteDuration = 1 hour,
+  snapshotSaveTimeout: FiniteDuration = 1 hour,
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+  extends JournalProps with HadoopFilesystemSnapshottingProps[DynamoDBJournalProps] {
 
   /**
-   * Creates a [[org.eligosource.eventsourced.core.Journal]] actor instance.
+   * Java API.
    */
-  def createJournalActor = new DynamoDBJournal(this)
+  def withOperationTimeout(operationTimeout: Timeout) =
+    copy(operationTimeout = operationTimeout)
 
-  def clientProps = DynamoDBClientProps(key, secret, operationTimeout, system, factory.getOrElse(system), dynamoEndpoint)
+  /**
+   * Java API.
+   */
+  def withReplayOperationTimeout(oeplayOperationTimeout: Timeout) =
+    copy(replayOperationTimeout = replayOperationTimeout)
 
+  /**
+   * Java API.
+   */
+  def withFactory(factory: ActorRefFactory) =
+    copy(factory = Some(factory))
+
+  /**
+   * Java API.
+   */
+  def withDynamoEndpoint(dynamoEndpoint: String) =
+    copy(dynamoEndpoint = dynamoEndpoint)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotPath(snapshotPath: Path) =
+    copy(snapshotPath = snapshotPath)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer) =
+    copy(snapshotSerializer = snapshotSerializer)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration) =
+    copy(snapshotLoadTimeout = snapshotLoadTimeout)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) =
+    copy(snapshotSaveTimeout = snapshotSaveTimeout)
+
+  /**
+   * Java API.
+   */
+  def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
+    copy(snapshotFilesystem = snapshotFilesystem)
+
+  def createJournalActor =
+    new DynamoDBJournal(this)
+
+  def clientProps =
+    DynamoDBClientProps(key, secret, operationTimeout, system, factory.getOrElse(system), dynamoEndpoint)
+}
+
+object DynamoDBJournalProps {
+  /**
+   * Java API.
+   */
+  def create(journalTable: String, eventSourcedApp: String, key: String, secret: String, system: ActorSystem) =
+    DynamoDBJournalProps(journalTable, eventSourcedApp, key, secret, system = system)
 }

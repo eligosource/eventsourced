@@ -65,11 +65,12 @@ object SnapshotExample extends App {
   extension.recover(replayParams.allWithSnapshot)
   processor ! Message(Increment(1))
   processor ! Message(Increment(2))
-  processor ? SnapshotRequest onComplete {
+
+  (processor ? SnapshotRequest).mapTo[SnapshotSaved].onComplete {
     case Success(SnapshotSaved(pid, snr, time)) => println(s"snapshotting succeeded: pid = ${pid} snr = ${snr} time = ${time}")
-    case Success(r)                             => println(s"unexpected result: ${r}")
     case Failure(e)                             => println(s"snapshotting failed: ${e.getMessage}")
   }
+
   processor ! Message(Increment(3))
 
   Thread.sleep(1000)

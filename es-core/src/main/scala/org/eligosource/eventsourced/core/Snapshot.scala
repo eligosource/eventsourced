@@ -62,7 +62,14 @@ case class SnapshotRequest(processorId: Int, sequenceNr: Long, requestor: ActorR
  * will be saved. The sender of this command will receive a [[org.eligosource.eventsourced.core.SnapshotSaved]]
  * reply when saving successfully completed.
  */
-object SnapshotRequest
+object SnapshotRequest {
+  /**
+   * Java API.
+   *
+   * Returns this object.
+   */
+  def get = this
+}
 
 /**
  * Offers a snapshot to a processor during replay.

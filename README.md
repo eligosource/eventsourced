@@ -195,10 +195,17 @@ In the following, the terms *persistent actor*, *event-sourced actor*, *event-so
 First steps
 -----------
 
-This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the usage of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and can be executed from the sbt prompt with
+This section guides through the minimum steps required to create, use and recover an event-sourced actor and demonstrates the usage of channels. Code from this section is contained in [FirstSteps.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/FirstSteps.scala) and [FirstSteps.java](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/java/org/eligosource/eventsourced/guide/japi/FirstSteps.java). It can be executed from the sbt prompt with
+
+**Scala:**
 
     > project eventsourced-examples
     > run-main org.eligosource.eventsourced.guide.FirstSteps
+
+**Java:**
+
+    > project eventsourced-examples
+    > run-main org.eligosource.eventsourced.guide.japi.FirstSteps
 
 The example in this section and all further examples use a journal that is backed by a [LevelDB Java port](https://github.com/eligosource/eventsourced/wiki/Installation#leveldb-java-port). For running a [native LevelDB](https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb) instance from sbt, [additional settings](https://github.com/eligosource/eventsourced/wiki/Installation#native-leveldb) are required. A legend to the figures used in this and other sections is in [Appendix A](#appendix-a-legend).
 
@@ -212,6 +219,8 @@ The example in this section and all further examples use a journal that is backe
 
 An `EventsourcingExtension` is initialized with an `ActorSystem` and a journal `ActorRef`.
 
+**Scala:**
+
     import java.io.File
     import akka.actor._
     import org.eligosource.eventsourced.core._
@@ -221,11 +230,24 @@ An `EventsourcingExtension` is initialized with an `ActorSystem` and a journal `
     val journal: ActorRef = LeveldbJournalProps(new File("target/example-1"), native = false).createJournal
     val extension: EventsourcingExtension = EventsourcingExtension(system, journal)
 
+**Java:**
+
+    import java.io.File;
+    import akka.actor.*;    
+    import org.eligosource.eventsourced.core.*;
+    import org.eligosource.eventsourced.journal.leveldb.*;
+
+    final ActorSystem system = ActorSystem.create("guide");
+    final ActorRef journal = LeveldbJournalProps.create(new File("target/guide-1-java")).withNative(false).createJournal(system);
+    final EventsourcingExtension extension = EventsourcingExtension.create(system, journal);
+
 This example uses a [LevelDB journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps) but any other [journal implementation](#journals) can be used as well.
 
 ### Step 2: Event-sourced actor definition
 
-Event-sourced actors can be defined as 'plain' actors i.e. they don't need to care about appending received event messages to a journal. For example,
+With the Scala API, event-sourced actors can be defined as 'plain' actors. With the Java API, event-sourced actors need to extend the abstract [`UntypedEventsourcedActor`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.UntypedEventsourcedActor) class. For example,
+
+**Scala:**
 
     class Processor extends Actor {
       var counter = 0
@@ -238,11 +260,33 @@ Event-sourced actors can be defined as 'plain' actors i.e. they don't need to ca
       }
     }
 
+**Java:**
+
+    public class Processor extends UntypedEventsourcedActor {
+        private int counter = 0;
+
+        @Override
+        public int id() {
+            return 1;
+        }
+
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof Message) {
+                Message msg = (Message)message;
+                counter = counter + 1;
+                System.out.println(String.format("[processor] event = %s (%d)", msg.event(), counter));
+            }
+        }
+    }
+
 is an actor that counts the number of received event [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s. In Eventsourced applications, events are always communicated (transported) via event `Message`s.
 
 ### Step 3: Event-sourced actor creation and recovery
 
-To make `Processor` an event-sourced actor, it must be modified with the stackable [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) trait during instantiation.
+To make the Scala `Processor` an event-sourced actor, it must be modified with the stackable [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) trait during instantiation. The Java `Processor` already extends [`UntypedEventsourcedActor`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.UntypedEventsourcedActor) class, so no further modification is needed.
+
+**Scala:**
 
     // create and register event-sourced processor
     val processor: ActorRef = extension.processorOf(Props(new Processor with Eventsourced { val id = 1 } ))
@@ -250,7 +294,15 @@ To make `Processor` an event-sourced actor, it must be modified with the stackab
     // recover registered processors by replaying journaled events
     extension.recover()
 
-An actor that is modified with `Eventsourced` writes event `Message`s to a journal before its `receive` method is called. The `processorOf` method registers that actor under a unique `id`. The processor `id` is defined by implementing the abstract `Eventsourced.id` member which must be a positive integer and consistently re-used across applications runs. The `recover` method recovers the state of `processor` by replaying all event messages that `processor` received in previous application runs.
+**Java:**
+
+    // create and register event-sourced processor
+    final ActorRef processor = extension.processorOf(Props.create(Processor.class), system);
+
+    // recover registered processors by replaying journaled events
+    extension.recover();
+
+An actor that is modified with `Eventsourced` (or extends `UntypedEventsourcedActor`) writes event `Message`s to a journal before its `receive`  method (or `onReceive` method, respectively) is called. The `processorOf` method registers that actor under a unique `id`. The processor `id` is defined by implementing the abstract `Eventsourced.id` member which must be a positive integer and consistently re-used across applications runs. The `recover` method recovers the state of `processor` by replaying all event messages that `processor` received in previous application runs.
 
 ### Step 4: Event-sourced actor usage
 
@@ -258,8 +310,15 @@ The event-sourced `processor` can be used like any other actor. Messages of type
 
 ![Event-sourced actor](https://raw.github.com/eligosource/eventsourced/master/doc/images/firststeps-1.png)
 
+**Scala:**
+
     // send event message to processor (will be journaled)
     processor ! Message("foo")
+
+**Java:**
+
+    // send event message to processor (will be journaled)
+    processor.tell(Message.create("foo"), null);
 
 A first application run will create an empty journal. Hence, no event messages will be replayed and the `processor` writes
 
@@ -277,6 +336,8 @@ on `stdout` where the first `println` is triggered by a replayed event message.
 ![Channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/firststeps-2.png)
 
 In this step, the event-sourced `processor` is extended to send out new event messages to a `destination`. It creates another event message (by making a copy of the received event message) with an updated `event` field and sends the updated message to `destination`.
+
+**Scala:**
 
     class Processor(destination: ActorRef) extends Actor {
       var counter = 0;
@@ -296,9 +357,43 @@ In this step, the event-sourced `processor` is extended to send out new event me
 
     extension.recover()
 
+**Java:**
+
+    public class Processor extends UntypedEventsourcedActor {
+        private ActorRef destination;
+        private int counter = 0;
+
+        public Processor(ActorRef destination) {
+            this.destination = destination;
+        }
+
+        @Override
+        public int id() {
+            return 1;
+        }
+
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof Message) {
+                Message msg = (Message)message;
+                counter = counter + 1;
+                // … 
+                destination.tell(msg.withEvent(String.format("processed %d event messages so far", counter)), getSelf());
+            }
+        }
+    }
+
+    final ActorRef destination = system.actorOf(Props.create(Destination.class));
+    // instantiate processor by passing the destination as constructor argument
+    final ActorRef processor = extension.processorOf(Props.create(Processor.class, destination), system);
+
+    extension.recover();
+
 Without any further actions, this would also send event messages to `destination` during recovery (i.e. during replay of event messages). With every application restart, `destination` would redundantly receive the whole event message history again and again. This is not acceptable in most cases, such as when `destination` represents an external service, for example.
 
 To prevent redundant message delivery to `destination` we need something that *remembers* which messages have already been successfully delivered. This is exactly the use case for [channels](#channels). A channel drops all messages that have already been successfully delivered to a destination. We therefore wrap `destination` by a channel and let the processor communicate with the destination via that channel. This can be done without changing the code of `Processor`.
+
+**Scala:**
 
     val destination: ActorRef = system.actorOf(Props[Destination])
     // wrap destination by channel
@@ -306,9 +401,19 @@ To prevent redundant message delivery to `destination` we need something that *r
     // instantiate processor by passing the channel (i.e. wrapped destination) as constructor argument
     val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
 
+**Java:**
+
+    final ActorRef destination = system.actorOf(Props.create(Destination.class));
+    // wrap destination by channel
+    final ActorRef channel = extension.channelOf(DefaultChannelProps.create(1, destination), system);
+    // instantiate processor by passing the channel (i.e. wrapped destination) as constructor argument
+    final ActorRef processor = extension.processorOf(Props.create(Processor.class, channel), system);
+
 A channel must have a unique id (`1` in our example), a positive integer that must be consistently defined across application runs. Here, we create a [default channel](#defaultchannel) that is configured with a [`DefaultChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannelProps) configuration object. If applications need reliable event message delivery to destinations, they should use a [reliable channel](#reliablechannel) that is configured with a [`ReliableChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannelProps) configuration object.
 
 Assuming the following definition of a `Destination` actor
+
+**Scala:**
 
     class Destination extends Actor {
       def receive = {
@@ -320,7 +425,20 @@ Assuming the following definition of a `Destination` actor
       }
     }
 
- and that we're starting again from an empty journal, you should see
+**Java:**
+
+    public class Destination extends UntypedActor {
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof Message) {
+                Message msg = (Message)message;
+                System.out.println(String.format("[destination] event = %s", msg.event()));
+                msg.confirm(true);
+            }
+        }
+    }
+
+and that we're starting again from an empty journal, you should see
 
     [processor] event = foo (1)
     [destination] event = 'processed 1 event messages so far'
@@ -344,13 +462,27 @@ Stackable traits
 
 The [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) trait has already been discussed in section [First steps](#first-steps). It can be combined with the stackable `Receiver`, `Emitter` and/or `Confirm` traits where the `Eventsourced` trait must always the last modification i.e.
 
+**Scala:**
+
     new MyActor with Receiver with Confirm with Eventsourced
+
+**Java:**
+
+    public class MyActor extends UntypedEventsourcedConfirmingReceiver
+
+The Eventsourced Java API provides some predefined combinations of stackable traits as abstract base classes. For example, [`UntypedEventsourcedConfirmingReceiver`]((http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.UntypedEventsourcedConfirmingReceiver)) is defined as
+
+    abstract class UntypedEventsourcedReceiver extends UntypedActor with Receiver with Confirm with Eventsourced
+
+Other predefined combinations of stackable traits in the Java API are described in the following subsections. Refer to the `Untyped*` abstract classes in the [API docs](http://eligosource.github.io/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package) for all predefined combinations.
 
 ### `Receiver`
 
 ![Receiver](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-2.png)
 
-An actor that receives event [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s often wants to pattern-match against the contained `event` directly instead of the whole event message. This can be achieved by modifying it with the [`Receiver`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Receiver) trait during instantiation.
+An actor that receives event [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s often wants to pattern-match against the contained `event` directly instead of the whole event message. This can be achieved by modifying it with the [`Receiver`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Receiver) trait during instantiation (Scala API) or extending the abstract [`UntypedReceiver`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.UntypedReceiver) class (Java API).
+
+**Scala:**
 
     class MyActor extends Actor {
       def receive = {
@@ -362,12 +494,27 @@ An actor that receives event [`Message`](http://eligosource.github.com/eventsour
 
     myActor ! Message("foo")
 
-In the above example, sending `Message("foo")` to `myActor` will write `received event foo` to `stdout`. The `Receiver` trait stores the received event message as *current* event message in a field, extracts the contained `event` from that message and calls the `receive` method of `MyActor` with `event` as argument. If `MyActor` wants to have access to the current event message it must be defined with a `Receiver` self-type and call the `message` method.
+**Java:**
+
+    public class MyActor extends UntypedReceiver {
+        @Override
+        public void onReceive(Object event) throws Exception {
+            System.out.println(String.format("received event = %s", event));
+        }
+    }
+
+    final ActorRef myActor = system.actorOf(Props.create(MyActor.class));
+
+    myActor.tell(Message.create("foo"), null);
+
+In the above example, sending `Message("foo")` to `myActor` will write `received event foo` to `stdout`. The `Receiver` trait stores the received event message as *current* event message in a field, extracts the contained `event` from that message and calls the `receive` (or `onReceive`) method of `MyActor` with `event` as argument. If `MyActor` wants to have access to the current event message it must be defined with a `Receiver` self-type and call the `message` method (Scala API) or just call the `message()` method (Java API).
+
+**Scala:**
 
     class MyActor extends Actor { this: Receiver =>
       def receive = {
         case event => {
-           // obtain current event message
+          // obtain current event message
           val currentMessage = message
           // …
           println("received event %s" format event)
@@ -375,9 +522,27 @@ In the above example, sending `Message("foo")` to `myActor` will write `received
       }
     }
 
+**Java:**
+
+    public class MyActor extends UntypedReceiver {
+        @Override
+        public void onReceive(Object event) throws Exception {
+            // obtain current event message
+            Message currentMessage = message();
+            // … 
+            System.out.println(String.format("received event = %s", event));
+        }
+    }
+
 The `Receiver` trait can also be combined with the stackable `Eventsourced` and/or `Confirm` traits where `Receiver` must always be the first modification. For example:
 
-    new MyActor with Receiver with Confirm with Eventsourced
+**Scala:**
+
+    new MyActor with Receiver with Eventsourced
+
+**Java:**
+
+    public class MyActor extends UntypedEventsourcedReceiver 
 
 Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Receiver) for further details.
 
@@ -385,7 +550,9 @@ Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/
 
 ![Emitter](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-3.png)
 
-Where a `Receiver` modification allows actors to pattern-match against incoming events directly instead of whole event `Message`s, an [`Emitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Emitter) introduces a corresponding simplification on the sending (outgoing) side. It allows actors to send (emit) events to channels without having to deal with whole event `Message`s. An emitter can also lookup channels by name.
+Where a `Receiver` modification allows actors to pattern-match against incoming events directly instead of whole event `Message`s, an [`Emitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Emitter) introduces a corresponding simplification on the sending (outgoing) side. It allows actors to send (emit) events to channels without having to deal with whole event `Message`s. An emitter can also lookup channels by name (or id, see below).
+
+**Scala:**
 
     class MyActor extends Actor { this: Emitter =>
         def receive = {
@@ -401,7 +568,24 @@ Where a `Receiver` modification allows actors to pattern-match against incoming 
 
     val myActor = system.actorOf(Props(new MyActor with Emitter))
 
+**Java:**
+
+    public class MyActor extends UntypedEmitter {
+        @Override
+        public void onReceive(Object event) throws Exception {
+            // emit event to channel "myChannel"
+            emitter("myChannel").sendEvent(String.format("received: %s", event), getSelf());
+        }
+    }
+
+    // create register channel under name "myChannel"
+    extension.channelOf(DefaultChannelProps.create(1, destination).withName("myChannel"), system);
+    
+    final ActorRef myActor = extension.processorOf(Props.create(MyActor.class), system);
+
 Event messages sent by an emitter to a channel are always derived from (i.e. are a copy of) the current event message (an `Emitter` is also `Receiver` and maintains a *current* event message, see also section [Receiver](#receiver)). A call to the `emitter` method with a channel name as argument creates a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) object that captures the named channel and the current event message. Calling `sendEvent` on that object modifies the captured event message with the specified event argument and sends the updated event message to the channel (see also channel [usage hints](#usage-hints)). A `MessageEmitter` object can also be sent to other actors (or threads) and be used there i.e. a `MessageEmitter` object is thread-safe. Channels can also be referred to by id when creating a `MessageEmitter` i.e. there's no need to define a custom channel name:
+
+**Scala:**
 
     class MyActor extends Actor { this: Emitter =>
         def receive = {
@@ -415,9 +599,28 @@ Event messages sent by an emitter to a channel are always derived from (i.e. are
     // create register channel
     extension.channelOf(DefaultChannelProps(1, destination))
 
+**Java:**
+
+    public class MyActor extends UntypedEmitter {
+        @Override
+        public void onReceive(Object event) throws Exception {
+            // emit event to channel with id 1
+            emitter(1).sendEvent(String.format("received: %s", event), getSelf());
+        }
+    }
+
+    // create register channel
+    extension.channelOf(DefaultChannelProps.create(1, destination), system);
+
 The `Emitter` trait can also be combined with the stackable `Eventsourced` and/or `Confirm` traits where `Emitter` must always be the first modification. For example:
 
-    new MyActor with Emitter with Confirm with Eventsourced
+**Scala:**
+
+    new MyActor with Emitter with Eventsourced
+
+**Java:**
+
+    public class MyActor extends UntypedEventsourcedEmitter
 
 Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Emitter) for further details.
 
@@ -427,15 +630,27 @@ Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/
 
 The receipt of event messages from channels must be confirmed by calling `confirm()` or `confirm(true)` on the received event `Message`. Applications can also *negatively* confirm an event message receipt by calling `confirm(false)`. This, for example, causes a reliable channel to redeliver the event message.
 
-Instead of calling `confirm(true)` or `confirm(false)` explicitly, actors can also be modified with the stackable [`Confirm`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Confirm) trait. This trait calls `confirm(true)` on the received event message when the modified actor's `receive` method returns normally and `confirm(false)` when it throws an exception.
+Instead of calling `confirm(true)` or `confirm(false)` explicitly, actors can also be modified with the stackable [`Confirm`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Confirm) trait. This trait calls `confirm(true)` on the received event message when the modified actor's `receive` (or `onReceive`) method returns normally and `confirm(false)` when it throws an exception.
 
 This trait can either be used standalone
 
+**Scala:**
+
     new MyActor with Confirm
+
+**Java:**
+
+    public class MyActor extends UntypedConfirmingActor
 
 or in combination with the stackable `Receiver`, `Emitter` and/or `Eventsourced` traits where the `Confirm` modification must be made after a `Receiver` or `Emitter` modification but before an `Eventsourced` modification. For example:
 
+**Scala:**
+
     new MyActor with Receiver with Confirm with Eventsourced
+
+**Java:**
+
+    public class MyActor extends UntypedEventsourcedConfirmingReceiver
 
 Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Confirm) for further details.
 
@@ -443,17 +658,32 @@ Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/
 
 ![Example](https://raw.github.com/eligosource/eventsourced/master/doc/images/stackabletraits-5.png)
 
-This section modifies (and simplifies) the example from section [First steps](#first-steps) by making use of the stackable `Receiver`, `Emitter` and `Confirm` traits. In particular
+This section modifies (and simplifies) the example from section [First steps](#first-steps) by making use of the stackable `Receiver`, `Emitter` and `Confirm` traits. In particular, for the Scala API
 
 - `Processor` will be modified with `Emitter` (in addition to `Eventsourced`)
 - `Destination` will be modified with `Receiver` and `Confirm`
 
-Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and can be executed from the sbt prompt with
+For the Java API
+
+- `Processor` will extend `UntypedEventsourcedEmitter`
+- `Destination` will extend `UntypedConfirmingReceiver`
+
+Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and 
+[StackableTraits.java](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/java/org/eligosource/eventsourced/guide/japi/StackableTraits.java). It can be executed from the sbt prompt with
+
+**Scala:**
 
     > project eventsourced-examples
     > run-main org.eligosource.eventsourced.guide.StackableTraits
 
-The new definition of `Processor`
+**Java:**
+
+    > project eventsourced-examples
+    > run-main org.eligosource.eventsourced.guide.japi.StackableTraits
+
+The new Scala definition of `Processor` now has a self-type `Emitter` and pattern-matches against events directly. The Java definition of `Processor` extends `UntypedEventsourcedEmitter` and also receives events directly (instead of `Message`s).
+
+**Scala:**
 
     class Processor extends Actor { this: Emitter =>
       var counter = 0
@@ -467,15 +697,47 @@ The new definition of `Processor`
       }
     }
 
-now has a self-type `Emitter` and pattern-matches against events directly. Instead of passing the channel via the constructor it is now looked-up by name (`"destination"`). The channel name is specified during channel creation.
+**Java:**
+
+    public class Processor extends UntypedEventsourcedEmitter {
+        private int counter = 0;
+
+        @Override
+        public int id() {
+            return 1;
+        }
+
+        @Override
+        public void onReceive(Object event) throws Exception {
+            counter = counter + 1;
+            System.out.println(String.format("[processor] event = %s (%d)", event, counter));
+            emitter("destination").sendEvent(String.format("processed %d event messages so far", counter), getSelf());
+        }
+    }
+
+Instead of passing the channel via the constructor it is now looked-up by name (`"destination"`). The channel name is specified during channel creation.
+
+**Scala:**
 
     extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
 
-`Processor` must be instantiated with an additional `Emitter` modification to conform to the `Processor` self-type.
+**Java:**
+
+    extension.channelOf(DefaultChannelProps.create(1, destination).withName("destination"), system);
+
+The Scala `Processor` must be instantiated with an additional `Emitter` modification to conform to the `Processor` self-type. No further modification is needed for the Java `Processor`.
+
+**Scala:**
 
     val processor: ActorRef = extension.processorOf(Props(new Processor with Emitter with Eventsourced { val id = 1 } ))
 
+**Java:**
+
+    final ActorRef processor = extension.processorOf(Props.create(Processor.class), system);
+
 The new definition of `Destination`
+
+**Scala:**
 
     class Destination extends Actor {
       def receive = {
@@ -485,16 +747,31 @@ The new definition of `Destination`
       }
     }
 
-pattern-matches against events directly and leaves event message receipt confirmation to the `Confirm` trait. `Destination` must be instantiated with a `Receiver` and a `Confirm` modification.
+**Java:**
+
+    public class Destination extends UntypedConfirmingReceiver {
+        @Override
+        public void onReceive(Object event) throws Exception {
+            System.out.println(String.format("[destination] event = %s", event));
+        }
+    }
+
+pattern-matches against events directly and leaves event message receipt confirmation to the `Confirm` trait. The Scala `Destination` must be instantiated with a `Receiver` and a `Confirm` modification and again, no further modification is needed for the Java `Destination`.
+
+**Scala:**
 
     val destination: ActorRef = system.actorOf(Props(new Destination with Receiver with Confirm))
+
+**Java:**
+
+    final ActorRef destination = system.actorOf(Props.create(Destination.class));
 
 Sender references
 -----------------
 
 The Eventsourced library preserves sender references for all
 
-- message exchanges with actors that are modified with `Eventsourced`, `Receiver`, `Emitter` and/or `Confirm` and
+- message exchanges with actors that are modified with `Eventsourced`, `Receiver`, `Emitter` and/or `Confirm` (or extend any of the abstract `Untyped*` base classes from the Java API) and
 - message exchanges with destination actors via [channels](#channels)
 
 i.e. event-sourced actor applications can make use of sender references in the same way as plain actor applications. If you know how sender references work with Akka [actors](http://doc.akka.io/docs/akka/2.1.0/scala/actors.html), the following will sound familiar to you.
@@ -502,6 +779,8 @@ i.e. event-sourced actor applications can make use of sender references in the s
 ![Processor reply](https://raw.github.com/eligosource/eventsourced/master/doc/images/senderrefs-1.png)
 
 For example, taking the code from section [First steps](#first-steps) as a starting point, `Processor` can be extended to reply to message senders as follows.
+
+**Scala:**
 
     class Processor(destination: ActorRef) extends Actor {
       // …
@@ -516,17 +795,46 @@ For example, taking the code from section [First steps](#first-steps) as a start
     }
 
 
+**Java:**
+
+    public class Processor extends UntypedEventsourcedActor {
+        // …         
+
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof Message) {
+                // … 
+                getSender().tell(String.format("done processing event = %s", msg.event()), getSelf());
+            }
+        }
+    }
+
+
 Applications can now *ask* the `processor` and will get a response asynchronously.
+
+**Scala:**
 
     processor ? Message("foo") onSuccess {
       case response => println(response)
     }
 
-No surprise here. The sender reference in this example represents the future that is returned from the `?` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because `Eventsourced` processors don't store sender references in the journal. The main reason for this is that applications usually do not want to redundantly reply to senders during replays.
+**Java:**
+
+    ask(processor, Message.create("foo"), 5000L).onSuccess(new OnSuccess<Object>() {
+        @Override
+        public void onSuccess(Object response) throws Throwable {
+            System.out.println(response);
+        }
+    }, system.dispatcher());
+
+
+No surprise here. The sender reference in this example represents the future that is returned from the `?` or `ask` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because `Eventsourced` processors don't store sender references in the journal. The main reason for this is that applications usually do not want to redundantly reply to senders during replays.
 
 ![Destination reply](https://raw.github.com/eligosource/eventsourced/master/doc/images/senderrefs-2.png)
 
 Instead of replying to the sender, the processor can also forward the sender reference to a destination and let the destination reply to the sender. This even works if the destination is wrapped by a channel because a channel simply forwards sender references when delivering event messages to destinations. For that reason, a [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) needs to store sender references (in contrast to processors), so that sender references are even available after a reliable channel has been restarted. If a stored sender reference is a remote reference, it remains valid even after recovery from a JVM crash (i.e. a crash of the JVM the reliable channel is running in) provided the remote sender is still available.
+
+**Scala:**
 
     class Processor(destination: ActorRef) extends Actor {
       var counter = 0
@@ -554,12 +862,60 @@ Instead of replying to the sender, the processor can also forward the sender ref
     val channel: ActorRef = extension.channelOf(DefaultChannelProps(1, destination))
     val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
 
-When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) (see also section [Emitter](#emitter)) applications can choose between methods `sendEvent` and `forwardEvent` where `sendEvent` takes an implicit sender reference as parameter and `forwardEvent` forwards the current sender reference. They work in the same way as the `!` and `forward` methods on `ActorRef`, respectively.
+**Java:**
 
-Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and can be executed from the sbt prompt with
+    public class Processor extends UntypedEventsourcedActor {
+        private ActorRef destination;
+        private int counter = 0;
+
+        public Processor(ActorRef destination) {
+            this.destination = destination;
+        }
+
+        @Override
+        public int id() {
+            return 1;
+        }
+
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof Message) {
+                Message msg = (Message)message;
+                // forward modified event message to destination (together with sender reference)
+                destination.forward(msg.withEvent(String.format("processed %d event messages so far", counter)), getContext());
+            }
+        }
+    }
+
+    public class Destination extends UntypedActor {
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof Message) {
+                Message msg = (Message)message;
+                // … 
+                // reply to sender
+                getSender().tell(String.format("done processing event = %s", msg.event()), getSelf());
+            }
+        }
+    }
+
+    final ActorRef destination = system.actorOf(Props.create(Destination.class));
+    final ActorRef channel = extension.channelOf(DefaultChannelProps.create(1, destination), system);
+    final ActorRef processor = extension.processorOf(Props.create(Processor.class, channel), system);
+
+When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) (see also section [Emitter](#emitter)) applications can choose between methods `sendEvent` and `forwardEvent` where `sendEvent` takes an (implicit) sender reference as parameter and `forwardEvent` forwards the current sender reference. They work in the same way as the `tell` (`!`) and `forward` methods on `ActorRef`, respectively.
+
+Code from this section is contained in [SenderReferences.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/SenderReferences.scala) and [SenderReferences.java](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/java/org/eligosource/eventsourced/guide/japi/SenderReferences.java). It can be executed from the sbt prompt with
+
+**Scala:**
 
     > project eventsourced-examples
     > run-main org.eligosource.eventsourced.guide.SenderReferences
+
+**Java:**
+
+    > project eventsourced-examples
+    > run-main org.eligosource.eventsourced.guide.japi.SenderReferences
 
 Channels
 --------
@@ -834,13 +1190,30 @@ Here processor `1` will receive replayed event messages with sequence numbers wi
 
 During snapshot based recovery, a processor receives a [`SnapshotOffer`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotOffer) message before receiving the remaining event messages (if there are any). A processor uses a `SnapshotOffer` message to restore its state.
 
+**Scala:**
+
     class Processor extends Actor {
-      var state = ...
+      var state = … 
 
       def receive = {
         case so: SnapshotOffer => state = so.snapshot.state
-        ...
+        … 
       }
+    }
+
+**Java:**
+
+    public class Processor extends UntypedEventsourcedActor {
+        private Object state = … 
+
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof SnapshotOffer) {
+                SnapshotOffer so = (SnapshotOffer)message;
+                state = so.snapshot().state();
+            }
+            // … 
+        }
     }
 
 Snapshot based recovery will only send a `SnapshotOffer` message to a processor if one or more snapshots have been created for that processor before and these snapshots match the criteria in the corresponding `ReplayParams`. Relevant criteria are `toSequenceNr` and `snapshotFilter`. If there are no snapshots for a processor or existing snapshots do not match `ReplayParams` criteria, event messages will be replayed from scratch i.e. from sequence number `0`.
@@ -950,7 +1323,9 @@ Snapshots
 
 Snapshots represent processor state at a certain point in time and can dramatically reduce [recovery](#recovery) times. Snapshot capturing and saving is triggered by applications and does not delete entries from the event message history unless explicitly requested by an application.
 
-Applications can create snapshots by sending a processor the [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest$) message.
+Applications can create snapshots by sending a processor a [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest$) message (Scala API) or `SnapshotRequest.get()` message (Java API).
+
+**Scala:**
 
     import org.eligosource.eventsourced.core._
     // … 
@@ -959,46 +1334,106 @@ Applications can create snapshots by sending a processor the [`SnapshotRequest`]
 
     processor ! SnapshotRequest
 
+**Java:**
+
+    import org.eligosource.eventsourced.core.*;
+    // … 
+
+    final ActorRef processor = … 
+
+    processor.tell(SnapshotRequest.get(), …)
+
 This will asynchronously capture and save a snapshot of `processor`'s state. The sender will be notified when the snapshot has been successfully saved.
 
-    processor ? SnapshotRequest onComplete {
-      case Success(SnapshotSaved(processorId, sequenceNr, timestamp)) => … 
+**Scala:**
+
+    (processor ? SnapshotRequest).mapTo[SnapshotSaved].onComplete {
+      case Success(SnapshotSaved(processorId, sequenceNr, timestamp)) => …  
       case Failure(e)                                                 => … 
     }
 
+**Java:**
+
+    ask(processor, SnapshotRequest.get(), 5000L).mapTo(Util.classTag(SnapshotSaved.class)).onComplete(new OnComplete<SnapshotSaved>() {
+        public void onComplete(Throwable failure, SnapshotSaved result) {
+            if (failure != null) { … } else { … }
+        }
+    }, system.dispatcher());
+
 Alternatively, applications may also use the `EventsourcingExtension.snapshot` method to trigger snapshot creation. For example,
 
-    val extension: EventsourcingExtension = ...
+**Scala:**
+
+    val extension: EventsourcingExtension = … 
 
     extension.snapshot(Set(1, 2)) onComplete {
-      case Success(snapshotSavedSet) => … 
-      case Failure(_)                => … 
+      case Success(snapshotSavedSet: Set[SnapshotSaved]) => … 
+      case Failure(_)                                    => … 
     }
 
-creates snapshots of processors with ids `1` and `2`. The returned future (of type `Future[Set[SnapshotSaved]]`) successfully completes when the snapshots of both processors have been successfully saved.
+**Java:**
+
+    Set<Integer> processorIds = new HashSet<Integer>();
+
+    processorIds.add(1);
+    processorIds.add(2);
+
+    extension.snapshot(processorIds, new Timeout(5000L)).onComplete(new OnComplete<Set<SnapshotSaved>>() {
+        public void onComplete(Throwable failure, Set<SnapshotSaved> snapshotSavedSet) {
+            if (failure != null) { … } else { … }
+        }
+    }, system.dispatcher());
+
+
+creates snapshots of processors with ids `1` and `2`. The returned future (of type `Future[scala.immutable.Set[SnapshotSaved]]` (Scala API) or `Future<java.util.Set<SnapshotSaved>>` (Java API)) successfully completes when the snapshots of both processors have been successfully saved.
 
 To participate in snapshot capturing, a processor must process [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest) messages by calling their `process` method with its current `state` as argument:
+
+**Scala:**
 
     class Processor extends Actor {
       var state = … 
 
       def receive = {
         case sr: SnapshotRequest => sr.process(state)
-        … 
+        // … 
       }
+    }
+
+**Java:**
+
+    public class Processor extends UntypedEventsourcedActor {
+        private Object state = …
+
+        @Override
+        public void onReceive(Object message) throws Exception {
+            if (message instanceof SnapshotRequest) {
+                SnapshotRequest sr = (SnapshotRequest)message;
+                sr.process(state, getContext());
+            }
+            // … 
+        }
     }
 
 Calling `process` will asynchronously save the `state` argument together with (generated) snapshot metadata. Creating a new snapshot does not delete older snapshots unless explicitly requested by an application. Hence, there can be n snapshots per processor.
 
+An example that demonstrates snapshot creation and [snapshot based recovery](#recovery-with-snapshots) is contained in [SnapshotExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/SnapshotExample.scala) and [SnapshotExample.java](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/java/org/eligosource/eventsourced/example/japi/SnapshotExample.java). It can be executed from the sbt prompt with
 
-An example that demonstrates snapshot creation and [snapshot based recovery](#recovery-with-snapshots) is contained in [SnapshotExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/SnapshotExample.scala). It can be executed from the sbt prompt with
+**Scala:**
 
     > project eventsourced-examples
     > run-main org.eligosource.eventsourced.example.SnapshotExample
 
+**Java:**
+
+    > project eventsourced-examples
+    > run-main org.eligosource.eventsourced.example.japi.SnapshotExample
+
 ### Configuration
 
 Snapshotting is supported by all journals via the Hadoop [`FileSystem`](http://hadoop.apache.org/docs/r1.1.2/api/org/apache/hadoop/fs/FileSystem.html) abstraction. The default `FileSystem` instance is the local filesystem i.e. snapshots are by default written locally unless configured otherwise by the application. Please refer to the Hadoop documentation how to create `FileSystem` instances for HDFS, FTP, S3 etc. Application-defined `FileSystem` instances can be configured in the following way:
+
+**Scala:**
 
     ...
     import org.apache.hadoop.fs.FileSystem
@@ -1007,16 +1442,26 @@ Snapshotting is supported by all journals via the Hadoop [`FileSystem`](http://h
     val hdfs: FileSystem = FileSystem.get(...)
     val journal: ActorRef = LeveldbJournalProps(..., snapshotFilesystem = hdfs).createJournal
 
+**Java:**
+
+    ...
+    import org.apache.hadoop.fs.FileSystem;
+
+    ...
+    final FileSystem hdfs = FileSystem.get(…);
+    final ActorRef journal = LeveldbJournalProps.create(...).withSnapshotFilesystem(hdfs).createJournal(system);
+
+
 Find out more in the [HadoopFilesystemSnapshottingProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps) API docs.
 
 Behavior changes
 ----------------
 
-Actors that are modified with a stackable `Receiver`, `Emitter` and/or `Eventsourced` trait can change their behavior with the methods `become()` and `unbecome()`. These are defined on the [`Behavior`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Behavior) trait from which `Receiver`, `Emitter` and `Eventsourced` inherit.
+Actors that are modified with a stackable `Receiver`, `Emitter` and/or `Eventsourced` trait (Scala API) or extend any of the abstract `Untyped*` base classes (Java API) can change their behavior with the methods `become()` and `unbecome()`. These are defined on the [`Behavior`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Behavior) trait from which `Receiver`, `Emitter` and `Eventsourced` inherit.
 
-Actors that change their behavior with `become()` and `unbecome()` will keep the functionality introduced by a stackable `Receiver`, `Emitter` and/or `Eventsourced` trait. For example, an actor that is modified with the `Eventsourced` trait will continue to journal event messages after having changed its behavior with `become()`.
+Actors that change their behavior with `become()` and `unbecome()` will keep the functionality introduced by a stackable `Receiver`, `Emitter` and/or `Eventsourced` trait. For example, an actor that is modified with the `Eventsourced` trait (Scala API) or extends `UntypedEventsourcedActor` (Java API) will continue to journal event messages after having changed its behavior with `become()`.
 
-On the other hand, actors that change their behavior with `context.become()` will loose the functionality introduced by the stackable `Receiver`, `Emitter` and/or `Eventsourced` traits (although the lost behavior can be recovered with `context.unbecome()`).
+On the other hand, actors that change their behavior with `context.become()` (Scala API) or `getContext().become()` (Java API) will loose the functionality introduced by the stackable `Receiver`, `Emitter` and/or `Eventsourced` traits (although the lost behavior can be recovered with `context.unbecome()` or `getContext().unbecome()`).
 
 Event series
 ------------
@@ -1089,7 +1534,7 @@ Using the sequence number has the advantage that consumers of emitted events onl
           if (eventId <= lastEventId) {
             // duplicate
           } else {
-            // ...
+            // … 
             lastEventId = eventId
           }
       }

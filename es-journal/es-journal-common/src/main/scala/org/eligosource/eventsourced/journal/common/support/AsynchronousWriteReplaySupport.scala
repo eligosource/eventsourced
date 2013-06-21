@@ -26,8 +26,6 @@ import org.eligosource.eventsourced.journal.common.JournalProps
 
 trait AsynchronousWriteReplaySupport extends Actor {
   import AsynchronousWriteReplaySupport._
-  import Channel.Deliver
-  import JournalProtocol._
 
   private val deadLetters = context.system.deadLetters
 

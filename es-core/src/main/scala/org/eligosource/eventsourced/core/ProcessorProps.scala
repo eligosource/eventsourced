@@ -16,6 +16,7 @@
 package org.eligosource.eventsourced.core
 
 import akka.actor._
+import akka.japi.{Function => JFunction}
 
 /**
  * [[org.eligosource.eventsourced.core.Eventsourced]] processor configuration object.
@@ -30,6 +31,18 @@ case class ProcessorProps(
    processorFactory: Int => Actor with Eventsourced,
    name: Option[String] = None,
    dispatcherName: Option[String] = None) {
+
+  /**
+   * Returns a new `ProcessorProps` with the specified name.
+   */
+  def withName(name: String) =
+    copy(name = Some(name))
+
+  /**
+   * Returns a new `ProcessorProps` with the specified dispatcher name.
+   */
+  def withDispatcherName(dispatcherName: String) =
+    copy(dispatcherName = Some(dispatcherName))
 
   /**
    * Creates a processor with the settings defined by this configuration object.
@@ -50,4 +63,17 @@ case class ProcessorProps(
       actorRefFactory.actorOf(props, name.get) else
       actorRefFactory.actorOf(props)
   }
+}
+
+object ProcessorProps {
+  /**
+   * Java API.
+   *
+   * Creates a new `ProcessorProps` object with specified `id` and `processorFactory`.
+   *
+   * @param id processor id.
+   * @param processorFactory processor factory.
+   */
+  def create(id: Int, processorFactory: JFunction[Integer, Actor with Eventsourced]) =
+    new ProcessorProps(id, pid => processorFactory(pid))
 }

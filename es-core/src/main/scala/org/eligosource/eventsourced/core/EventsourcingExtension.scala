@@ -15,14 +15,18 @@
  */
 package org.eligosource.eventsourced.core
 
+import java.lang.{Boolean => JBoolean}
 import java.util.concurrent.atomic.AtomicReference
+import java.util.{List => JList, Set => JSet}
 
 import scala.annotation.tailrec
+import scala.collection.JavaConverters._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.util.{Try, Success, Failure}
 
 import akka.actor._
+import akka.japi.{Function => JFunction}
 import akka.pattern._
 import akka.util.Timeout
 
@@ -55,6 +59,15 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
     channelsRef.get.idToChannel
 
   /**
+   * Java API.
+   *
+   * Map of registered [[org.eligosource.eventsourced.core.Channel]]s. Mapping key is
+   * the channel id.
+   */
+  def getChannels: java.util.Map[Integer, ActorRef] =
+    channels map { case (k, v) => new Integer(k) -> v } asJava
+
+  /**
    * Map of registered named [[org.eligosource.eventsourced.core.Channel]]s. Mapping key is
    * the channel name.
    */
@@ -62,11 +75,29 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
     channelsRef.get.nameToChannel
 
   /**
+   * Java API.
+   *
+   * Map of registered named [[org.eligosource.eventsourced.core.Channel]]s. Mapping key is
+   * the channel name.
+   */
+  def getNamedChannels: java.util.Map[String, ActorRef] =
+    namedChannels.asJava
+
+  /**
    * Map of registered [[org.eligosource.eventsourced.core.Eventsourced]] processors.
    * Mapping key is the processor id.
    */
   def processors: Map[Int, ActorRef] =
     processorsRef.get
+
+  /**
+   * Java API.
+   *
+   * Map of registered [[org.eligosource.eventsourced.core.Eventsourced]] processors.
+   * Mapping key is the processor id.
+   */
+  def getProcessors: java.util.Map[Integer, ActorRef] =
+    processors map { case (k, v) => new Integer(k) -> v } asJava
 
   /**
    * Registers an [[org.eligosource.eventsourced.core.Eventsourced]] processor.
@@ -93,7 +124,7 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * blocking.
    *
    * @param props actor ref configuration object.
-   * @param name optional processor name.
+   * @param name optional processor name. If `None`, a name is generated.
    * @param actorRefFactory [[org.eligosource.eventsourced.core.Eventsourced]]
    *        ref factory.
    * @return a processor ref.
@@ -113,6 +144,49 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
     registerProcessor(id, processor)
     processor
   }
+
+  /**
+   * Java API.
+   *
+   * Registers an [[org.eligosource.eventsourced.core.Eventsourced]] processor with
+   * a generated actor name.
+   *
+   * This method obtains the id from the created processor with a blocking operation.
+   * Use the overloaded `processorOf(ProcessorProps)` method if you want to avoid
+   * blocking.
+   *
+   * @param props actor ref configuration object.
+   * @param actorRefFactory [[org.eligosource.eventsourced.core.Eventsourced]]
+   *        ref factory.
+   * @return a processor ref.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
+   * @throws InvalidProcessorIdException if processor id < 1.
+   */
+  def processorOf(props: Props, actorRefFactory: ActorRefFactory): ActorRef =
+    processorOf(props, None)(actorRefFactory)
+
+  /**
+   * Java API.
+   *
+   * Registers an [[org.eligosource.eventsourced.core.Eventsourced]] processor with a
+   * specified actor name.
+   *
+   * This method obtains the id from the created processor with a blocking operation.
+   * Use the overloaded `processorOf(ProcessorProps)` method if you want to avoid
+   * blocking.
+   *
+   * @param props actor ref configuration object.
+   * @param name processor name.
+   * @param actorRefFactory [[org.eligosource.eventsourced.core.Eventsourced]]
+   *        ref factory.
+   * @return a processor ref.
+   * @throws InvalidActorNameException if `name` is defined and already in use
+   *         in the underlying actor system.
+   * @throws InvalidProcessorIdException if processor id < 1.
+   */
+  def processorOf(props: Props, name: String, actorRefFactory: ActorRefFactory): ActorRef =
+    processorOf(props, Some(name))(actorRefFactory)
 
   /**
    * Creates and registers a [[org.eligosource.eventsourced.core.Channel]]. The channel is
@@ -166,6 +240,16 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
       processors.keys.map(pid => ReplayParams(pid, snapshotFilter)).toSeq
 
     /**
+     * Java API.
+     *
+     * Replay parameters for all registered processors for snapshotted replay,
+     * starting from the latest filtered snapshot and no upper sequence number
+     * bound.
+     */
+    def allWithSnapshot(snapshotFilter: JFunction[SnapshotMetadata, JBoolean]): Seq[ReplayParams] =
+      allWithSnapshot(smd => snapshotFilter(smd))
+
+    /**
      * Replay parameters for selected registered processors for non-snapshotted replay,
      * with a user-defined lower sequence number bound and no upper sequence number
      * bound.
@@ -178,6 +262,15 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
       case (pid, p) if (f(pid).isDefined) => ReplayParams(pid, f(pid).get)
     } toList
   }
+
+  /**
+   * Java API.
+   *
+   * Predefined `ReplayParams` sequences to be used with methods `replay` or `recover`.
+   *
+   * @see [[org.eligosource.eventsourced.core.ReplayParams]]
+   */
+  def getReplayParams = replayParams
 
   /**
    * Replays input messages to specified processors, optionally based on a snapshot.
@@ -200,6 +293,25 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
       }
     }
     journal ? (BatchReplayInMsgs(replays))
+  }
+
+  /**
+   * Java API.
+   *
+   * Replays input messages to specified processors, optionally based on a snapshot.
+   * The returned `Future` will be completed when the replayed messages have been
+   * sent (via `!`) to the specified processors. Any new message sent to any of the
+   * specified processors, after successful completion of the returned `Future`, will
+   * be processed after the replayed input messages.
+   *
+   * Clients that want to wait for replayed messages being processed should call the
+   * `awaitProcessing` method after the returned `Future` successfully completed.
+   *
+   * @param params sequence of processor-specific replay parameters.
+   * @see [[org.eligosource.eventsourced.core.ReplayParams]]
+   */
+  def replay(params: JList[ReplayParams], timeout: Timeout): Future[Any] = {
+    replay(params.asScala)(timeout)
   }
 
   @deprecated("use replay(Seq[ReplayParams])(Timeout)", "0.5")
@@ -229,6 +341,15 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   /**
+   * Java API.
+   *
+   * Activates the specified channels and starts delivery of pending messages.
+   */
+  def deliver(channels: JList[ActorRef], timeout: Timeout): Future[Any] = {
+    deliver(channels.asScala)(timeout)
+  }
+
+  /**
    * Recovers all processors and all channels registered at this extension where
    *
    *  - processor recovery is done by calling `replay(params)`
@@ -245,11 +366,33 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
    * `awaitProcessing` method after this method successfully returned.
    *
    * @param waitAtMost wait for the specified duration for the replay to complete.
+   * @throws TimeoutException if replay doesn't complete within the specified duration.
+   */
+  def recover(waitAtMost: FiniteDuration) {
+    recover(replayParams.allFromScratch, waitAtMost)
+  }
+
+  /**
+   * Recovers all processors and all channels registered at this extension where
+   *
+   *  - processor recovery is done by calling `replay(params)`
+   *  - channel activation is done by calling `deliver()`
+   *
+   * Channel activation is only started after processor recovery successfully completed.
+   *
+   * This method waits for replayed messages being sent to all processors (via `!`)
+   * and all channels being activated but does not wait for replayed input messages being
+   * processed. However, any new message sent to any of the processors, after this method
+   * successfully returned, will be processed after the replayed event messages.
+   *
+   * Clients that want to wait for replayed messages being processed should call the
+   * `awaitProcessing` method after this method successfully returned.
+   *
    * @throws TimeoutException if replay doesn't complete within the specified duration (which
    *         defaults to 1 minute).
    */
-  def recover(waitAtMost: FiniteDuration = 1 minute) {
-    recover(replayParams.allFromScratch, waitAtMost)
+  def recover() {
+    recover(1 minute)
   }
 
   /**
@@ -310,13 +453,39 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
     }
   }
 
+  /**
+   * Java API.
+   *
+   * Recovers specified processors and all channels registered at this extension where
+   *
+   *  - processor recovery is done by calling `replay(params)`
+   *  - channel activation is done by calling `deliver()`
+   *
+   * Channel activation is only started after processor recovery successfully completed.
+   *
+   * This method waits for replayed messages being sent to specified processors (via `!`)
+   * and all channels being activated but does not wait for replayed input messages being
+   * processed. However, any new message sent to any of the specified processors, after
+   * this method successfully returned, will be processed after the replayed event messages.
+   *
+   * Clients that want to wait for replayed messages being processed should call the
+   * `awaitProcessing` method after this method successfully returned.
+   *
+   * @param params replay parameters passed to `replay(params)`.
+   * @param waitAtMost wait for the specified duration for the replay to complete.
+   * @throws TimeoutException if replay doesn't complete within the specified duration.
+   */
+  def recover(params: JList[ReplayParams], waitAtMost: FiniteDuration) {
+    recover(params.asScala, waitAtMost)
+  }
+
   @deprecated("use recover(Seq[ReplayParams], FiniteDuration)", "0.5")
   def recover(f: (Int) => Option[Long], waitAtMost: FiniteDuration) {
     recover(replayParams.selectedWith(f), waitAtMost)
   }
 
   /**
-   * Returns a `Future` that will be completed when selected processors have finished
+   * Returns a `Future` that will be completed when specified processors have finished
    * processing all pending messages in their mailboxes.
    *
    * @param processorIds ids of registered processors to wait for. Default value
@@ -331,15 +500,65 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
   }
 
   /**
-   * Waits for selected processors to finish processing of all pending messages
+   * Java API.
+   *
+   * Returns a `Future` that will be completed when specified processors have finished
+   * processing all pending messages in their mailboxes.
+   *
+   * @param processorIds ids of registered processors to wait for. Default value
+   *        is the set of all registered processor ids.
+   */
+  def completeProcessing(processorIds: JSet[Integer], timeout: Timeout): Future[Any] = {
+    completeProcessing(processorIds.asScala.map(_.toInt).toSet)(timeout)
+  }
+
+  /**
+   * Java API.
+   *
+   * Returns a `Future` that will be completed when all processors have finished
+   * processing all pending messages in their mailboxes.
+   */
+  def completeProcessing(timeout: Timeout): Future[Any] = {
+    completeProcessing()(timeout)
+  }
+
+  /**
+   * Waits for specified processors to finish processing of all pending messages
+   * in their mailboxes.
+   *
+   * @param processorIds ids of registered processors to wait for. Default value
+   *        is the set of all registered processor ids.
+   * @param atMost maximum duration to wait for processing to complete. Default
+   *        value is 1 minute.
+   */
+  def awaitProcessing(processorIds: Set[Int] = processors.keySet, atMost: FiniteDuration = 1 minute) {
+    Await.result(completeProcessing(processorIds)(Timeout(atMost)), atMost)
+  }
+
+  /**
+   * Java API.
+   *
+   * Waits for specified processors to finish processing of all pending messages
    * in their mailboxes.
    *
    * @param processorIds ids of registered processors to wait for. Default value
    *        is the set of all registered processor ids.
    * @param atMost maximum duration to wait for processing to complete.
    */
-  def awaitProcessing(processorIds: Set[Int] = processors.keySet, atMost: FiniteDuration = 1 minute) {
-    Await.result(completeProcessing(processorIds)(Timeout(atMost)), atMost)
+  def awaitProcessing(processorIds: JSet[Integer], atMost: FiniteDuration) {
+    awaitProcessing(processorIds.asScala.map(_.toInt).toSet, atMost)
+  }
+
+  /**
+   * Java API.
+   *
+   * Waits for all processors to finish processing of all pending messages
+   * in their mailboxes.
+   *
+   * @param atMost maximum duration to wait for processing to complete.
+   */
+  def awaitProcessing(atMost: FiniteDuration) {
+    awaitProcessing(processors.keySet, atMost)
   }
 
   /**
@@ -367,6 +586,26 @@ class EventsourcingExtension(system: ExtendedActorSystem) extends Extension {
     }
 
     Future.sequence(commands.map(journal.ask(_).mapTo[SnapshotSaved]).toSet)
+  }
+
+  /**
+   * Java API.
+   *
+   * Requests a snapshot capturing action from specified processors. These processors
+   * will receive a [[org.eligosource.eventsourced.core.SnapshotRequest]] message which
+   * is used to capture a snapshot via that message's `process` method. Once captured,
+   * the snapshots will be saved. The future returned by this method will be completed,
+   * when all snapshots have been saved.
+   *
+   * Calling this method for a single processor is equivalent to sending that
+   * processor a `SnapshotRequest.get` message.
+   *
+   * @param processorIds ids of processors for which a snapshot capturing action
+   *        shall be requested.
+   * @param timeout snapshot capturing and saving timeout.
+   */
+  def snapshot(processorIds: JSet[Integer], timeout: Timeout): Future[JSet[SnapshotSaved]] = {
+    snapshot(processorIds.asScala.map(_.toInt).toSet)(timeout).map(_.asJava)(system.dispatcher)
   }
 
   @tailrec
@@ -447,6 +686,18 @@ object EventsourcingExtension extends ExtensionId[EventsourcingExtension] with E
     extension.registerJournal(journal)
     extension
   }
+
+  /**
+   * Java API.
+   *
+   * Obtains the `EventsourcingExtension` instance associated with `system`, registers a `journal`
+   * at that instance and returns it.
+   *
+   * @param system actor system associated with the returned extension instance.
+   * @param journal journal to register.
+   */
+  def create(system: ActorSystem, journal: ActorRef): EventsourcingExtension =
+    apply(system, journal)
 
   def createExtension(system: ExtendedActorSystem) =
     new EventsourcingExtension(system)

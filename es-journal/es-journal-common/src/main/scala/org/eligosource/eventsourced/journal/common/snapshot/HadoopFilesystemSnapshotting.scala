@@ -38,7 +38,7 @@ import org.eligosource.eventsourced.journal.common.serialization._
 /**
  * Snapshotting configuration object.
  */
-trait HadoopFilesystemSnapshottingProps { this: JournalProps =>
+trait HadoopFilesystemSnapshottingProps[A <: HadoopFilesystemSnapshottingProps[A]] { this: JournalProps =>
   /**
    * Path where snapshots are stored on `snapshotFilesystem`. A relative path is relative to
    * `snapshotFilesystem`'s working directory.
@@ -64,6 +64,34 @@ trait HadoopFilesystemSnapshottingProps { this: JournalProps =>
    * Hadoop filesystem for storing snapshots.
    */
   def snapshotFilesystem: FileSystem
+
+  /**
+   * Java API.
+   *
+   * Returns a new `HadoopFilesystemSnapshottingProps` with specified snapshot serializer.
+   */
+  def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer): A
+
+  /**
+   * Java API.
+   *
+   * Returns a new `HadoopFilesystemSnapshottingProps` with specified snapshot load timeout.
+   */
+  def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration): A
+
+  /**
+   * Java API.
+   *
+   * Returns a new `HadoopFilesystemSnapshottingProps` with specified snapshot save timeout.
+   */
+  def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration): A
+
+  /**
+   * Java API.
+   *
+   * Returns a new `HadoopFilesystemSnapshottingProps` with specified snapshot filesystem.
+   */
+  def withSnapshotFilesystem(snapshotFilesystem: FileSystem): A
 }
 
 object HadoopFilesystemSnapshotting {
@@ -86,7 +114,7 @@ trait HadoopFilesystemSnapshotting { this: Actor =>
   /**
    * Snapshotting configuration object.
    */
-  val props: HadoopFilesystemSnapshottingProps
+  val props: HadoopFilesystemSnapshottingProps[_]
 
   import props._
 

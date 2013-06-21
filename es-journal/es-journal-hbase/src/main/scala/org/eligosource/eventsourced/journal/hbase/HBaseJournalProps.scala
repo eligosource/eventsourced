@@ -71,38 +71,77 @@ case class HBaseJournalProps(
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
-  snapshotFilesystem: FileSystem = defaultLocalFilesystem) extends JournalProps with HadoopFilesystemSnapshottingProps {
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+  extends JournalProps with HadoopFilesystemSnapshottingProps[HBaseJournalProps] {
 
+  /**
+   * Java API.
+   */
   def withTableName(tableName: String) =
     copy(tableName = tableName)
 
+  /**
+   * Java API.
+   */
   def withName(name: String) =
     copy(name = Some(name))
 
+  /**
+   * Java API.
+   */
   def withDispatcherName(dispatcherName: String) =
     copy(dispatcherName = Some(dispatcherName))
 
+  /**
+   * Java API.
+   */
   def withReplayChunkSize(replayChunkSize: Int) =
     copy(replayChunkSize = replayChunkSize)
 
+  /**
+   * Java API.
+   */
   def withInitTimeout(initTimeout: FiniteDuration) =
     copy(initTimeout = initTimeout)
 
+  /**
+   * Java API.
+   */
   def withSnapshotPath(snapshotPath: Path) =
     copy(snapshotPath = snapshotPath)
 
+  /**
+   * Java API.
+   */
   def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer) =
     copy(snapshotSerializer = snapshotSerializer)
 
+  /**
+   * Java API.
+   */
   def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration) =
     copy(snapshotLoadTimeout = snapshotLoadTimeout)
 
+  /**
+   * Java API.
+   */
   def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) =
     copy(snapshotSaveTimeout = snapshotSaveTimeout)
 
+  /**
+   * Java API.
+   */
   def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
     copy(snapshotFilesystem = snapshotFilesystem)
 
   def createJournalActor: Actor =
     new HBaseJournal(this)
+}
+
+object HBaseJournalProps {
+  /**
+   * Java API.
+   */
+  def create(zookeeperQuorum: String) =
+    HBaseJournalProps(zookeeperQuorum)
 }

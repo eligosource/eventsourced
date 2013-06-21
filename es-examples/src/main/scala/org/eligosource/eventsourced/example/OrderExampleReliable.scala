@@ -28,7 +28,6 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 
 import org.eligosource.eventsourced.core._
-import org.eligosource.eventsourced.core.Channel._
 import org.eligosource.eventsourced.journal.leveldb._
 import org.eligosource.eventsourced.patterns.reliable.requestreply._
 

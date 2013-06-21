@@ -21,11 +21,9 @@ import scala.util._
 import akka.actor._
 
 import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.core.JournalProtocol._
 
 trait SynchronousWriteReplaySupport extends Actor {
-  import Channel.Deliver
-  import JournalProtocol._
-
   import context.dispatcher
 
   private val deadLetters = context.system.deadLetters

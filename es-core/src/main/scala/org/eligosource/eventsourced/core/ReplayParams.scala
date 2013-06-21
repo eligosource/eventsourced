@@ -15,10 +15,14 @@
  */
 package org.eligosource.eventsourced.core
 
+import java.lang.{Boolean => JBoolean}
+
+import akka.japi.{Function => JFunction}
+
 /**
  * Processor-specific replay parameters.
  */
-sealed trait ReplayParams {
+sealed abstract class ReplayParams {
   /**
    * Processor id.
    */
@@ -94,6 +98,70 @@ object ReplayParams {
   def apply(processorId: Int, snapshot: Boolean, toSequenceNr: Long): ReplayParams =
     if (snapshot) SnapshotReplayParams(processorId, toSequenceNr = toSequenceNr)
     else StandardReplayParams(processorId, toSequenceNr = toSequenceNr)
+
+  /**
+   * Java API.
+   *
+   * Creates processor-specific replay parameters for non-snapshotted replay with no
+   * lower and upper sequence number bounds.
+   */
+  def create(processorId: Int): ReplayParams =
+    apply(processorId)
+
+  /**
+   * Java API.
+   *
+   * Creates processor-specific replay parameters for non-snapshotted replay with a
+   * lower sequence number bound but no upper sequence number bound.
+   */
+  def create(processorId: Int, fromSequenceNr: Long): ReplayParams =
+    apply(processorId, fromSequenceNr)
+
+  /**
+   * Java API.
+   *
+   * Creates processor-specific replay parameters for non-snapshotted replay with
+   * lower and upper sequence number bounds.
+   */
+  def create(processorId: Int, fromSequenceNr: Long, toSequenceNr: Long): ReplayParams =
+    apply(processorId, fromSequenceNr, toSequenceNr)
+
+  /**
+   * Java API.
+   *
+   * Creates processor-specific replay parameters for snapshotted replay with no upper
+   * sequence number bound.
+   */
+  def create(processorId: Int, snapshotFilter: JFunction[SnapshotMetadata, JBoolean]): ReplayParams =
+    apply(processorId, smd => snapshotFilter(smd))
+
+  /**
+   * Java API.
+   *
+   * Creates processor-specific replay parameters for snapshotted replay with an upper
+   * sequence number bound.
+   */
+  def create(processorId: Int, snapshotFilter: JFunction[SnapshotMetadata, JBoolean], toSequenceNr: Long): ReplayParams =
+    apply(processorId, smd => snapshotFilter(smd), toSequenceNr)
+
+  /**
+   * Java API.
+   *
+   * Creates processor-specific replay parameters for snapshotted replay if `snapshot` is
+   * `true`, for non-snapshotted replay otherwise. There are no lower and upper sequence
+   * number bounds.
+   */
+  def create(processorId: Int, snapshot: Boolean): ReplayParams =
+    apply(processorId, snapshot)
+
+  /**
+   * Java API.
+   *
+   * Creates processor-specific replay parameters for snapshotted replay if `snapshot` is
+   * `true`, for non-snapshotted replay otherwise. There is an upper sequence number bound.
+   */
+  def create(processorId: Int, snapshot: Boolean, toSequenceNr: Long): ReplayParams =
+    apply(processorId, snapshot, toSequenceNr)
 
   /**
    * Processor-specific replay parameters for non-snapshotted replay.
