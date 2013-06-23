@@ -30,10 +30,9 @@ First, download, install and start a standalone mongoDB instance by following th
 
     libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-reactive" % "0.6-SNAPSHOT"
 
-### Mongodb Casbah Based Journal Initialization
+### Mongodb Reactive Based Journal Initialization
 
     import akka.actor._
-    import com.mongodb.casbah.Imports._
     import org.eligosource.eventsourced.core._
     import org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps
 
@@ -42,7 +41,7 @@ First, download, install and start a standalone mongoDB instance by following th
     // create and start the reactive based mongoDB journal
     val journal: ActorRef = Journal(MongodbReactiveJournalProps(List("localhost:27017"))
 
-    // create an event-sourcing extension that uses the Casbah based mongoDB journal
+    // create an event-sourcing extension that uses the ReactiveMongo based mongoDB journal
     val extension = EventsourcingExtension(system, journal)
 
     // ...
