@@ -100,7 +100,7 @@ val app    = "my-eventsourced-app"
 val props  = DynamoDBJournalProps(table, app, key, secret, asyncWriterCount = 16, system = actorSystem)
 
 // Event sourcing extension
-val extension = EventsourcingExtension(system, Journal(props))
+val extension = EventsourcingExtension(system, props.createJournal)
 
 // create processors and channels
 val p = extension.processorOf(...)

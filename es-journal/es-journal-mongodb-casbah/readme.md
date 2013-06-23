@@ -41,7 +41,7 @@ First, download, install and start a standalone mongoDB instance by following th
     implicit val system = ActorSystem("example")
 
     // create and start the Casbah based mongoDB journal
-    val journal: ActorRef = Journal(MongodbCasbahJournalProps(MongoClient(), "eventsourced","event"))
+    val journal: ActorRef = MongodbCasbahJournalProps(MongoClient(), "eventsourced", "event").createJournal
 
     // create an event-sourcing extension that uses the Casbah based mongoDB journal
     val extension = EventsourcingExtension(system, journal)

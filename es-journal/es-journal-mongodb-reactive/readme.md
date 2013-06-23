@@ -39,7 +39,7 @@ First, download, install and start a standalone mongoDB instance by following th
     implicit val system = ActorSystem("example")
 
     // create and start the reactive based mongoDB journal
-    val journal: ActorRef = Journal(MongodbReactiveJournalProps(List("localhost:27017"))
+    val journal: ActorRef = MongodbReactiveJournalProps(List("localhost:27017").createJournal
 
     // create an event-sourcing extension that uses the ReactiveMongo based mongoDB journal
     val extension = EventsourcingExtension(system, journal)

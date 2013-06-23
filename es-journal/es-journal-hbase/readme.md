@@ -48,7 +48,7 @@ Initialize the HBase journal in your application:
     implicit val system = ActorSystem("example")
 
     // create and start the HBase journal
-    val journal: ActorRef = Journal(HBaseJournalProps("localhost"))
+    val journal: ActorRef = HBaseJournalProps("localhost").createJournal
 
     // create an event-sourcing extension that uses the HBase journal
     val extension = EventsourcingExtension(system, journal)
