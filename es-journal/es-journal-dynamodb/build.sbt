@@ -1,8 +1,8 @@
 resolvers ++= Seq("sonatype" at "https://oss.sonatype.org/content/repositories/snapshots/", "spray repo" at "http://repo.spray.io")
 
 libraryDependencies ++= Seq(
-  "com.sclasen" %%  "spray-dynamodb" % "0.1.2" % "compile",
-  "com.sclasen" %%  "spray-aws" % "0.1.2" % "compile"
+  "com.sclasen" %%  "spray-dynamodb" % "0.2.0-SNAPSHOT" % "compile",
+  "com.sclasen" %%  "spray-aws" % "0.2.0-SNAPSHOT" % "compile"
 )
 
 OsgiKeys.importPackage := Seq(
