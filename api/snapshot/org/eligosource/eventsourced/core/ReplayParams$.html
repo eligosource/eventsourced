@@ -29,7 +29,7 @@
         </head>
         <body class="value">
       <div id="definition">
-        <a href="ReplayParams.html" title="Go to companion"><img src="../../../../lib/object_to_trait_big.png" /></a>
+        <a href="ReplayParams.html" title="Go to companion"><img src="../../../../lib/object_to_class_big.png" /></a>
         <p id="owner"><a href="../../../package.html" class="extype" name="org">org</a>.<a href="../../package.html" class="extype" name="org.eligosource">eligosource</a>.<a href="../package.html" class="extype" name="org.eligosource.eventsourced">eventsourced</a>.<a href="package.html" class="extype" name="org.eligosource.eventsourced.core">core</a></p>
         <h1><a href="ReplayParams.html" title="Go to companion">ReplayParams</a></h1>
       </div>
@@ -289,6 +289,112 @@ lower and upper sequence number bounds.</p>
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.ReplayParams#create" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="create(processorId:Int,snapshot:Boolean,toSequenceNr:Long):org.eligosource.eventsourced.core.ReplayParams"></a>
+      <a id="create(Int,Boolean,Long):ReplayParams"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">create</span><span class="params">(<span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span></span>, <span name="snapshot">snapshot: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="toSequenceNr">toSequenceNr: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result">: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Creates processor-specific replay parameters for snapshotted replay if <code>snapshot</code> is
+<code>true</code>, for non-snapshotted replay otherwise. There is an upper sequence number bound.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.ReplayParams#create" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="create(processorId:Int,snapshot:Boolean):org.eligosource.eventsourced.core.ReplayParams"></a>
+      <a id="create(Int,Boolean):ReplayParams"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">create</span><span class="params">(<span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span></span>, <span name="snapshot">snapshot: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result">: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Creates processor-specific replay parameters for snapshotted replay if <code>snapshot</code> is
+<code>true</code>, for non-snapshotted replay otherwise. There are no lower and upper sequence
+number bounds.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.ReplayParams#create" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="create(processorId:Int,snapshotFilter:akka.japi.Function[org.eligosource.eventsourced.core.SnapshotMetadata,Boolean],toSequenceNr:Long):org.eligosource.eventsourced.core.ReplayParams"></a>
+      <a id="create(Int,Function[SnapshotMetadata,Boolean],Long):ReplayParams"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">create</span><span class="params">(<span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span></span>, <span name="snapshotFilter">snapshotFilter: <span class="extype" name="akka.japi.Function">Function</span>[<a href="SnapshotMetadata.html" class="extype" name="org.eligosource.eventsourced.core.SnapshotMetadata">SnapshotMetadata</a>, <span class="extype" name="java.lang.Boolean">Boolean</span>]</span>, <span name="toSequenceNr">toSequenceNr: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result">: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Creates processor-specific replay parameters for snapshotted replay with an upper
+sequence number bound.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.ReplayParams#create" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="create(processorId:Int,snapshotFilter:akka.japi.Function[org.eligosource.eventsourced.core.SnapshotMetadata,Boolean]):org.eligosource.eventsourced.core.ReplayParams"></a>
+      <a id="create(Int,Function[SnapshotMetadata,Boolean]):ReplayParams"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">create</span><span class="params">(<span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span></span>, <span name="snapshotFilter">snapshotFilter: <span class="extype" name="akka.japi.Function">Function</span>[<a href="SnapshotMetadata.html" class="extype" name="org.eligosource.eventsourced.core.SnapshotMetadata">SnapshotMetadata</a>, <span class="extype" name="java.lang.Boolean">Boolean</span>]</span>)</span><span class="result">: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Creates processor-specific replay parameters for snapshotted replay with no upper
+sequence number bound.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.ReplayParams#create" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="create(processorId:Int,fromSequenceNr:Long,toSequenceNr:Long):org.eligosource.eventsourced.core.ReplayParams"></a>
+      <a id="create(Int,Long,Long):ReplayParams"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">create</span><span class="params">(<span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span></span>, <span name="fromSequenceNr">fromSequenceNr: <span class="extype" name="scala.Long">Long</span></span>, <span name="toSequenceNr">toSequenceNr: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result">: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Creates processor-specific replay parameters for non-snapshotted replay with
+lower and upper sequence number bounds.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.ReplayParams#create" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="create(processorId:Int,fromSequenceNr:Long):org.eligosource.eventsourced.core.ReplayParams"></a>
+      <a id="create(Int,Long):ReplayParams"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">create</span><span class="params">(<span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span></span>, <span name="fromSequenceNr">fromSequenceNr: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result">: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Creates processor-specific replay parameters for non-snapshotted replay with a
+lower sequence number bound but no upper sequence number bound.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.ReplayParams#create" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="create(processorId:Int):org.eligosource.eventsourced.core.ReplayParams"></a>
+      <a id="create(Int):ReplayParams"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">create</span><span class="params">(<span name="processorId">processorId: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Creates processor-specific replay parameters for non-snapshotted replay with no
+lower and upper sequence number bounds.
+</p></div></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>

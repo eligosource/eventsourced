@@ -77,7 +77,7 @@
       </h4>
       
     </li><li name="org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="LeveldbJournalPropsextendsJournalPropswithProductwithSerializable"></a>
+      <a id="LeveldbJournalPropsextendsJournalPropswithHadoopFilesystemSnapshottingProps[org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps]withProductwithSerializable"></a>
       <a id="LeveldbJournalProps:LeveldbJournalProps"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -85,7 +85,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="LeveldbJournalProps.html"><span class="name">LeveldbJournalProps</span></a><span class="params">(<span name="dir">dir: <span class="extype" name="java.io.File">File</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="fsync">fsync: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">false</span></span>, <span name="checksum">checksum: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">false</span></span>, <span name="native">native: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>, <span name="processorStructured">processorStructured: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>, <span name="snapshotDir">snapshotDir: <span class="extype" name="java.io.File">File</span> = <span class="symbol">new java.io.File(&quot;snapshots&quot;)</span></span>, <span name="snapshotSerializer">snapshotSerializer: <a href="../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a> = <span class="defval" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer.java">...</span></span>, <span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>)</span><span class="result"> extends <a href="../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="LeveldbJournalProps.html"><span class="name">LeveldbJournalProps</span></a><span class="params">(<span name="dir">dir: <span class="extype" name="java.io.File">File</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="fsync">fsync: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">false</span></span>, <span name="checksum">checksum: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">false</span></span>, <span name="native">native: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>, <span name="processorStructured">processorStructured: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>, <span name="snapshotDir">snapshotDir: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span> = <span class="defval" name="new org.apache.hadoop.fs.Path(&quot;snapshots&quot;)">...</span></span>, <span name="snapshotSerializer">snapshotSerializer: <a href="../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a> = <span class="defval" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer.java">...</span></span>, <span name="snapshotLoadTimeout">snapshotLoadTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotFilesystem">snapshotFilesystem: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span> = <span class="defval" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem">...</span></span>)</span><span class="result"> extends <a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a> with <a href="../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a>[<a href="LeveldbJournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps">LeveldbJournalProps</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       <p class="comment cmt">Configuration object for a <a href="http://code.google.com/p/leveldb/" target="_blank">LevelDB</a> based journal.</p>
@@ -96,19 +96,19 @@
 
         <div id="values" class="values members">
               <h3>Value Members</h3>
-              <ol><li name="org.eligosource.eventsourced.journal.leveldb.LeveldbJournal" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="LeveldbJournal"></a>
-      <a id="LeveldbJournal:LeveldbJournal"></a>
+              <ol><li name="org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="LeveldbJournalProps"></a>
+      <a id="LeveldbJournalProps:LeveldbJournalProps"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">object</span>
       </span>
       <span class="symbol">
-        <a href="LeveldbJournal$.html"><span class="name">LeveldbJournal</span></a>
+        <a href="LeveldbJournalProps$.html"><span class="name">LeveldbJournalProps</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
-      <p class="comment cmt"></p>
+      
     </li></ol>
             </div>
 

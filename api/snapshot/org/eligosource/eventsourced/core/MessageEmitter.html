@@ -263,6 +263,23 @@ directly to emit event messages to destinations (using the <code>!</code>,
               
         </dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.MessageEmitter#forward" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="forward(f:akka.japi.Function[org.eligosource.eventsourced.core.Message,org.eligosource.eventsourced.core.Message],context:akka.actor.ActorContext):Unit"></a>
+      <a id="forward(Function[Message,Message],ActorContext):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">forward</span><span class="params">(<span name="f">f: <span class="extype" name="akka.japi.Function">Function</span>[<a href="Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a>, <a href="Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a>]</span>, <span name="context">context: <span class="extype" name="akka.actor.ActorContext">ActorContext</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Updates <code>message</code> with function <code>f</code> and emits the updated
+message to <code>channel</code> using the original sender actor as
+the sender.
+</p></div><dl class="paramcmts block"><dt class="param">f</dt><dd class="cmt"><p>message update function.</p></dd><dt class="param">context</dt><dd class="cmt"><p>actor context.
+</p></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.MessageEmitter#forward" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="forward(f:org.eligosource.eventsourced.core.Message=&gt;org.eligosource.eventsourced.core.Message)(implicitcontext:akka.actor.ActorContext):Unit"></a>
       <a id="forward((Message)⇒Message)(ActorContext):Unit"></a>
       <h4 class="signature">
@@ -275,9 +292,9 @@ directly to emit event messages to destinations (using the <code>!</code>,
       </span>
       </h4>
       <p class="shortcomment cmt">Updates <code>message</code> with function <code>f</code> and emits the updated
-message to <code>channel</code> passing the original sender actor as
+message to <code>channel</code> using the original sender actor as
 the sender.</p><div class="fullcomment"><div class="comment cmt"><p>Updates <code>message</code> with function <code>f</code> and emits the updated
-message to <code>channel</code> passing the original sender actor as
+message to <code>channel</code> using the original sender actor as
 the sender.
 </p></div><dl class="paramcmts block"><dt class="param">f</dt><dd class="cmt"><p>message update function.</p></dd><dt class="param">context</dt><dd class="cmt"><p>actor context.
 </p></dd></dl></div>
@@ -389,6 +406,22 @@ the sender.
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.MessageEmitter#send" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="send(f:akka.japi.Function[org.eligosource.eventsourced.core.Message,org.eligosource.eventsourced.core.Message],sender:akka.actor.ActorRef):Unit"></a>
+      <a id="send(Function[Message,Message],ActorRef):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">send</span><span class="params">(<span name="f">f: <span class="extype" name="akka.japi.Function">Function</span>[<a href="Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a>, <a href="Message.html" class="extype" name="org.eligosource.eventsourced.core.Message">Message</a>]</span>, <span name="sender">sender: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Updates <code>message</code> with function <code>f</code> and emits the updated
+message to <code>channel</code> using <code>sender</code> as sender reference.
+</p></div><dl class="paramcmts block"><dt class="param">f</dt><dd class="cmt"><p>message update function.</p></dd><dt class="param">sender</dt><dd class="cmt"><p>sender reference.
+</p></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.MessageEmitter#send" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="send(f:org.eligosource.eventsourced.core.Message=&gt;org.eligosource.eventsourced.core.Message)(implicitsender:akka.actor.ActorRef):Unit"></a>
       <a id="send((Message)⇒Message)(ActorRef):Unit"></a>

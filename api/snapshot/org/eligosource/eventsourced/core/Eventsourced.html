@@ -74,6 +74,9 @@ or <a href="Emitter.html" class="extype" name="org.eligosource.eventsourced.core
 </p></span></dd></dl><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><a href="Behavior.html" class="extype" name="org.eligosource.eventsourced.core.Behavior">Behavior</a>, <span class="extype" name="akka.actor.Actor">Actor</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+        </div><div class="toggleContainer block">
+          <span class="toggle">Known Subclasses</span>
+          <div class="subClasses hiddenContent"><a href="UntypedEventsourcedActor.html" class="extype" name="org.eligosource.eventsourced.core.UntypedEventsourcedActor">UntypedEventsourcedActor</a>, <a href="UntypedEventsourcedConfirmingReceiver.html" class="extype" name="org.eligosource.eventsourced.core.UntypedEventsourcedConfirmingReceiver">UntypedEventsourcedConfirmingReceiver</a>, <a href="UntypedEventsourcedEmitter.html" class="extype" name="org.eligosource.eventsourced.core.UntypedEventsourcedEmitter">UntypedEventsourcedEmitter</a>, <a href="UntypedEventsourcedReceiver.html" class="extype" name="org.eligosource.eventsourced.core.UntypedEventsourcedReceiver">UntypedEventsourcedReceiver</a></div>
         </div></div>
         
 
@@ -228,6 +231,40 @@ or <a href="Emitter.html" class="extype" name="org.eligosource.eventsourced.core
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.Behavior#become" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="become(behavior:akka.japi.Procedure[Any],discardOld:Boolean):Unit"></a>
+      <a id="become(Procedure[Any],Boolean):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">become</span><span class="params">(<span name="behavior">behavior: <span class="extype" name="akka.japi.Procedure">Procedure</span>[<span class="extype" name="scala.Any">Any</span>]</span>, <span name="discardOld">discardOld: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Puts <code>behavior</code> on the hotswap stack. This will preserve the behavior of this stackable
+trait. Actors that additionally want to replace the behavior of this stackable trait should
+call <code>getContext().become(...)</code>.
+</p></div><dl class="paramcmts block"><dt class="param">behavior</dt><dd class="cmt"><p>new behavior</p></dd><dt class="param">discardOld</dt><dd class="cmt"><p>if <code>true</code>, <code>unbecome()</code> will be called prior to pushing <code>behavior</code>.
+</p></dd></dl><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="Behavior.html" class="extype" name="org.eligosource.eventsourced.core.Behavior">Behavior</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.Behavior#become" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="become(behavior:akka.japi.Procedure[Any]):Unit"></a>
+      <a id="become(Procedure[Any]):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">become</span><span class="params">(<span name="behavior">behavior: <span class="extype" name="akka.japi.Procedure">Procedure</span>[<span class="extype" name="scala.Any">Any</span>]</span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Puts <code>behavior</code> on the hotswap stack. This will preserve the behavior of this stackable
+trait. Actors that additionally want to replace the behavior of this stackable trait should
+call <code>getContext().become(...)</code>. The existing (old) behavior will be discarded.
+</p></div><dl class="paramcmts block"><dt class="param">behavior</dt><dd class="cmt"><p>new behavior
+</p></dd></dl><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="Behavior.html" class="extype" name="org.eligosource.eventsourced.core.Behavior">Behavior</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.Behavior#become" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="become(behavior:akka.actor.Actor.Receive,discardOld:Boolean):Unit"></a>
       <a id="become(akka.actor.Actor.Receive,Boolean):Unit"></a>
       <h4 class="signature">
@@ -239,9 +276,10 @@ or <a href="Emitter.html" class="extype" name="org.eligosource.eventsourced.core
         <span class="name">become</span><span class="params">(<span name="behavior">behavior: <span class="extype" name="akka.actor.Actor.Receive">akka.actor.Actor.Receive</span></span>, <span name="discardOld">discardOld: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Puts <code>behavior</code> on the hotswap stack.</p><div class="fullcomment"><div class="comment cmt"><p>Puts <code>behavior</code> on the hotswap stack. This will only affect the behavior of the actor
-that has been modified with this stackable trait.
-</p></div><dl class="paramcmts block"><dt class="param">behavior</dt><dd class="cmt"><p>new behavior</p></dd><dt class="param">discardOld</dt><dd class="cmt"><p>if <code>true</code>, an <code>unbecome()</code> will be issued prior to pushing <code>behavior</code>.
+      <p class="shortcomment cmt">Puts <code>behavior</code> on the hotswap stack.</p><div class="fullcomment"><div class="comment cmt"><p>Puts <code>behavior</code> on the hotswap stack. This will preserve the behavior of this stackable
+trait. Actors that additionally want to replace the behavior of this stackable trait should
+call <code>context.become(...)</code>.
+</p></div><dl class="paramcmts block"><dt class="param">behavior</dt><dd class="cmt"><p>new behavior</p></dd><dt class="param">discardOld</dt><dd class="cmt"><p>if <code>true</code>, <code>unbecome()</code> will be called prior to pushing <code>behavior</code>.
 </p></dd></dl><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="Behavior.html" class="extype" name="org.eligosource.eventsourced.core.Behavior">Behavior</a></dd></dl></div>
     </li><li name="scala.AnyRef#clone" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a>
@@ -585,8 +623,8 @@ that has been modified with this stackable trait.
         <span class="name">unbecome</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Reverts the behavior to the previous one on the hotswap stack.</p><div class="fullcomment"><div class="comment cmt"><p>Reverts the behavior to the previous one on the hotswap stack. This will only affect the
-behavior of the actor that has been modified with this stackable trait.
+      <p class="shortcomment cmt">Reverts the behavior to the previous one on the hotswap stack.</p><div class="fullcomment"><div class="comment cmt"><p>Reverts the behavior to the previous one on the hotswap stack. This will preserve the behavior
+of this stackable trait.
 </p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="Behavior.html" class="extype" name="org.eligosource.eventsourced.core.Behavior">Behavior</a></dd></dl></div>
     </li><li name="akka.actor.Actor#unhandled" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="unhandled(message:Any):Unit"></a>

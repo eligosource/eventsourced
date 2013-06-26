@@ -1,0 +1,546 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+        <head>
+          <title>bson - reactivemongo.bson</title>
+          <meta name="description" content="bson - reactivemongo.bson" />
+          <meta name="keywords" content="bson reactivemongo.bson" />
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link href="../../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
+      <link href="../../lib/diagrams.css" media="screen" type="text/css" rel="stylesheet" id="diagrams-css" />
+      <script type="text/javascript" src="../../lib/jquery.js" id="jquery-js"></script>
+      <script type="text/javascript" src="../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../lib/template.js"></script>
+      <script type="text/javascript" src="../../lib/tools.tooltip.js"></script>
+      
+      <script type="text/javascript">
+         if(top === self) {
+            var url = '../../index.html';
+            var hash = 'reactivemongo.bson.package';
+            var anchor = window.location.hash;
+            var anchor_opt = '';
+            if (anchor.length >= 1)
+              anchor_opt = '@' + anchor.substring(1);
+            window.location.href = url + '#' + hash + anchor_opt;
+         }
+   	  </script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img src="../../lib/package_big.png" />
+        <p id="owner"><a href="../package.html" class="extype" name="reactivemongo">reactivemongo</a></p>
+        <h1>bson</h1>
+      </div>
+
+      <h4 id="signature" class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <span class="name">bson</span>
+      </span>
+      </h4>
+      
+          <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
+          <span class="toggle">Linear Supertypes</span>
+          <div class="superTypes hiddenContent"><span class="extype" name="reactivemongo.bson.DefaultBSONHandlers">DefaultBSONHandlers</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+        </div></div>
+        
+
+      <div id="mbrsel">
+        <div id="textfilter"><span class="pre"></span><span class="input"><input id="mbrsel-input" type="text" accesskey="/" /></span><span class="post"></span></div>
+        <div id="order">
+              <span class="filtertype">Ordering</span>
+              <ol>
+                
+                <li class="alpha in"><span>Alphabetic</span></li>
+                <li class="inherit out"><span>By inheritance</span></li>
+              </ol>
+            </div>
+        <div id="ancestors">
+                <span class="filtertype">Inherited<br />
+                </span>
+                <ol id="linearization">
+                  <li class="in" name="reactivemongo.bson"><span>bson</span></li><li class="in" name="reactivemongo.bson.DefaultBSONHandlers"><span>DefaultBSONHandlers</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                </ol>
+              </div><div id="ancestors">
+            <span class="filtertype"></span>
+            <ol>
+              <li class="hideall out"><span>Hide All</span></li>
+              <li class="showall in"><span>Show all</span></li>
+            </ol>
+            <a href="http://docs.scala-lang.org/overviews/scaladoc/usage.html#members" target="_blank">Learn more about member selection</a>
+          </div>
+        <div id="visbl">
+            <span class="filtertype">Visibility</span>
+            <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+          </div>
+      </div>
+
+      <div id="template">
+        <div id="allMembers">
+        
+
+        <div id="types" class="types members">
+              <h3>Type Members</h3>
+              <ol><li name="reactivemongo.bson.DefaultBSONHandlers.BSONArrayCollectionReader" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONArrayCollectionReader[M&lt;:&lt;?&gt;,T&lt;:&lt;?&gt;]extendsBSONReader[reactivemongo.bson.BSONArray,M[T]]"></a>
+      <a id="BSONArrayCollectionReader[M[_],T]:BSONArrayCollectionReader[M,T]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONArrayCollectionReader</span><span class="tparams">[<span name="M">M<span class="tparams">[<span name="_">_</span>]</span></span>, <span name="T">T</span>]</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>, <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.BSONArrayCollectionReader.M">M</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.BSONArrayCollectionReader.T">T</span>]]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONArrayCollectionWriter" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONArrayCollectionWriter[T&lt;:&lt;?&gt;,Repr&lt;:&lt;?&gt;]extendsVariantBSONWriter[Repr,reactivemongo.bson.BSONArray]"></a>
+      <a id="BSONArrayCollectionWriter[T,Repr]:BSONArrayCollectionWriter[T,Repr]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONArrayCollectionWriter</span><span class="tparams">[<span name="T">T</span>, <span name="Repr">Repr</span>]</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.VariantBSONWriter">VariantBSONWriter</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.BSONArrayCollectionWriter.Repr">Repr</span>, <span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONBooleanLikeReader" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONBooleanLikeReader[B&lt;:&lt;?&gt;]extendsBSONReader[B,reactivemongo.bson.BSONBooleanLike]"></a>
+      <a id="BSONBooleanLikeReader[B&lt;:BSONValue]:BSONBooleanLikeReader[B]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONBooleanLikeReader</span><span class="tparams">[<span name="B">B &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span></span>]</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.BSONBooleanLikeReader.B">B</span>, <span class="extype" name="reactivemongo.bson.BSONBooleanLike">BSONBooleanLike</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.BSONElement" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="BSONElement=(String,reactivemongo.bson.BSONValue)"></a>
+      <a id="BSONElement:(String,BSONValue)"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">type</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONElement</span><span class="result"> = (<span class="extype" name="scala.Predef.String">String</span>, <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>)</span>
+      </span>
+      </h4>
+      
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONNumberLikeReader" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONNumberLikeReader[B&lt;:&lt;?&gt;]extendsBSONReader[B,reactivemongo.bson.BSONNumberLike]"></a>
+      <a id="BSONNumberLikeReader[B&lt;:BSONValue]:BSONNumberLikeReader[B]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONNumberLikeReader</span><span class="tparams">[<span name="B">B &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span></span>]</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.BSONNumberLikeReader.B">B</span>, <span class="extype" name="reactivemongo.bson.BSONNumberLike">BSONNumberLike</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+
+        <div id="values" class="values members">
+              <h3>Value Members</h3>
+              <ol><li name="reactivemongo.bson.DefaultBSONHandlers.BSONArrayIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONArrayIdentity"></a>
+      <a id="BSONArrayIdentity:BSONArrayIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONArrayIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>, <span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>, <span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONBinaryIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONBinaryIdentity"></a>
+      <a id="BSONBinaryIdentity:BSONBinaryIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONBinaryIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONBinary">BSONBinary</span>, <span class="extype" name="reactivemongo.bson.BSONBinary">BSONBinary</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONBinary">BSONBinary</span>, <span class="extype" name="reactivemongo.bson.BSONBinary">BSONBinary</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONBooleanHandler" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONBooleanHandler"></a>
+      <a id="BSONBooleanHandler:BSONBooleanHandler"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONBooleanHandler</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONHandler">BSONHandler</span>[<span class="extype" name="reactivemongo.bson.BSONBoolean">BSONBoolean</span>, <span class="extype" name="scala.Boolean">Boolean</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONBooleanIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONBooleanIdentity"></a>
+      <a id="BSONBooleanIdentity:BSONBooleanIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONBooleanIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONBoolean">BSONBoolean</span>, <span class="extype" name="reactivemongo.bson.BSONBoolean">BSONBoolean</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONBoolean">BSONBoolean</span>, <span class="extype" name="reactivemongo.bson.BSONBoolean">BSONBoolean</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONBooleanLikeWriter" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONBooleanLikeWriter"></a>
+      <a id="BSONBooleanLikeWriter:BSONBooleanLikeWriter"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONBooleanLikeWriter</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.VariantBSONWriter">VariantBSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONBooleanLike">BSONBooleanLike</span>, <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONDateTimeIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONDateTimeIdentity"></a>
+      <a id="BSONDateTimeIdentity:BSONDateTimeIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONDateTimeIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONDateTime">BSONDateTime</span>, <span class="extype" name="reactivemongo.bson.BSONDateTime">BSONDateTime</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONDateTime">BSONDateTime</span>, <span class="extype" name="reactivemongo.bson.BSONDateTime">BSONDateTime</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONDocumentIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONDocumentIdentity"></a>
+      <a id="BSONDocumentIdentity:BSONDocumentIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONDocumentIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>, <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>, <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>] with <span class="extype" name="reactivemongo.bson.BSONDocumentReader">BSONDocumentReader</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>] with <span class="extype" name="reactivemongo.bson.BSONDocumentWriter">BSONDocumentWriter</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONDoubleHandler" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONDoubleHandler"></a>
+      <a id="BSONDoubleHandler:BSONDoubleHandler"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONDoubleHandler</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONHandler">BSONHandler</span>[<span class="extype" name="reactivemongo.bson.BSONDouble">BSONDouble</span>, <span class="extype" name="scala.Double">Double</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONDoubleIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONDoubleIdentity"></a>
+      <a id="BSONDoubleIdentity:BSONDoubleIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONDoubleIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONDouble">BSONDouble</span>, <span class="extype" name="reactivemongo.bson.BSONDouble">BSONDouble</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONDouble">BSONDouble</span>, <span class="extype" name="reactivemongo.bson.BSONDouble">BSONDouble</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONIntegerHandler" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONIntegerHandler"></a>
+      <a id="BSONIntegerHandler:BSONIntegerHandler"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONIntegerHandler</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONHandler">BSONHandler</span>[<span class="extype" name="reactivemongo.bson.BSONInteger">BSONInteger</span>, <span class="extype" name="scala.Int">Int</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONIntegerIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONIntegerIdentity"></a>
+      <a id="BSONIntegerIdentity:BSONIntegerIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONIntegerIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONInteger">BSONInteger</span>, <span class="extype" name="reactivemongo.bson.BSONInteger">BSONInteger</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONInteger">BSONInteger</span>, <span class="extype" name="reactivemongo.bson.BSONInteger">BSONInteger</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONLongHandler" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONLongHandler"></a>
+      <a id="BSONLongHandler:BSONLongHandler"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONLongHandler</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONHandler">BSONHandler</span>[<span class="extype" name="reactivemongo.bson.BSONLong">BSONLong</span>, <span class="extype" name="scala.Long">Long</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONLongIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONLongIdentity"></a>
+      <a id="BSONLongIdentity:BSONLongIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONLongIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONLong">BSONLong</span>, <span class="extype" name="reactivemongo.bson.BSONLong">BSONLong</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONLong">BSONLong</span>, <span class="extype" name="reactivemongo.bson.BSONLong">BSONLong</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONNullIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONNullIdentity"></a>
+      <a id="BSONNullIdentity:BSONNullIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONNullIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONNull">BSONNull</span>.type, <span class="extype" name="reactivemongo.bson.BSONNull">BSONNull</span>.type] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONNull">BSONNull</span>.type, <span class="extype" name="reactivemongo.bson.BSONNull">BSONNull</span>.type]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONNumberLikeWriter" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONNumberLikeWriter"></a>
+      <a id="BSONNumberLikeWriter:BSONNumberLikeWriter"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONNumberLikeWriter</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.VariantBSONWriter">VariantBSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONNumberLike">BSONNumberLike</span>, <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONObjectIDIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONObjectIDIdentity"></a>
+      <a id="BSONObjectIDIdentity:BSONObjectIDIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONObjectIDIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONObjectID">BSONObjectID</span>, <span class="extype" name="reactivemongo.bson.BSONObjectID">BSONObjectID</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONObjectID">BSONObjectID</span>, <span class="extype" name="reactivemongo.bson.BSONObjectID">BSONObjectID</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONRegexIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONRegexIdentity"></a>
+      <a id="BSONRegexIdentity:BSONRegexIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONRegexIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONRegex">BSONRegex</span>, <span class="extype" name="reactivemongo.bson.BSONRegex">BSONRegex</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONRegex">BSONRegex</span>, <span class="extype" name="reactivemongo.bson.BSONRegex">BSONRegex</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONStringHandler" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONStringHandler"></a>
+      <a id="BSONStringHandler:BSONStringHandler"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONStringHandler</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONHandler">BSONHandler</span>[<span class="extype" name="reactivemongo.bson.BSONString">BSONString</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONStringIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONStringIdentity"></a>
+      <a id="BSONStringIdentity:BSONStringIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONStringIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONString">BSONString</span>, <span class="extype" name="reactivemongo.bson.BSONString">BSONString</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONString">BSONString</span>, <span class="extype" name="reactivemongo.bson.BSONString">BSONString</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONUndefinedIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONUndefinedIdentity"></a>
+      <a id="BSONUndefinedIdentity:BSONUndefinedIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONUndefinedIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONUndefined">BSONUndefined</span>.type, <span class="extype" name="reactivemongo.bson.BSONUndefined">BSONUndefined</span>.type] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONUndefined">BSONUndefined</span>.type, <span class="extype" name="reactivemongo.bson.BSONUndefined">BSONUndefined</span>.type]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers.BSONValueIdentity" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="BSONValueIdentity"></a>
+      <a id="BSONValueIdentity:BSONValueIdentity"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">BSONValueIdentity</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>, <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>] with <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>, <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers#bsonArrayToCollectionReader" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="bsonArrayToCollectionReader[M[_],T](implicitcbf:scala.collection.generic.CanBuildFrom[M[_],T,M[T]],implicitreader:reactivemongo.bson.BSONReader[_&lt;:reactivemongo.bson.BSONValue,T]):reactivemongo.bson.BSONReader[reactivemongo.bson.BSONArray,M[T]]"></a>
+      <a id="bsonArrayToCollectionReader[M[_],T](CanBuildFrom[M[_],T,M[T]],BSONReader[_&lt;:BSONValue,T]):BSONReader[BSONArray,M[T]]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">bsonArrayToCollectionReader</span><span class="tparams">[<span name="M">M<span class="tparams">[<span name="_">_</span>]</span></span>, <span name="T">T</span>]</span><span class="params">(<span class="implicit">implicit </span><span name="cbf">cbf: <span class="extype" name="scala.collection.generic.CanBuildFrom">CanBuildFrom</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonArrayToCollectionReader.M">M</span>[_], <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonArrayToCollectionReader.T">T</span>, <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonArrayToCollectionReader.M">M</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonArrayToCollectionReader.T">T</span>]]</span>, <span name="reader">reader: <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[_ &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>, <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonArrayToCollectionReader.T">T</span>]</span>)</span><span class="result">: <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>, <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonArrayToCollectionReader.M">M</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonArrayToCollectionReader.T">T</span>]]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers#bsonBooleanLikeReader" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="bsonBooleanLikeReader[B&lt;:reactivemongo.bson.BSONValue]:DefaultBSONHandlers.this.BSONBooleanLikeReader[B]"></a>
+      <a id="bsonBooleanLikeReader[B&lt;:BSONValue]:BSONBooleanLikeReader[B]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">bsonBooleanLikeReader</span><span class="tparams">[<span name="B">B &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span></span>]</span><span class="result">: <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.BSONBooleanLikeReader">BSONBooleanLikeReader</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonBooleanLikeReader.B">B</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers#bsonNumberLikeReader" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="bsonNumberLikeReader[B&lt;:reactivemongo.bson.BSONValue]:DefaultBSONHandlers.this.BSONNumberLikeReader[B]"></a>
+      <a id="bsonNumberLikeReader[B&lt;:BSONValue]:BSONNumberLikeReader[B]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">bsonNumberLikeReader</span><span class="tparams">[<span name="B">B &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span></span>]</span><span class="result">: <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.BSONNumberLikeReader">BSONNumberLikeReader</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.bsonNumberLikeReader.B">B</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers#collectionToBSONArrayCollectionWriter" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="collectionToBSONArrayCollectionWriter[T,Repr](implicitevidence$2:Repr=&gt;Traversable[T],implicitwriter:reactivemongo.bson.BSONWriter[T,_&lt;:reactivemongo.bson.BSONValue]):reactivemongo.bson.VariantBSONWriter[Repr,reactivemongo.bson.BSONArray]"></a>
+      <a id="collectionToBSONArrayCollectionWriter[T,Repr]((Repr)⇒Traversable[T],BSONWriter[T,_&lt;:BSONValue]):VariantBSONWriter[Repr,BSONArray]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">collectionToBSONArrayCollectionWriter</span><span class="tparams">[<span name="T">T</span>, <span name="Repr">Repr</span>]</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: (<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.collectionToBSONArrayCollectionWriter.Repr">Repr</span>) ⇒ <span class="extype" name="scala.Traversable">Traversable</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.collectionToBSONArrayCollectionWriter.T">T</span>]</span>, <span name="writer">writer: <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.collectionToBSONArrayCollectionWriter.T">T</span>, _ &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>]</span>)</span><span class="result">: <span class="extype" name="reactivemongo.bson.VariantBSONWriter">VariantBSONWriter</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.collectionToBSONArrayCollectionWriter.Repr">Repr</span>, <span class="extype" name="reactivemongo.bson.BSONArray">BSONArray</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers#findReader" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="findReader[T](implicitreader:reactivemongo.bson.VariantBSONReader[_&lt;:reactivemongo.bson.BSONValue,T]):reactivemongo.bson.BSONReader[_&lt;:reactivemongo.bson.BSONValue,T]"></a>
+      <a id="findReader[T](VariantBSONReader[_&lt;:BSONValue,T]):BSONReader[_&lt;:BSONValue,T]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">findReader</span><span class="tparams">[<span name="T">T</span>]</span><span class="params">(<span class="implicit">implicit </span><span name="reader">reader: <span class="extype" name="reactivemongo.bson.VariantBSONReader">VariantBSONReader</span>[_ &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>, <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.findReader.T">T</span>]</span>)</span><span class="result">: <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[_ &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>, <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.findReader.T">T</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li><li name="reactivemongo.bson.DefaultBSONHandlers#findWriter" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="findWriter[T](implicitwriter:reactivemongo.bson.VariantBSONWriter[T,_&lt;:reactivemongo.bson.BSONValue]):reactivemongo.bson.BSONWriter[T,_&lt;:reactivemongo.bson.BSONValue]"></a>
+      <a id="findWriter[T](VariantBSONWriter[T,_&lt;:BSONValue]):BSONWriter[T,_&lt;:BSONValue]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">findWriter</span><span class="tparams">[<span name="T">T</span>]</span><span class="params">(<span class="implicit">implicit </span><span name="writer">writer: <span class="extype" name="reactivemongo.bson.VariantBSONWriter">VariantBSONWriter</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.findWriter.T">T</span>, _ &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>]</span>)</span><span class="result">: <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<span class="extype" name="reactivemongo.bson.DefaultBSONHandlers.findWriter.T">T</span>, _ &lt;: <span class="extype" name="reactivemongo.bson.BSONValue">BSONValue</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>DefaultBSONHandlers</dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+
+        
+        </div>
+
+        <div id="inheritedMembers">
+        <div class="parent" name="reactivemongo.bson.DefaultBSONHandlers">
+              <h3>Inherited from <span class="extype" name="reactivemongo.bson.DefaultBSONHandlers">DefaultBSONHandlers</span></h3>
+            </div><div class="parent" name="scala.AnyRef">
+              <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
+            </div><div class="parent" name="scala.Any">
+              <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>
+            </div>
+        
+        </div>
+
+        <div id="groupedMembers">
+        <div class="group" name="Ungrouped">
+              <h3>Ungrouped</h3>
+              
+            </div>
+        </div>
+
+      </div>
+
+      <div id="tooltip"></div>
+
+      <div id="footer">  </div>
+
+
+    </body>
+      </html>

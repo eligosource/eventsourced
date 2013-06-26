@@ -172,6 +172,22 @@
       <p class="shortcomment cmt">Replay parameters for all registered processors for non-snapshotted replay,
 starting from sequence number 0 (= from scratch) and no upper sequence number
 bound.</p>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension.replayParams#allWithSnapshot" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="allWithSnapshot(snapshotFilter:akka.japi.Function[org.eligosource.eventsourced.core.SnapshotMetadata,Boolean]):Seq[org.eligosource.eventsourced.core.ReplayParams]"></a>
+      <a id="allWithSnapshot(Function[SnapshotMetadata,Boolean]):Seq[ReplayParams]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">allWithSnapshot</span><span class="params">(<span name="snapshotFilter">snapshotFilter: <span class="extype" name="akka.japi.Function">Function</span>[<a href="SnapshotMetadata.html" class="extype" name="org.eligosource.eventsourced.core.SnapshotMetadata">SnapshotMetadata</a>, <span class="extype" name="java.lang.Boolean">Boolean</span>]</span>)</span><span class="result">: <span class="extype" name="scala.Seq">Seq</span>[<a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Replay parameters for all registered processors for snapshotted replay,
+starting from the latest filtered snapshot and no upper sequence number
+bound.
+</p></div></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension.replayParams#allWithSnapshot" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="allWithSnapshot(snapshotFilter:org.eligosource.eventsourced.core.SnapshotMetadata=&gt;Boolean):Seq[org.eligosource.eventsourced.core.ReplayParams]"></a>
       <a id="allWithSnapshot((SnapshotMetadata)⇒Boolean):Seq[ReplayParams]"></a>

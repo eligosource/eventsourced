@@ -29,9 +29,9 @@
         </head>
         <body class="type">
       <div id="definition">
-        <img src="../../../../../lib/class_big.png" />
+        <a href="InmemJournalProps$.html" title="Go to companion"><img src="../../../../../lib/class_to_object_big.png" /></a>
         <p id="owner"><a href="../../../../package.html" class="extype" name="org">org</a>.<a href="../../../package.html" class="extype" name="org.eligosource">eligosource</a>.<a href="../../package.html" class="extype" name="org.eligosource.eventsourced">eventsourced</a>.<a href="../package.html" class="extype" name="org.eligosource.eventsourced.journal">journal</a>.<a href="package.html" class="extype" name="org.eligosource.eventsourced.journal.inmem">inmem</a></p>
-        <h1>InmemJournalProps</h1>
+        <h1><a href="InmemJournalProps$.html" title="Go to companion">InmemJournalProps</a></h1>
       </div>
 
       <h4 id="signature" class="signature">
@@ -40,7 +40,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">InmemJournalProps</span><span class="params">(<span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>)</span><span class="result"> extends <a href="../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">InmemJournalProps</span><span class="params">(<span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>)</span><span class="result"> extends <a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
@@ -54,7 +54,7 @@
 <span class="kw">val</span> journal: ActorRef = Journal(InmemJournalProps())</pre></div><dl class="paramcmts block"><dt class="param">name</dt><dd class="cmt"><p>Optional journal actor name.</p></dd><dt class="param">dispatcherName</dt><dd class="cmt"><p>Optional journal actor dispatcher name.
 </p></dd></dl><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -72,7 +72,7 @@
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps"><span>InmemJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.core.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps"><span>InmemJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -209,6 +209,34 @@
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.common.JournalProps#createJournal" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="createJournal(implicitactorRefFactory:akka.actor.ActorRefFactory):akka.actor.ActorRef"></a>
+      <a id="createJournal(ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createJournal</span><span class="params">(<span class="implicit">implicit </span><span name="actorRefFactory">actorRefFactory: <span class="extype" name="akka.actor.ActorRefFactory">ActorRefFactory</span></span>)</span><span class="result">: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Creates and starts a new journal using the settings of this configuration object.</p><div class="fullcomment"><div class="comment cmt"><p>Creates and starts a new journal using the settings of this configuration object.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#createJournalActor" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="createJournalActor:akka.actor.Actor"></a>
+      <a id="createJournalActor:Actor"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createJournalActor</span><span class="result">: <span class="extype" name="akka.actor.Actor">Actor</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Creates a journal actor instance.</p><div class="fullcomment"><div class="comment cmt"><p>Creates a journal actor instance.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a> → <a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#dispatcherName" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="dispatcherName:Option[String]"></a>
       <a id="dispatcherName:Option[String]"></a>
@@ -222,7 +250,7 @@
       </span>
       </h4>
       <p class="shortcomment cmt">Optional journal actor dispatcher name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor dispatcher name.
-</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a> → <a href="../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a> → <a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>
@@ -278,20 +306,6 @@
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#journal" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="journal:akka.actor.Actor"></a>
-      <a id="journal:Actor"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">journal</span><span class="result">: <span class="extype" name="akka.actor.Actor">Actor</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Creates a journal actor instance.</p><div class="fullcomment"><div class="comment cmt"><p>Creates a journal actor instance.
-</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a> → <a href="../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#name" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="name:Option[String]"></a>
       <a id="name:Option[String]"></a>
@@ -304,7 +318,7 @@
         <span class="name">name</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Optional journal actor name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a> → <a href="../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
+      <p class="shortcomment cmt">Optional journal actor name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a> → <a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a>
       <a id="ne(AnyRef):Boolean"></a>
@@ -405,7 +419,7 @@
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#withDispatcherName" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#withDispatcherName" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="withDispatcherName(dispatcherName:String):org.eligosource.eventsourced.journal.inmem.InmemJournalProps"></a>
       <a id="withDispatcherName(String):InmemJournalProps"></a>
       <h4 class="signature">
@@ -417,8 +431,9 @@
         <span class="name">withDispatcherName</span><span class="params">(<span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Returns a new <code>InmemJournalProps</code> with specified journal actor dispatcher name.</p>
-    </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#withName" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Returns a new <code>InmemJournalProps</code> with specified journal actor dispatcher name.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps#withName" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="withName(name:String):org.eligosource.eventsourced.journal.inmem.InmemJournalProps"></a>
       <a id="withName(String):InmemJournalProps"></a>
       <h4 class="signature">
@@ -430,7 +445,8 @@
         <span class="name">withName</span><span class="params">(<span name="name">name: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.inmem.InmemJournalProps">InmemJournalProps</a></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Returns a new <code>InmemJournalProps</code> with specified journal actor name.</p>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Returns a new <code>InmemJournalProps</code> with specified journal actor name.
+</p></div></div>
     </li></ol>
             </div>
 
@@ -448,8 +464,8 @@
               <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
             </div><div class="parent" name="scala.Equals">
               <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
-            </div><div class="parent" name="org.eligosource.eventsourced.core.JournalProps">
-              <h3>Inherited from <a href="../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></h3>
+            </div><div class="parent" name="org.eligosource.eventsourced.journal.common.JournalProps">
+              <h3>Inherited from <a href="../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">

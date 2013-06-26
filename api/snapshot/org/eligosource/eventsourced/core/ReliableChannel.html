@@ -55,7 +55,7 @@ a timeout occurs), a re-delivery attempt is made after a certain <i>redelivery d
 the channel restarts itself after a certain <i>restart delay</i> (specified by <code>policy.restartDelay</code>)
 and starts again with re-deliveries. If the maximum number of restarts has been reached (specified
 by <code>policy.restartMax</code>) the channel stops message delivery and publishes a
-<a href="Channel$$DeliveryStopped.html" class="extype" name="org.eligosource.eventsourced.core.Channel.DeliveryStopped">org.eligosource.eventsourced.core.Channel.DeliveryStopped</a> event to the event stream of the
+<a href="DeliveryStopped.html" class="extype" name="org.eligosource.eventsourced.core.DeliveryStopped">org.eligosource.eventsourced.core.DeliveryStopped</a> event to the event stream of the
 <span class="extype" name="akka.actor.ActorSystem">akka.actor.ActorSystem</span> this channel belongs to. Applications can then re-activate the channel
 by calling <code>EventsourcingExtension.deliver(Int)</code> with the channel id as argument.</p><p>A <code>ReliableChannel</code> stores <code>sender</code> references along with event messages so that they can be forwarded
 to destinations even after the channel has been restarted. If a stored sender reference is a remote
@@ -67,8 +67,8 @@ senders must set the <code>Message.processorId</code> of the sent <code>Message<
 Setting the <code>processorId</code> to <code>0</code> causes a reliable channel to skip writing an acknowledgement. An
 acknowledgement always refers to an event message received by an  <code>Eventsourced</code> processor, so there's
 no need to write one in this case.
-</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="Journal$$WriteAck.html" class="extype" name="org.eligosource.eventsourced.core.Journal.WriteAck">org.eligosource.eventsourced.core.Journal.WriteAck</a>
-</p></span><span class="cmt"><p><a href="Journal$$WriteOutMsg.html" class="extype" name="org.eligosource.eventsourced.core.Journal.WriteOutMsg">org.eligosource.eventsourced.core.Journal.WriteOutMsg</a></p></span><span class="cmt"><p><a href="RedeliveryPolicy.html" class="extype" name="org.eligosource.eventsourced.core.RedeliveryPolicy">org.eligosource.eventsourced.core.RedeliveryPolicy</a></p></span><span class="cmt"><p><a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a></p></span></dd></dl><div class="toggleContainer block">
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="JournalProtocol$$WriteAck.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.WriteAck">org.eligosource.eventsourced.core.JournalProtocol.WriteAck</a>
+</p></span><span class="cmt"><p><a href="JournalProtocol$$WriteOutMsg.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.WriteOutMsg">org.eligosource.eventsourced.core.JournalProtocol.WriteOutMsg</a></p></span><span class="cmt"><p><a href="RedeliveryPolicy.html" class="extype" name="org.eligosource.eventsourced.core.RedeliveryPolicy">org.eligosource.eventsourced.core.RedeliveryPolicy</a></p></span><span class="cmt"><p><a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a></p></span></dd></dl><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">Channel</a>, <span class="extype" name="akka.actor.Actor">Actor</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
@@ -294,19 +294,6 @@ no need to write one in this case.
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.core.Channel#executionContext" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="executionContext:scala.concurrent.ExecutionContext"></a>
-      <a id="executionContext:ExecutionContext"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier">implicit </span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">executionContext</span><span class="result">: <span class="extype" name="scala.concurrent.ExecutionContext">ExecutionContext</span></span>
-      </span>
-      </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">Channel</a></dd></dl></div>
     </li><li name="scala.AnyRef#finalize" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <a id="finalize():Unit"></a>

@@ -40,13 +40,13 @@
         <span class="kind">object</span>
       </span>
       <span class="symbol">
-        <span class="name">ReactiveMessageReader</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.handlers.BSONReader">BSONReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</span>
+        <span class="name">ReactiveMessageReader</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONDocumentReader">BSONDocumentReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</span>
       </span>
       </h4>
       
           <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
-          <div class="superTypes hiddenContent"><span class="extype" name="reactivemongo.bson.handlers.BSONReader">BSONReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>], <span class="extype" name="reactivemongo.bson.handlers.RawBSONReader">RawBSONReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>], <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="reactivemongo.bson.BSONDocumentReader">BSONDocumentReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>], <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>, <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>], <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -64,7 +64,7 @@
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageReader"><span>ReactiveMessageReader</span></li><li class="in" name="reactivemongo.bson.handlers.BSONReader"><span>BSONReader</span></li><li class="in" name="reactivemongo.bson.handlers.RawBSONReader"><span>RawBSONReader</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageReader"><span>ReactiveMessageReader</span></li><li class="in" name="reactivemongo.bson.BSONDocumentReader"><span>BSONDocumentReader</span></li><li class="in" name="reactivemongo.bson.BSONReader"><span>BSONReader</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -226,19 +226,6 @@
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageReader#fromBSON" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="fromBSON(doc:reactivemongo.bson.BSONDocument):org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage"></a>
-      <a id="fromBSON(BSONDocument):ReactiveMessage"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">fromBSON</span><span class="params">(<span name="doc">doc: <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span></span>)</span><span class="result">: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>
-      </span>
-      </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageReader">ReactiveMessageReader</a> → BSONReader</dd></dl></div>
     </li><li name="scala.AnyRef#getClass" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <a id="getClass():Class[_]"></a>
@@ -317,19 +304,45 @@
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="reactivemongo.bson.handlers.BSONReader#read" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="read(buffer:org.jboss.netty.buffer.ChannelBuffer):DocumentType"></a>
-      <a id="read(ChannelBuffer):ReactiveMessage"></a>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageReader#read" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="read(doc:reactivemongo.bson.BSONDocument):org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage"></a>
+      <a id="read(BSONDocument):ReactiveMessage"></a>
       <h4 class="signature">
       <span class="modifier_kind">
-        <span class="modifier">final </span>
+        <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">read</span><span class="params">(<span name="buffer">buffer: <span class="extype" name="org.jboss.netty.buffer.ChannelBuffer">ChannelBuffer</span></span>)</span><span class="result">: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>
+        <span class="name">read</span><span class="params">(<span name="doc">doc: <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span></span>)</span><span class="result">: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BSONReader → RawBSONReader</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageReader">ReactiveMessageReader</a> → BSONReader</dd></dl></div>
+    </li><li name="reactivemongo.bson.BSONReader#readOpt" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="readOpt(bson:&lt;?&gt;):Option[T]"></a>
+      <a id="readOpt(BSONDocument):Option[ReactiveMessage]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">readOpt</span><span class="params">(<span name="bson">bson: <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span></span>)</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BSONReader</dd></dl></div>
+    </li><li name="reactivemongo.bson.BSONReader#readTry" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="readTry(bson:&lt;?&gt;):scala.util.Try[T]"></a>
+      <a id="readTry(BSONDocument):Try[ReactiveMessage]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">readTry</span><span class="params">(<span name="bson">bson: <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span></span>)</span><span class="result">: <span class="extype" name="scala.util.Try">Try</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BSONReader</dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a>
       <a id="synchronized[T0](⇒T0):T0"></a>
@@ -413,10 +426,10 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="reactivemongo.bson.handlers.BSONReader">
-              <h3>Inherited from <span class="extype" name="reactivemongo.bson.handlers.BSONReader">BSONReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</h3>
-            </div><div class="parent" name="reactivemongo.bson.handlers.RawBSONReader">
-              <h3>Inherited from <span class="extype" name="reactivemongo.bson.handlers.RawBSONReader">RawBSONReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</h3>
+        <div class="parent" name="reactivemongo.bson.BSONDocumentReader">
+              <h3>Inherited from <span class="extype" name="reactivemongo.bson.BSONDocumentReader">BSONDocumentReader</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</h3>
+            </div><div class="parent" name="reactivemongo.bson.BSONReader">
+              <h3>Inherited from <span class="extype" name="reactivemongo.bson.BSONReader">BSONReader</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>, <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">

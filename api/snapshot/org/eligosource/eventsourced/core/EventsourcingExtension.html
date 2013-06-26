@@ -190,6 +190,39 @@ event <a href="Message.html" class="extype" name="org.eligosource.eventsourced.c
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#awaitProcessing" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="awaitProcessing(atMost:scala.concurrent.duration.FiniteDuration):Unit"></a>
+      <a id="awaitProcessing(FiniteDuration):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">awaitProcessing</span><span class="params">(<span name="atMost">atMost: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Waits for all processors to finish processing of all pending messages
+in their mailboxes.
+</p></div><dl class="paramcmts block"><dt class="param">atMost</dt><dd class="cmt"><p>maximum duration to wait for processing to complete.
+</p></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#awaitProcessing" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="awaitProcessing(processorIds:java.util.Set[Integer],atMost:scala.concurrent.duration.FiniteDuration):Unit"></a>
+      <a id="awaitProcessing(Set[Integer],FiniteDuration):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">awaitProcessing</span><span class="params">(<span name="processorIds">processorIds: <span class="extype" name="java.util.Set">Set</span>[<span class="extype" name="java.lang.Integer">Integer</span>]</span>, <span name="atMost">atMost: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Waits for specified processors to finish processing of all pending messages
+in their mailboxes.
+</p></div><dl class="paramcmts block"><dt class="param">processorIds</dt><dd class="cmt"><p>ids of registered processors to wait for. Default value
+       is the set of all registered processor ids.</p></dd><dt class="param">atMost</dt><dd class="cmt"><p>maximum duration to wait for processing to complete.
+</p></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#awaitProcessing" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="awaitProcessing(processorIds:Set[Int],atMost:scala.concurrent.duration.FiniteDuration):Unit"></a>
       <a id="awaitProcessing(Set[Int],FiniteDuration):Unit"></a>
       <h4 class="signature">
@@ -201,11 +234,12 @@ event <a href="Message.html" class="extype" name="org.eligosource.eventsourced.c
         <span class="name">awaitProcessing</span><span class="params">(<span name="processorIds">processorIds: <span class="extype" name="scala.Predef.Set">Set</span>[<span class="extype" name="scala.Int">Int</span>] = <span class="symbol"><span class="name"><a href="#processors:Map[Int,akka.actor.ActorRef]">processors.keySet</a></span></span></span>, <span name="atMost">atMost: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="symbol">1 minute</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Waits for selected processors to finish processing of all pending messages
-in their mailboxes.</p><div class="fullcomment"><div class="comment cmt"><p>Waits for selected processors to finish processing of all pending messages
+      <p class="shortcomment cmt">Waits for specified processors to finish processing of all pending messages
+in their mailboxes.</p><div class="fullcomment"><div class="comment cmt"><p>Waits for specified processors to finish processing of all pending messages
 in their mailboxes.
 </p></div><dl class="paramcmts block"><dt class="param">processorIds</dt><dd class="cmt"><p>ids of registered processors to wait for. Default value
-       is the set of all registered processor ids.</p></dd><dt class="param">atMost</dt><dd class="cmt"><p>maximum duration to wait for processing to complete.
+       is the set of all registered processor ids.</p></dd><dt class="param">atMost</dt><dd class="cmt"><p>maximum duration to wait for processing to complete. Default
+       value is 1 minute.
 </p></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#channelOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="channelOf(props:org.eligosource.eventsourced.core.ChannelProps)(implicitactorRefFactory:akka.actor.ActorRefFactory):akka.actor.ActorRef"></a>
@@ -259,6 +293,38 @@ the channel id.
               
         </dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#completeProcessing" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="completeProcessing(timeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
+      <a id="completeProcessing(Timeout):Future[Any]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">completeProcessing</span><span class="params">(<span name="timeout">timeout: <span class="extype" name="akka.util.Timeout">Timeout</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Any">Any</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Returns a <code>Future</code> that will be completed when all processors have finished
+processing all pending messages in their mailboxes.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#completeProcessing" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="completeProcessing(processorIds:java.util.Set[Integer],timeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
+      <a id="completeProcessing(Set[Integer],Timeout):Future[Any]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">completeProcessing</span><span class="params">(<span name="processorIds">processorIds: <span class="extype" name="java.util.Set">Set</span>[<span class="extype" name="java.lang.Integer">Integer</span>]</span>, <span name="timeout">timeout: <span class="extype" name="akka.util.Timeout">Timeout</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Any">Any</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Returns a <code>Future</code> that will be completed when specified processors have finished
+processing all pending messages in their mailboxes.
+</p></div><dl class="paramcmts block"><dt class="param">processorIds</dt><dd class="cmt"><p>ids of registered processors to wait for. Default value
+       is the set of all registered processor ids.
+</p></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#completeProcessing" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="completeProcessing(processorIds:Set[Int])(implicittimeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
       <a id="completeProcessing(Set[Int])(Timeout):Future[Any]"></a>
       <h4 class="signature">
@@ -270,12 +336,26 @@ the channel id.
         <span class="name">completeProcessing</span><span class="params">(<span name="processorIds">processorIds: <span class="extype" name="scala.Predef.Set">Set</span>[<span class="extype" name="scala.Int">Int</span>] = <span class="symbol"><span class="name"><a href="#processors:Map[Int,akka.actor.ActorRef]">processors.keySet</a></span></span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="timeout">timeout: <span class="extype" name="akka.util.Timeout">Timeout</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Any">Any</span>]</span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Returns a <code>Future</code> that will be completed when selected processors have finished
-processing all pending messages in their mailboxes.</p><div class="fullcomment"><div class="comment cmt"><p>Returns a <code>Future</code> that will be completed when selected processors have finished
+      <p class="shortcomment cmt">Returns a <code>Future</code> that will be completed when specified processors have finished
+processing all pending messages in their mailboxes.</p><div class="fullcomment"><div class="comment cmt"><p>Returns a <code>Future</code> that will be completed when specified processors have finished
 processing all pending messages in their mailboxes.
 </p></div><dl class="paramcmts block"><dt class="param">processorIds</dt><dd class="cmt"><p>ids of registered processors to wait for. Default value
        is the set of all registered processor ids.
 </p></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#deliver" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="deliver(channels:java.util.List[akka.actor.ActorRef],timeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
+      <a id="deliver(List[ActorRef],Timeout):Future[Any]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">deliver</span><span class="params">(<span name="channels">channels: <span class="extype" name="java.util.List">List</span>[<span class="extype" name="akka.actor.ActorRef">ActorRef</span>]</span>, <span name="timeout">timeout: <span class="extype" name="akka.util.Timeout">Timeout</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Any">Any</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Activates the specified channels and starts delivery of pending messages.
+</p></div></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#deliver" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="deliver(channels:Seq[akka.actor.ActorRef])(implicittimeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
       <a id="deliver(Seq[ActorRef])(Timeout):Future[Any]"></a>
@@ -357,6 +437,21 @@ processing all pending messages in their mailboxes.
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#getChannels" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="getChannels:java.util.Map[Integer,akka.actor.ActorRef]"></a>
+      <a id="getChannels:Map[Integer,ActorRef]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getChannels</span><span class="result">: <span class="extype" name="java.util.Map">Map</span>[<span class="extype" name="java.lang.Integer">Integer</span>, <span class="extype" name="akka.actor.ActorRef">ActorRef</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Map of registered <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>s. Mapping key is
+the channel id.
+</p></div></div>
     </li><li name="scala.AnyRef#getClass" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <a id="getClass():Class[_]"></a>
@@ -370,6 +465,51 @@ processing all pending messages in their mailboxes.
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#getNamedChannels" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="getNamedChannels:java.util.Map[String,akka.actor.ActorRef]"></a>
+      <a id="getNamedChannels:Map[String,ActorRef]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getNamedChannels</span><span class="result">: <span class="extype" name="java.util.Map">Map</span>[<span class="extype" name="scala.Predef.String">String</span>, <span class="extype" name="akka.actor.ActorRef">ActorRef</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Map of registered named <a href="Channel.html" class="extype" name="org.eligosource.eventsourced.core.Channel">org.eligosource.eventsourced.core.Channel</a>s. Mapping key is
+the channel name.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#getProcessors" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="getProcessors:java.util.Map[Integer,akka.actor.ActorRef]"></a>
+      <a id="getProcessors:Map[Integer,ActorRef]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getProcessors</span><span class="result">: <span class="extype" name="java.util.Map">Map</span>[<span class="extype" name="java.lang.Integer">Integer</span>, <span class="extype" name="akka.actor.ActorRef">ActorRef</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Map of registered <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processors.
+Mapping key is the processor id.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#getReplayParams" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="getReplayParams:EventsourcingExtension.this.replayParams.type"></a>
+      <a id="getReplayParams:replayParams.type"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getReplayParams</span><span class="result">: <a href="EventsourcingExtension$replayParams$.html" class="extype" name="org.eligosource.eventsourced.core.EventsourcingExtension.replayParams">replayParams</a>.type</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Predefined <code>ReplayParams</code> sequences to be used with methods <code>replay</code> or <code>recover</code>.
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">org.eligosource.eventsourced.core.ReplayParams</a>
+</p></span></dd></dl></div>
     </li><li name="scala.AnyRef#hashCode" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hashCode():Int"></a>
       <a id="hashCode():Int"></a>
@@ -464,6 +604,46 @@ the channel name.
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#processorOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="processorOf(props:akka.actor.Props,name:String,actorRefFactory:akka.actor.ActorRefFactory):akka.actor.ActorRef"></a>
+      <a id="processorOf(Props,String,ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">processorOf</span><span class="params">(<span name="props">props: <span class="extype" name="akka.actor.Props">Props</span></span>, <span name="name">name: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="actorRefFactory">actorRefFactory: <span class="extype" name="akka.actor.ActorRefFactory">ActorRefFactory</span></span>)</span><span class="result">: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Registers an <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processor with a
+specified actor name.</p><p>This method obtains the id from the created processor with a blocking operation.
+Use the overloaded <code>processorOf(ProcessorProps)</code> method if you want to avoid
+blocking.
+</p></div><dl class="paramcmts block"><dt class="param">props</dt><dd class="cmt"><p>actor ref configuration object.</p></dd><dt class="param">name</dt><dd class="cmt"><p>processor name.</p></dd><dt class="param">actorRefFactory</dt><dd class="cmt"><p><a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a>
+       ref factory.</p></dd><dt>returns</dt><dd class="cmt"><p>a processor ref.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">InvalidActorNameException<p>if <code>name</code> is defined and already in use
+        in the underlying actor system.</p></span><span class="cmt">InvalidProcessorIdException<p>if processor id &lt; 1.
+</p></span></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#processorOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="processorOf(props:akka.actor.Props,actorRefFactory:akka.actor.ActorRefFactory):akka.actor.ActorRef"></a>
+      <a id="processorOf(Props,ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">processorOf</span><span class="params">(<span name="props">props: <span class="extype" name="akka.actor.Props">Props</span></span>, <span name="actorRefFactory">actorRefFactory: <span class="extype" name="akka.actor.ActorRefFactory">ActorRefFactory</span></span>)</span><span class="result">: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Registers an <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processor with
+a generated actor name.</p><p>This method obtains the id from the created processor with a blocking operation.
+Use the overloaded <code>processorOf(ProcessorProps)</code> method if you want to avoid
+blocking.
+</p></div><dl class="paramcmts block"><dt class="param">props</dt><dd class="cmt"><p>actor ref configuration object.</p></dd><dt class="param">actorRefFactory</dt><dd class="cmt"><p><a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a>
+       ref factory.</p></dd><dt>returns</dt><dd class="cmt"><p>a processor ref.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">InvalidActorNameException<p>if <code>name</code> is defined and already in use
+        in the underlying actor system.</p></span><span class="cmt">InvalidProcessorIdException<p>if processor id &lt; 1.
+</p></span></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#processorOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="processorOf(props:akka.actor.Props,name:Option[String])(implicitactorRefFactory:akka.actor.ActorRefFactory):akka.actor.ActorRef"></a>
       <a id="processorOf(Props,Option[String])(ActorRefFactory):ActorRef"></a>
       <h4 class="signature">
@@ -478,7 +658,7 @@ the channel name.
       <p class="shortcomment cmt">Registers an <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processor.</p><div class="fullcomment"><div class="comment cmt"><p>Registers an <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processor.</p><p>This method obtains the id from the created processor with a blocking operation.
 Use the overloaded <code>processorOf(ProcessorProps)</code> method if you want to avoid
 blocking.
-</p></div><dl class="paramcmts block"><dt class="param">props</dt><dd class="cmt"><p>actor ref configuration object.</p></dd><dt class="param">name</dt><dd class="cmt"><p>optional processor name.</p></dd><dt class="param">actorRefFactory</dt><dd class="cmt"><p><a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a>
+</p></div><dl class="paramcmts block"><dt class="param">props</dt><dd class="cmt"><p>actor ref configuration object.</p></dd><dt class="param">name</dt><dd class="cmt"><p>optional processor name. If <code>None</code>, a name is generated.</p></dd><dt class="param">actorRefFactory</dt><dd class="cmt"><p><a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a>
        ref factory.</p></dd><dt>returns</dt><dd class="cmt"><p>a processor ref.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">InvalidActorNameException<p>if <code>name</code> is defined and already in use
         in the underlying actor system.</p></span><span class="cmt">InvalidProcessorIdException<p>if processor id &lt; 1.
 </p></span></dd></dl></div>
@@ -514,6 +694,25 @@ blocking.
       <p class="shortcomment cmt">Map of registered <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processors.</p><div class="fullcomment"><div class="comment cmt"><p>Map of registered <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">org.eligosource.eventsourced.core.Eventsourced</a> processors.
 Mapping key is the processor id.
 </p></div></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#recover" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="recover(params:java.util.List[org.eligosource.eventsourced.core.ReplayParams],waitAtMost:scala.concurrent.duration.FiniteDuration):Unit"></a>
+      <a id="recover(List[ReplayParams],FiniteDuration):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">recover</span><span class="params">(<span name="params">params: <span class="extype" name="java.util.List">List</span>[<a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a>]</span>, <span name="waitAtMost">waitAtMost: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Recovers specified processors and all channels registered at this extension where</p><ul><li>processor recovery is done by calling <code>replay(params)</code></li><li>channel activation is done by calling <code>deliver()</code></li></ul><p>Channel activation is only started after processor recovery successfully completed.</p><p>This method waits for replayed messages being sent to specified processors (via <code>!</code>)
+and all channels being activated but does not wait for replayed input messages being
+processed. However, any new message sent to any of the specified processors, after
+this method successfully returned, will be processed after the replayed event messages.</p><p>Clients that want to wait for replayed messages being processed should call the
+<code>awaitProcessing</code> method after this method successfully returned.
+</p></div><dl class="paramcmts block"><dt class="param">params</dt><dd class="cmt"><p>replay parameters passed to <code>replay(params)</code>.</p></dd><dt class="param">waitAtMost</dt><dd class="cmt"><p>wait for the specified duration for the replay to complete.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within the specified duration.
+</p></span></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#recover" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="recover(params:Seq[org.eligosource.eventsourced.core.ReplayParams],waitAtMost:scala.concurrent.duration.FiniteDuration):Unit"></a>
       <a id="recover(Seq[ReplayParams],FiniteDuration):Unit"></a>
@@ -553,6 +752,26 @@ this method successfully returned, will be processed after the replayed event me
 </p></div><dl class="paramcmts block"><dt class="param">params</dt><dd class="cmt"><p>replay parameters passed to <code>replay(params)</code>.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within 1 minute.
 </p></span></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#recover" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="recover():Unit"></a>
+      <a id="recover():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">recover</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Recovers all processors and all channels registered at this extension where</p><div class="fullcomment"><div class="comment cmt"><p>Recovers all processors and all channels registered at this extension where</p><ul><li>processor recovery is done by calling <code>replay(params)</code></li><li>channel activation is done by calling <code>deliver()</code></li></ul><p>Channel activation is only started after processor recovery successfully completed.</p><p>This method waits for replayed messages being sent to all processors (via <code>!</code>)
+and all channels being activated but does not wait for replayed input messages being
+processed. However, any new message sent to any of the processors, after this method
+successfully returned, will be processed after the replayed event messages.</p><p>Clients that want to wait for replayed messages being processed should call the
+<code>awaitProcessing</code> method after this method successfully returned.
+</p></div><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within the specified duration (which
+        defaults to 1 minute).
+</p></span></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#recover" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="recover(waitAtMost:scala.concurrent.duration.FiniteDuration):Unit"></a>
       <a id="recover(FiniteDuration):Unit"></a>
       <h4 class="signature">
@@ -561,7 +780,7 @@ this method successfully returned, will be processed after the replayed event me
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">recover</span><span class="params">(<span name="waitAtMost">waitAtMost: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="symbol">1 minute</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+        <span class="name">recover</span><span class="params">(<span name="waitAtMost">waitAtMost: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       </h4>
       <p class="shortcomment cmt">Recovers all processors and all channels registered at this extension where</p><div class="fullcomment"><div class="comment cmt"><p>Recovers all processors and all channels registered at this extension where</p><ul><li>processor recovery is done by calling <code>replay(params)</code></li><li>channel activation is done by calling <code>deliver()</code></li></ul><p>Channel activation is only started after processor recovery successfully completed.</p><p>This method waits for replayed messages being sent to all processors (via <code>!</code>)
@@ -569,8 +788,27 @@ and all channels being activated but does not wait for replayed input messages b
 processed. However, any new message sent to any of the processors, after this method
 successfully returned, will be processed after the replayed event messages.</p><p>Clients that want to wait for replayed messages being processed should call the
 <code>awaitProcessing</code> method after this method successfully returned.
-</p></div><dl class="paramcmts block"><dt class="param">waitAtMost</dt><dd class="cmt"><p>wait for the specified duration for the replay to complete.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within the specified duration (which
-        defaults to 1 minute).
+</p></div><dl class="paramcmts block"><dt class="param">waitAtMost</dt><dd class="cmt"><p>wait for the specified duration for the replay to complete.</p></dd></dl><dl class="attributes block"> <dt>Exceptions thrown</dt><dd><span class="cmt">TimeoutException<p>if replay doesn't complete within the specified duration.
+</p></span></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#replay" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="replay(params:java.util.List[org.eligosource.eventsourced.core.ReplayParams],timeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
+      <a id="replay(List[ReplayParams],Timeout):Future[Any]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">replay</span><span class="params">(<span name="params">params: <span class="extype" name="java.util.List">List</span>[<a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a>]</span>, <span name="timeout">timeout: <span class="extype" name="akka.util.Timeout">Timeout</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="scala.Any">Any</span>]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Replays input messages to specified processors, optionally based on a snapshot.
+The returned <code>Future</code> will be completed when the replayed messages have been
+sent (via <code>!</code>) to the specified processors. Any new message sent to any of the
+specified processors, after successful completion of the returned <code>Future</code>, will
+be processed after the replayed input messages.</p><p>Clients that want to wait for replayed messages being processed should call the
+<code>awaitProcessing</code> method after the returned <code>Future</code> successfully completed.
+</p></div><dl class="paramcmts block"><dt class="param">params</dt><dd class="cmt"><p>sequence of processor-specific replay parameters.</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">org.eligosource.eventsourced.core.ReplayParams</a>
 </p></span></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#replay" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="replay(params:Seq[org.eligosource.eventsourced.core.ReplayParams])(implicittimeout:akka.util.Timeout):scala.concurrent.Future[Any]"></a>
@@ -605,6 +843,27 @@ be processed after the replayed input messages.</p><p>Clients that want to wait 
       </span>
       </h4>
       <p class="comment cmt">Predefined <code>ReplayParams</code> sequences to be used with methods <code>replay</code> or <code>recover</code>.</p>
+    </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#snapshot" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshot(processorIds:java.util.Set[Integer],timeout:akka.util.Timeout):scala.concurrent.Future[java.util.Set[org.eligosource.eventsourced.core.SnapshotSaved]]"></a>
+      <a id="snapshot(Set[Integer],Timeout):Future[Set[SnapshotSaved]]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshot</span><span class="params">(<span name="processorIds">processorIds: <span class="extype" name="java.util.Set">Set</span>[<span class="extype" name="java.lang.Integer">Integer</span>]</span>, <span name="timeout">timeout: <span class="extype" name="akka.util.Timeout">Timeout</span></span>)</span><span class="result">: <span class="extype" name="scala.concurrent.Future">Future</span>[<span class="extype" name="java.util.Set">Set</span>[<a href="SnapshotSaved.html" class="extype" name="org.eligosource.eventsourced.core.SnapshotSaved">SnapshotSaved</a>]]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Requests a snapshot capturing action from specified processors. These processors
+will receive a <a href="SnapshotRequest.html" class="extype" name="org.eligosource.eventsourced.core.SnapshotRequest">org.eligosource.eventsourced.core.SnapshotRequest</a> message which
+is used to capture a snapshot via that message's <code>process</code> method. Once captured,
+the snapshots will be saved. The future returned by this method will be completed,
+when all snapshots have been saved.</p><p>Calling this method for a single processor is equivalent to sending that
+processor a <code>SnapshotRequest.get</code> message.
+</p></div><dl class="paramcmts block"><dt class="param">processorIds</dt><dd class="cmt"><p>ids of processors for which a snapshot capturing action
+       shall be requested.</p></dd><dt class="param">timeout</dt><dd class="cmt"><p>snapshot capturing and saving timeout.
+</p></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension#snapshot" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="snapshot(processorIds:Set[Int])(implicittimeout:akka.util.Timeout):scala.concurrent.Future[Set[org.eligosource.eventsourced.core.SnapshotSaved]]"></a>
       <a id="snapshot(Set[Int])(Timeout):Future[Set[SnapshotSaved]]"></a>

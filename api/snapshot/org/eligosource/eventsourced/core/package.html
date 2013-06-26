@@ -198,6 +198,20 @@ to <code>destination</code>.</p>
       </span>
       </h4>
       <p class="comment cmt"><a href="DefaultChannel.html" class="extype" name="org.eligosource.eventsourced.core.DefaultChannel">org.eligosource.eventsourced.core.DefaultChannel</a> configuration object.</p>
+    </li><li name="org.eligosource.eventsourced.core.DeliveryStopped" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="DeliveryStoppedextendsProductwithSerializable"></a>
+      <a id="DeliveryStopped:DeliveryStopped"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="DeliveryStopped.html"><span class="name">DeliveryStopped</span></a><span class="params">(<span name="channelId">channelId: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Channel event that is published when a reliable channel (identified by <code>channelId</code>)
+stops event message delivery.</p>
     </li><li name="org.eligosource.eventsourced.core.Emitter" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
       <a id="EmitterextendsReceiver"></a>
       <a id="Emitter:Emitter"></a>
@@ -265,19 +279,6 @@ to <code>destination</code>.</p>
       </span>
       </h4>
       <p class="comment cmt">Thrown when a processor is registered with an id &lt; 1.</p>
-    </li><li name="org.eligosource.eventsourced.core.JournalProps" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
-      <a id="JournalPropsextendsAnyRef"></a>
-      <a id="JournalProps:JournalProps"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">trait</span>
-      </span>
-      <span class="symbol">
-        <a href="JournalProps.html"><span class="name">JournalProps</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
-      </span>
-      </h4>
-      <p class="comment cmt">Journal configuration object.</p>
     </li><li name="org.eligosource.eventsourced.core.Message" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="MessageextendsProductwithSerializable"></a>
       <a id="Message:Message"></a>
@@ -407,8 +408,8 @@ actor's <code>receive</code> method with that <code>event</code>.</p>
       <a id="ReplayParams:ReplayParams"></a>
       <h4 class="signature">
       <span class="modifier_kind">
-        <span class="modifier">sealed </span>
-        <span class="kind">trait</span>
+        <span class="modifier">sealed abstract </span>
+        <span class="kind">class</span>
       </span>
       <span class="symbol">
         <a href="ReplayParams.html"><span class="name">ReplayParams</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
@@ -507,6 +508,123 @@ processor.</p>
       </span>
       </h4>
       <p class="comment cmt">Success reply to a snapshot capturing request.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedActorSupport" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedActorSupportextendsActor"></a>
+      <a id="UntypedActorSupport:UntypedActorSupport"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedActorSupport.html"><span class="name">UntypedActorSupport</span></a><span class="result"> extends <span class="extype" name="akka.actor.Actor">Actor</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedConfirmingActor" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedConfirmingActorextendsUntypedActorSupportwithConfirm"></a>
+      <a id="UntypedConfirmingActor:UntypedConfirmingActor"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedConfirmingActor.html"><span class="name">UntypedConfirmingActor</span></a><span class="result"> extends <a href="UntypedActorSupport.html" class="extype" name="org.eligosource.eventsourced.core.UntypedActorSupport">UntypedActorSupport</a> with <a href="Confirm.html" class="extype" name="org.eligosource.eventsourced.core.Confirm">Confirm</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedConfirmingReceiver" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedConfirmingReceiverextendsUntypedReceiverwithConfirm"></a>
+      <a id="UntypedConfirmingReceiver:UntypedConfirmingReceiver"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedConfirmingReceiver.html"><span class="name">UntypedConfirmingReceiver</span></a><span class="result"> extends <a href="UntypedReceiver.html" class="extype" name="org.eligosource.eventsourced.core.UntypedReceiver">UntypedReceiver</a> with <a href="Confirm.html" class="extype" name="org.eligosource.eventsourced.core.Confirm">Confirm</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedEmitter" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedEmitterextendsUntypedActorSupportwithEmitter"></a>
+      <a id="UntypedEmitter:UntypedEmitter"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedEmitter.html"><span class="name">UntypedEmitter</span></a><span class="result"> extends <a href="UntypedActorSupport.html" class="extype" name="org.eligosource.eventsourced.core.UntypedActorSupport">UntypedActorSupport</a> with <a href="Emitter.html" class="extype" name="org.eligosource.eventsourced.core.Emitter">Emitter</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedEventsourcedActor" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedEventsourcedActorextendsUntypedActorSupportwithEventsourced"></a>
+      <a id="UntypedEventsourcedActor:UntypedEventsourcedActor"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedEventsourcedActor.html"><span class="name">UntypedEventsourcedActor</span></a><span class="result"> extends <a href="UntypedActorSupport.html" class="extype" name="org.eligosource.eventsourced.core.UntypedActorSupport">UntypedActorSupport</a> with <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">Eventsourced</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedEventsourcedConfirmingReceiver" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedEventsourcedConfirmingReceiverextendsUntypedConfirmingReceiverwithEventsourced"></a>
+      <a id="UntypedEventsourcedConfirmingReceiver:UntypedEventsourcedConfirmingReceiver"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedEventsourcedConfirmingReceiver.html"><span class="name">UntypedEventsourcedConfirmingReceiver</span></a><span class="result"> extends <a href="UntypedConfirmingReceiver.html" class="extype" name="org.eligosource.eventsourced.core.UntypedConfirmingReceiver">UntypedConfirmingReceiver</a> with <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">Eventsourced</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedEventsourcedEmitter" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedEventsourcedEmitterextendsUntypedEmitterwithEventsourced"></a>
+      <a id="UntypedEventsourcedEmitter:UntypedEventsourcedEmitter"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedEventsourcedEmitter.html"><span class="name">UntypedEventsourcedEmitter</span></a><span class="result"> extends <a href="UntypedEmitter.html" class="extype" name="org.eligosource.eventsourced.core.UntypedEmitter">UntypedEmitter</a> with <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">Eventsourced</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedEventsourcedReceiver" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedEventsourcedReceiverextendsUntypedReceiverwithEventsourced"></a>
+      <a id="UntypedEventsourcedReceiver:UntypedEventsourcedReceiver"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedEventsourcedReceiver.html"><span class="name">UntypedEventsourcedReceiver</span></a><span class="result"> extends <a href="UntypedReceiver.html" class="extype" name="org.eligosource.eventsourced.core.UntypedReceiver">UntypedReceiver</a> with <a href="Eventsourced.html" class="extype" name="org.eligosource.eventsourced.core.Eventsourced">Eventsourced</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.core.UntypedReceiver" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="UntypedReceiverextendsUntypedActorSupportwithReceiver"></a>
+      <a id="UntypedReceiver:UntypedReceiver"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a href="UntypedReceiver.html"><span class="name">UntypedReceiver</span></a><span class="result"> extends <a href="UntypedActorSupport.html" class="extype" name="org.eligosource.eventsourced.core.UntypedActorSupport">UntypedActorSupport</a> with <a href="Receiver.html" class="extype" name="org.eligosource.eventsourced.core.Receiver">Receiver</a></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Java API.</p>
     </li></ol>
             </div>
 
@@ -514,19 +632,32 @@ processor.</p>
 
         <div id="values" class="values members">
               <h3>Value Members</h3>
-              <ol><li name="org.eligosource.eventsourced.core.Channel" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Channel"></a>
-      <a id="Channel:Channel"></a>
+              <ol><li name="org.eligosource.eventsourced.core.DefaultChannelProps" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="DefaultChannelProps"></a>
+      <a id="DefaultChannelProps:DefaultChannelProps"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">object</span>
       </span>
       <span class="symbol">
-        <a href="Channel$.html"><span class="name">Channel</span></a>
+        <a href="DefaultChannelProps$.html"><span class="name">DefaultChannelProps</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
+    </li><li name="org.eligosource.eventsourced.core.Deliver" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Deliver"></a>
+      <a id="Deliver:Deliver"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="Deliver$.html"><span class="name">Deliver</span></a><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      <p class="comment cmt">Channel command for starting delivery of pending event messages.</p>
     </li><li name="org.eligosource.eventsourced.core.EventsourcingExtension" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="EventsourcingExtension"></a>
       <a id="EventsourcingExtension:EventsourcingExtension"></a>
@@ -552,7 +683,46 @@ processor.</p>
         <a href="Journal$.html"><span class="name">Journal</span></a>
       </span>
       </h4>
+      <p class="comment cmt">Only exists for backwards compatibility.</p>
+    </li><li name="org.eligosource.eventsourced.core.JournalProtocol" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="JournalProtocol"></a>
+      <a id="JournalProtocol:JournalProtocol"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="JournalProtocol$.html"><span class="name">JournalProtocol</span></a>
+      </span>
+      </h4>
       <p class="comment cmt">Defines message types that can be processed by a journal actor.</p>
+    </li><li name="org.eligosource.eventsourced.core.Message" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Message"></a>
+      <a id="Message:Message"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="Message$.html"><span class="name">Message</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      
+    </li><li name="org.eligosource.eventsourced.core.ProcessorProps" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ProcessorProps"></a>
+      <a id="ProcessorProps:ProcessorProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="ProcessorProps$.html"><span class="name">ProcessorProps</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      
     </li><li name="org.eligosource.eventsourced.core.RedeliveryPolicy" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="RedeliveryPolicy"></a>
       <a id="RedeliveryPolicy:RedeliveryPolicy"></a>
@@ -563,6 +733,19 @@ processor.</p>
       </span>
       <span class="symbol">
         <a href="RedeliveryPolicy$.html"><span class="name">RedeliveryPolicy</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4>
+      
+    </li><li name="org.eligosource.eventsourced.core.ReliableChannelProps" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ReliableChannelProps"></a>
+      <a id="ReliableChannelProps:ReliableChannelProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="ReliableChannelProps$.html"><span class="name">ReliableChannelProps</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       

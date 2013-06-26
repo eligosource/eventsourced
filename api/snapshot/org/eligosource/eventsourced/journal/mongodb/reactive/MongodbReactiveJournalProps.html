@@ -40,7 +40,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">MongodbReactiveJournalProps</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="authentications">authentications: <span class="extype" name="scala.List">List</span>[<span class="extype" name="reactivemongo.core.actors.Authenticate">Authenticate</span>] = <span class="symbol">immutable.this.List.empty[Nothing]</span></span>, <span name="nbChannelsPerNode">nbChannelsPerNode: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">10</span></span>, <span name="mongoDBSystemName">mongoDBSystemName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultDatabaseName">...</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultCollectionName">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="initTimeout">initTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(30).seconds">...</span></span>, <span name="replayChunkSize">replayChunkSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">16.*(100)</span></span>)</span><span class="result"> extends <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">MongodbReactiveJournalProps</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="authentications">authentications: <span class="extype" name="scala.List">List</span>[<span class="extype" name="reactivemongo.core.actors.Authenticate">Authenticate</span>] = <span class="symbol">immutable.this.List.empty[Nothing]</span></span>, <span name="nbChannelsPerNode">nbChannelsPerNode: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">10</span></span>, <span name="mongoDBSystemName">mongoDBSystemName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultDatabaseName">...</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultCollectionName">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="initTimeout">initTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(30).seconds">...</span></span>, <span name="replayChunkSize">replayChunkSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">16.*(100)</span></span>)</span><span class="result"> extends <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
@@ -55,7 +55,7 @@
        the highest stored sequence number is loaded from the event message table.</p></dd><dt class="param">replayChunkSize</dt><dd class="cmt"><p>Maximum number of event messages to keep in memory during replay.
 </p></dd></dl><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -73,7 +73,7 @@
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"><span>MongodbReactiveJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.core.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"><span>MongodbReactiveJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -237,6 +237,33 @@
       </span>
       </h4>
       <p class="shortcomment cmt">Optional mongoDB collection name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional mongoDB collection name. Defaults to {@see DefaultCollectionName}</p></div></div>
+    </li><li name="org.eligosource.eventsourced.journal.common.JournalProps#createJournal" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="createJournal(implicitactorRefFactory:akka.actor.ActorRefFactory):akka.actor.ActorRef"></a>
+      <a id="createJournal(ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createJournal</span><span class="params">(<span class="implicit">implicit </span><span name="actorRefFactory">actorRefFactory: <span class="extype" name="akka.actor.ActorRefFactory">ActorRefFactory</span></span>)</span><span class="result">: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Creates and starts a new journal using the settings of this configuration object.</p><div class="fullcomment"><div class="comment cmt"><p>Creates and starts a new journal using the settings of this configuration object.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#createJournalActor" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="createJournalActor:akka.actor.Actor"></a>
+      <a id="createJournalActor:Actor"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createJournalActor</span><span class="result">: <span class="extype" name="akka.actor.Actor">Actor</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Returns a new <code>MongodbRactiveJournal</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Returns a new <code>MongodbRactiveJournal</code>.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#dbName" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="dbName:String"></a>
       <a id="dbName:String"></a>
@@ -262,7 +289,7 @@
         <span class="name">dispatcherName</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Optional journal actor dispatcher name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor dispatcher name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
+      <p class="shortcomment cmt">Optional journal actor dispatcher name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor dispatcher name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>
@@ -332,19 +359,6 @@
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#journal" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="journal:akka.actor.Actor"></a>
-      <a id="journal:Actor"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">journal</span><span class="result">: <span class="extype" name="akka.actor.Actor">Actor</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Returns a new <code>MongodbRactiveJournal</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Returns a new <code>MongodbRactiveJournal</code>.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#mongoDBSystemName" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="mongoDBSystemName:Option[String]"></a>
       <a id="mongoDBSystemName:Option[String]"></a>
@@ -370,7 +384,7 @@
         <span class="name">name</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Optional journal actor name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
+      <p class="shortcomment cmt">Optional journal actor name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#nbChannelsPerNode" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="nbChannelsPerNode:Int"></a>
       <a id="nbChannelsPerNode:Int"></a>
@@ -644,8 +658,8 @@
               <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
             </div><div class="parent" name="scala.Equals">
               <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
-            </div><div class="parent" name="org.eligosource.eventsourced.core.JournalProps">
-              <h3>Inherited from <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></h3>
+            </div><div class="parent" name="org.eligosource.eventsourced.journal.common.JournalProps">
+              <h3>Inherited from <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">

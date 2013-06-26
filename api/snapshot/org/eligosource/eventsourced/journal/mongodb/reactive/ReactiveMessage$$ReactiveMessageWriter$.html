@@ -40,13 +40,13 @@
         <span class="kind">object</span>
       </span>
       <span class="symbol">
-        <span class="name">ReactiveMessageWriter</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.handlers.BSONWriter">BSONWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</span>
+        <span class="name">ReactiveMessageWriter</span><span class="result"> extends <span class="extype" name="reactivemongo.bson.BSONDocumentWriter">BSONDocumentWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</span>
       </span>
       </h4>
       
           <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
-          <div class="superTypes hiddenContent"><span class="extype" name="reactivemongo.bson.handlers.BSONWriter">BSONWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>], <span class="extype" name="reactivemongo.bson.handlers.RawBSONWriter">RawBSONWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>], <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="reactivemongo.bson.BSONDocumentWriter">BSONDocumentWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>], <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>, <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>], <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -64,7 +64,7 @@
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageWriter"><span>ReactiveMessageWriter</span></li><li class="in" name="reactivemongo.bson.handlers.BSONWriter"><span>BSONWriter</span></li><li class="in" name="reactivemongo.bson.handlers.RawBSONWriter"><span>RawBSONWriter</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageWriter"><span>ReactiveMessageWriter</span></li><li class="in" name="reactivemongo.bson.BSONDocumentWriter"><span>BSONDocumentWriter</span></li><li class="in" name="reactivemongo.bson.BSONWriter"><span>BSONWriter</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -317,19 +317,6 @@
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageWriter#toBSON" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="toBSON(reactiveMsg:org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage):reactivemongo.bson.AppendableBSONDocument"></a>
-      <a id="toBSON(ReactiveMessage):AppendableBSONDocument"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">toBSON</span><span class="params">(<span name="reactiveMsg">reactiveMsg: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>)</span><span class="result">: <span class="extype" name="reactivemongo.bson.AppendableBSONDocument">AppendableBSONDocument</span></span>
-      </span>
-      </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageWriter">ReactiveMessageWriter</a> → BSONWriter</dd></dl></div>
     </li><li name="scala.AnyRef#toString" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="toString():String"></a>
       <a id="toString():String"></a>
@@ -391,19 +378,45 @@
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="reactivemongo.bson.handlers.BSONWriter#write" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="write(document:DocumentType):org.jboss.netty.buffer.ChannelBuffer"></a>
-      <a id="write(ReactiveMessage):ChannelBuffer"></a>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageWriter#write" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="write(reactiveMsg:org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage):reactivemongo.bson.BSONDocument"></a>
+      <a id="write(ReactiveMessage):BSONDocument"></a>
       <h4 class="signature">
       <span class="modifier_kind">
-        <span class="modifier">final </span>
+        <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">write</span><span class="params">(<span name="document">document: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>)</span><span class="result">: <span class="extype" name="org.jboss.netty.buffer.ChannelBuffer">ChannelBuffer</span></span>
+        <span class="name">write</span><span class="params">(<span name="reactiveMsg">reactiveMsg: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>)</span><span class="result">: <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span></span>
       </span>
       </h4>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BSONWriter → RawBSONWriter</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage.ReactiveMessageWriter">ReactiveMessageWriter</a> → BSONWriter</dd></dl></div>
+    </li><li name="reactivemongo.bson.BSONWriter#writeOpt" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="writeOpt(t:&lt;?&gt;):Option[B]"></a>
+      <a id="writeOpt(ReactiveMessage):Option[BSONDocument]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">writeOpt</span><span class="params">(<span name="t">t: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>)</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BSONWriter</dd></dl></div>
+    </li><li name="reactivemongo.bson.BSONWriter#writeTry" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="writeTry(t:&lt;?&gt;):scala.util.Try[B]"></a>
+      <a id="writeTry(ReactiveMessage):Try[BSONDocument]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">writeTry</span><span class="params">(<span name="t">t: <a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a></span>)</span><span class="result">: <span class="extype" name="scala.util.Try">Try</span>[<span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BSONWriter</dd></dl></div>
     </li></ol>
             </div>
 
@@ -413,10 +426,10 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="reactivemongo.bson.handlers.BSONWriter">
-              <h3>Inherited from <span class="extype" name="reactivemongo.bson.handlers.BSONWriter">BSONWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</h3>
-            </div><div class="parent" name="reactivemongo.bson.handlers.RawBSONWriter">
-              <h3>Inherited from <span class="extype" name="reactivemongo.bson.handlers.RawBSONWriter">RawBSONWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</h3>
+        <div class="parent" name="reactivemongo.bson.BSONDocumentWriter">
+              <h3>Inherited from <span class="extype" name="reactivemongo.bson.BSONDocumentWriter">BSONDocumentWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>]</h3>
+            </div><div class="parent" name="reactivemongo.bson.BSONWriter">
+              <h3>Inherited from <span class="extype" name="reactivemongo.bson.BSONWriter">BSONWriter</span>[<a href="ReactiveMessage.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.ReactiveMessage">ReactiveMessage</a>, <span class="extype" name="reactivemongo.bson.BSONDocument">BSONDocument</span>]</h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">

@@ -29,9 +29,9 @@
         </head>
         <body class="type">
       <div id="definition">
-        <img src="../../../../../../lib/class_big.png" />
+        <a href="MongodbCasbahJournalProps$.html" title="Go to companion"><img src="../../../../../../lib/class_to_object_big.png" /></a>
         <p id="owner"><a href="../../../../../package.html" class="extype" name="org">org</a>.<a href="../../../../package.html" class="extype" name="org.eligosource">eligosource</a>.<a href="../../../package.html" class="extype" name="org.eligosource.eventsourced">eventsourced</a>.<a href="../../package.html" class="extype" name="org.eligosource.eventsourced.journal">journal</a>.<a href="../package.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb">mongodb</a>.<a href="package.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah">casbah</a></p>
-        <h1>MongodbCasbahJournalProps</h1>
+        <h1><a href="MongodbCasbahJournalProps$.html" title="Go to companion">MongodbCasbahJournalProps</a></h1>
       </div>
 
       <h4 id="signature" class="signature">
@@ -40,7 +40,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">MongodbCasbahJournalProps</span><span class="params">(<span name="mongoClient">mongoClient: <span class="extype" name="com.mongodb.casbah.TypeImports.MongoClient">com.mongodb.casbah.Imports.MongoClient</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>)</span><span class="result"> extends <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">MongodbCasbahJournalProps</span><span class="params">(<span name="mongoClient">mongoClient: <span class="extype" name="com.mongodb.casbah.TypeImports.MongoClient">com.mongodb.casbah.Imports.MongoClient</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="snapshotPath">snapshotPath: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span> = <span class="defval" name="new org.apache.hadoop.fs.Path(&quot;snapshots&quot;)">...</span></span>, <span name="snapshotSerializer">snapshotSerializer: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a> = <span class="defval" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer.java">...</span></span>, <span name="snapshotLoadTimeout">snapshotLoadTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotFilesystem">snapshotFilesystem: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span> = <span class="defval" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>)</span><span class="result"> extends <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a> with <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a>[<a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
@@ -54,7 +54,7 @@
 <span class="kw">val</span> journal: ActorRef = Journal(MongodbCasbahJournalProps(journalConn))</pre></div><dl class="paramcmts block"><dt class="param">mongoClient</dt><dd class="cmt"><p>Required mongoDB/Casbah client.</p></dd><dt class="param">dbName</dt><dd class="cmt"><p>Required mongoDB database name.</p></dd><dt class="param">collName</dt><dd class="cmt"><p>Required mongoDB collection name.</p></dd><dt class="param">name</dt><dd class="cmt"><p>Optional journal actor name.</p></dd><dt class="param">dispatcherName</dt><dd class="cmt"><p>Optional journal actor dispatcher name.
 </p></dd></dl><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a>[<a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a>], <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -72,7 +72,7 @@
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"><span>MongodbCasbahJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.core.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"><span>MongodbCasbahJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps"><span>HadoopFilesystemSnapshottingProps</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -93,7 +93,7 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="&lt;init&gt;(mongoClient:com.mongodb.casbah.Imports.MongoClient,dbName:String,collName:String,name:Option[String],dispatcherName:Option[String]):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
+      <a id="&lt;init&gt;(mongoClient:com.mongodb.casbah.Imports.MongoClient,dbName:String,collName:String,snapshotPath:org.apache.hadoop.fs.Path,snapshotSerializer:org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer,snapshotLoadTimeout:scala.concurrent.duration.FiniteDuration,snapshotSaveTimeout:scala.concurrent.duration.FiniteDuration,snapshotFilesystem:org.apache.hadoop.fs.FileSystem,name:Option[String],dispatcherName:Option[String]):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
       <a id="&lt;init&gt;:MongodbCasbahJournalProps"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -101,7 +101,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">MongodbCasbahJournalProps</span><span class="params">(<span name="mongoClient">mongoClient: <span class="extype" name="com.mongodb.casbah.TypeImports.MongoClient">com.mongodb.casbah.Imports.MongoClient</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>)</span>
+        <span class="name">MongodbCasbahJournalProps</span><span class="params">(<span name="mongoClient">mongoClient: <span class="extype" name="com.mongodb.casbah.TypeImports.MongoClient">com.mongodb.casbah.Imports.MongoClient</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="snapshotPath">snapshotPath: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span> = <span class="defval" name="new org.apache.hadoop.fs.Path(&quot;snapshots&quot;)">...</span></span>, <span name="snapshotSerializer">snapshotSerializer: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a> = <span class="defval" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer.java">...</span></span>, <span name="snapshotLoadTimeout">snapshotLoadTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotFilesystem">snapshotFilesystem: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span> = <span class="defval" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>)</span>
       </span>
       </h4>
       <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="paramcmts block"><dt class="param">mongoClient</dt><dd class="cmt"><p>Required mongoDB/Casbah client.</p></dd><dt class="param">dbName</dt><dd class="cmt"><p>Required mongoDB database name.</p></dd><dt class="param">collName</dt><dd class="cmt"><p>Required mongoDB collection name.</p></dd><dt class="param">name</dt><dd class="cmt"><p>Optional journal actor name.</p></dd><dt class="param">dispatcherName</dt><dd class="cmt"><p>Optional journal actor dispatcher name.
@@ -222,6 +222,34 @@
       </span>
       </h4>
       <p class="shortcomment cmt">Required mongoDB collection name.</p>
+    </li><li name="org.eligosource.eventsourced.journal.common.JournalProps#createJournal" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="createJournal(implicitactorRefFactory:akka.actor.ActorRefFactory):akka.actor.ActorRef"></a>
+      <a id="createJournal(ActorRefFactory):ActorRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createJournal</span><span class="params">(<span class="implicit">implicit </span><span name="actorRefFactory">actorRefFactory: <span class="extype" name="akka.actor.ActorRefFactory">ActorRefFactory</span></span>)</span><span class="result">: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Creates and starts a new journal using the settings of this configuration object.</p><div class="fullcomment"><div class="comment cmt"><p>Creates and starts a new journal using the settings of this configuration object.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#createJournalActor" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="createJournalActor:akka.actor.Actor"></a>
+      <a id="createJournalActor:Actor"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createJournalActor</span><span class="result">: <span class="extype" name="akka.actor.Actor">Actor</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Creates a journal actor instance.</p><div class="fullcomment"><div class="comment cmt"><p>Creates a journal actor instance.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#dbName" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="dbName:String"></a>
       <a id="dbName:String"></a>
@@ -248,7 +276,7 @@
       </span>
       </h4>
       <p class="shortcomment cmt">Optional journal actor dispatcher name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor dispatcher name.
-</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>
@@ -304,20 +332,6 @@
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#journal" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="journal:akka.actor.Actor"></a>
-      <a id="journal:Actor"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">journal</span><span class="result">: <span class="extype" name="akka.actor.Actor">Actor</span></span>
-      </span>
-      </h4>
-      <p class="shortcomment cmt">Creates a journal actor instance.</p><div class="fullcomment"><div class="comment cmt"><p>Creates a journal actor instance.
-</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#mongoClient" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="mongoClient:com.mongodb.casbah.Imports.MongoClient"></a>
       <a id="mongoClient:com.mongodb.casbah.Imports.MongoClient"></a>
@@ -343,7 +357,7 @@
         <span class="name">name</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Optional journal actor name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></dd></dl></div>
+      <p class="shortcomment cmt">Optional journal actor name.</p><div class="fullcomment"><div class="comment cmt"><p>Optional journal actor name.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a>
       <a id="ne(AnyRef):Boolean"></a>
@@ -383,6 +397,77 @@
       </span>
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#snapshotFilesystem" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotFilesystem:org.apache.hadoop.fs.FileSystem"></a>
+      <a id="snapshotFilesystem:FileSystem"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotFilesystem</span><span class="result">: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Hadoop filesystem for storing snapshots.</p><div class="fullcomment"><div class="comment cmt"><p>Hadoop filesystem for storing snapshots.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#snapshotLoadTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotLoadTimeout:scala.concurrent.duration.FiniteDuration"></a>
+      <a id="snapshotLoadTimeout:FiniteDuration"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotLoadTimeout</span><span class="result">: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Timeout for loading a snapshot.</p><div class="fullcomment"><div class="comment cmt"><p>Timeout for loading a snapshot.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#snapshotPath" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotPath:org.apache.hadoop.fs.Path"></a>
+      <a id="snapshotPath:Path"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotPath</span><span class="result">: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Path where snapshots are stored on <code>snapshotFilesystem</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Path where snapshots are stored on <code>snapshotFilesystem</code>. A relative path is relative to
+<code>snapshotFilesystem</code>'s working directory.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#snapshotSaveTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotSaveTimeout:scala.concurrent.duration.FiniteDuration"></a>
+      <a id="snapshotSaveTimeout:FiniteDuration"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotSaveTimeout</span><span class="result">: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Timeout for saving a snapshot.</p><div class="fullcomment"><div class="comment cmt"><p>Timeout for saving a snapshot.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#snapshotSerializer" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotSerializer:org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer"></a>
+      <a id="snapshotSerializer:SnapshotSerializer"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotSerializer</span><span class="result">: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Serializer for writing and reading snapshots.</p><div class="fullcomment"><div class="comment cmt"><p>Serializer for writing and reading snapshots.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a>
       <a id="synchronized[T0](⇒T0):T0"></a>
@@ -444,7 +529,7 @@
                 <span class="name">@throws</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withDispatcherName" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withDispatcherName" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="withDispatcherName(dispatcherName:String):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
       <a id="withDispatcherName(String):MongodbCasbahJournalProps"></a>
       <h4 class="signature">
@@ -456,8 +541,9 @@
         <span class="name">withDispatcherName</span><span class="params">(<span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Returns a new <code>MongodbCasbahJournalProps</code> with specified journal actor dispatcher name.</p>
-    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withName" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Returns a new <code>MongodbCasbahJournalProps</code> with specified journal actor dispatcher name.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withName" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="withName(name:String):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
       <a id="withName(String):MongodbCasbahJournalProps"></a>
       <h4 class="signature">
@@ -469,7 +555,77 @@
         <span class="name">withName</span><span class="params">(<span name="name">name: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Returns a new <code>MongodbCasbahJournalProps</code> with specified journal actor name.</p>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p><p>Returns a new <code>MongodbCasbahJournalProps</code> with specified journal actor name.
+</p></div></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withSnapshotFilesystem" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotFilesystem(snapshotFilesystem:org.apache.hadoop.fs.FileSystem):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
+      <a id="withSnapshotFilesystem(FileSystem):MongodbCasbahJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotFilesystem</span><span class="params">(<span name="snapshotFilesystem">snapshotFilesystem: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withSnapshotLoadTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotLoadTimeout(snapshotLoadTimeout:scala.concurrent.duration.FiniteDuration):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
+      <a id="withSnapshotLoadTimeout(FiniteDuration):MongodbCasbahJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotLoadTimeout</span><span class="params">(<span name="snapshotLoadTimeout">snapshotLoadTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withSnapshotPath" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="withSnapshotPath(snapshotPath:org.apache.hadoop.fs.Path):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
+      <a id="withSnapshotPath(Path):MongodbCasbahJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotPath</span><span class="params">(<span name="snapshotPath">snapshotPath: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withSnapshotSaveTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotSaveTimeout(snapshotSaveTimeout:scala.concurrent.duration.FiniteDuration):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
+      <a id="withSnapshotSaveTimeout(FiniteDuration):MongodbCasbahJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotSaveTimeout</span><span class="params">(<span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps#withSnapshotSerializer" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotSerializer(snapshotSerializer:org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer):org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps"></a>
+      <a id="withSnapshotSerializer(SnapshotSerializer):MongodbCasbahJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotSerializer</span><span class="params">(<span name="snapshotSerializer">snapshotSerializer: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
     </li></ol>
             </div>
 
@@ -487,8 +643,10 @@
               <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
             </div><div class="parent" name="scala.Equals">
               <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
-            </div><div class="parent" name="org.eligosource.eventsourced.core.JournalProps">
-              <h3>Inherited from <a href="../../../core/JournalProps.html" class="extype" name="org.eligosource.eventsourced.core.JournalProps">JournalProps</a></h3>
+            </div><div class="parent" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">
+              <h3>Inherited from <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a>[<a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps">MongodbCasbahJournalProps</a>]</h3>
+            </div><div class="parent" name="org.eligosource.eventsourced.journal.common.JournalProps">
+              <h3>Inherited from <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">
