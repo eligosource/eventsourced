@@ -470,7 +470,7 @@ The [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#or
 
     public class MyActor extends UntypedEventsourcedConfirmingReceiver
 
-The Eventsourced Java API provides some predefined combinations of stackable traits as abstract base classes. For example, [`UntypedEventsourcedConfirmingReceiver`]((http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.UntypedEventsourcedConfirmingReceiver)) is defined as
+The Eventsourced Java API provides some predefined combinations of stackable traits as abstract base classes. For example, [`UntypedEventsourcedConfirmingReceiver`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.UntypedEventsourcedConfirmingReceiver) is defined as
 
     abstract class UntypedEventsourcedReceiver extends UntypedActor with Receiver with Confirm with Eventsourced
 
