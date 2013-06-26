@@ -15,13 +15,14 @@
  */
 package org.eligosource.eventsourced.journal.mongodb.reactive
 
-import reactivemongo.api.{DB, MongoConnection}
+import reactivemongo.api.{DB, MongoConnection, MongoDriver}
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 object MongodbReactiveFixtureSupport {
-  val connection = MongoConnection(List("localhost:34567"))
+  val driver = new MongoDriver
+  val connection = driver.connection(List("localhost:34567"))
 }
 
 trait MongodbReactiveFixtureSupport {

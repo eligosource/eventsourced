@@ -28,7 +28,7 @@ import de.flapdoodle.embed.process.runtime.Network
 */
 trait MongodbReactiveSpecSupport extends BeforeAndAfterAll { this: Suite =>
 
-  val mongoVer = Version.V2_4_0_RC3
+  val mongoVer = Version.V2_4_3
   val mongoLocalHostName = Network.getLocalHost.getCanonicalHostName
   val mongoLocalHostIPV6 = Network.localhostIsIPv6()
   val mongoDefaultPort = 34567

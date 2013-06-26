@@ -15,29 +15,31 @@
  */
 package org.eligosource.eventsourced.journal.mongodb.reactive
 
-import de.flapdoodle.embed.mongo.distribution.Version
 import de.flapdoodle.embed.mongo.{Command, MongodProcess, MongodExecutable, MongodStarter}
+import de.flapdoodle.embed.mongo.config.{MongodConfig, RuntimeConfigBuilder}
+import de.flapdoodle.embed.mongo.distribution.Version
+import de.flapdoodle.embed.process.config.io.ProcessOutput
+import de.flapdoodle.embed.process.io.{NullProcessor, Processors}
 import de.flapdoodle.embed.process.runtime.Network
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.journal.common.PersistentJournalSpec
+
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
-import reactivemongo.api.{DB, MongoConnection}
+import reactivemongo.api.{DB, MongoConnection, MongoDriver}
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
-import de.flapdoodle.embed.process.config.io.ProcessOutput
-import de.flapdoodle.embed.process.io.{NullProcessor, Processors}
-import de.flapdoodle.embed.mongo.config.{MongodConfig, RuntimeConfigBuilder}
+
 
 class MongodbReactiveJournalSpec extends PersistentJournalSpec with BeforeAndAfterEach with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val duration = 10 seconds
 
-  val mongoVer = Version.V2_4_0_RC3
+  val mongoVer = Version.V2_4_3
   val mongoLocalHostName = Network.getLocalHost.getCanonicalHostName
   val mongoLocalHostIPV6 = Network.localhostIsIPv6()
   val mongoDefaultPort = 54441
@@ -48,7 +50,7 @@ class MongodbReactiveJournalSpec extends PersistentJournalSpec with BeforeAndAft
 
   var connection: MongoConnection = _
 
-  def journalProps = MongodbReactiveJournalProps(List("localhost:54441"))
+  def journalProps = MongodbReactiveJournalProps(List(mongoLocalHostName + ":" + mongoDefaultPort))
 
   override def afterEach() {
     val db = DB(DefaultDatabaseName, connection)
@@ -71,11 +73,13 @@ class MongodbReactiveJournalSpec extends PersistentJournalSpec with BeforeAndAft
     mongoStarter = MongodStarter.getInstance(runtimeConfig)
     mongoExe = mongoStarter.prepare(new MongodConfig(mongoVer, mongoDefaultPort, mongoLocalHostIPV6))
     mongod = mongoExe.start()
-    connection = MongoConnection(List("localhost:54441"))
+
+    val driver = new MongoDriver
+    connection = driver.connection(List(mongoLocalHostName + ":" + mongoDefaultPort))
   }
 
   override def afterAll() = try {
-    connection.close()
+    connection.askClose()
     mongod.stop()
     mongoExe.stop()
   } catch { case _: Throwable => /* ignore */ }
