@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "org.reactivemongo"   %% "reactivemongo"              % "0.9-AKKA-2.2.0-RC1-SNAPSHOT"    % "compile,it"
       exclude("ch.qos.logback", "logback-core")
       exclude("ch.qos.logback", "logback-classic"),
-  "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo"  % "1.33"                           % "compile,it",
+  "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo"  % "1.33"                           % "it",
   "org.slf4j"            % "slf4j-log4j12"              % "1.6.0",
   "org.scalatest"       %% "scalatest"                  % Version.ScalaTest % "it"
 )
