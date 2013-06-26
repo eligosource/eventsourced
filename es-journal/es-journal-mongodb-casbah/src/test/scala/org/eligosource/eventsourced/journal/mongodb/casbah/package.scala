@@ -6,7 +6,7 @@ import de.flapdoodle.embed.process.runtime.Network
 
 package object casbah {
 
-  val mongoVer = Version.V2_4_0_RC3
+  val mongoVer = Version.V2_4_3
   val mongoLocalHostName = Network.getLocalHost.getCanonicalHostName
   val mongoLocalHostIPV6 = Network.localhostIsIPv6()
   val mongoDefaultPort = 12345
