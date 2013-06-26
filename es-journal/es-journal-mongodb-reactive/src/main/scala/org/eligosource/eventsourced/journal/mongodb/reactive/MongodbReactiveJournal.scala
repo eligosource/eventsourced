@@ -25,18 +25,17 @@ import org.eligosource.eventsourced.journal.common.support.AsynchronousWriteRepl
 import org.eligosource.eventsourced.journal.common.util._
 
 import reactivemongo.api._
+import reactivemongo.api.collections.default._
 import reactivemongo.api.indexes._
 import reactivemongo.bson._
-import reactivemongo.bson.handlers._
-import reactivemongo.bson.handlers.DefaultBSONHandlers.DefaultBSONDocumentWriter
-import reactivemongo.bson.handlers.DefaultBSONHandlers.DefaultBSONReaderHandler
+import reactivemongo.core.errors._
 
 import scala.concurrent._
 import scala.Some
 import scala.util._
 import reactivemongo.core.commands.GetLastError
 
-private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJournalProps) extends AsynchronousWriteReplaySupport {
+private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
 
   import context.dispatcher
 
@@ -45,11 +44,10 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
   implicit def msgFromBytes(bytes: Array[Byte]): Message = serialization.deserializeMessage(bytes)
 
-  val log = Logging(context.system, this.getClass)
   val serialization = MessageSerialization(context.system)
 
   var connection: MongoConnection = _
-  var collection: Collection = _
+  var collection: BSONCollection = _
 
   def journalProps = props
 
@@ -59,7 +57,9 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
 
     def executeWriteInMsg(cmd: WriteInMsg): Future[Any] = {
       val rm = ReactiveMessage(key = Key(cmd.processorId, sequenceNr = cmd.message.sequenceNr), msgAsBytes = msgToBytes(cmd.message.clearConfirmationSettings))
-      collection.insert(rm, GetLastError(fsync = true))
+      val future = collection.insert(rm, GetLastError(fsync = true))
+      future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeWriteInMsg] " + e.getMessage) }
+      future
     }
 
     def executeWriteOutMsg(cmd: WriteOutMsg): Future[Any] = {
@@ -68,7 +68,9 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
       val msgFtr = collection.insert(rm, GetLastError(fsync = true))
       val ackFtr = if (cmd.ackSequenceNr != SkipAck) {
         val rm = ReactiveMessage(key = Key(cmd.ackProcessorId, sequenceNr = cmd.ackSequenceNr, confirmingChannelId = cmd.channelId))
-        collection.insert(rm, GetLastError(fsync = true))
+        val future = collection.insert(rm, GetLastError(fsync = true))
+        future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeWriteOutMsg] " + e.getMessage) }
+        future
       } else msgFtr
       val wrtFtr = for { _ <- msgFtr; a <- ackFtr } yield a
       wrtFtr
@@ -76,7 +78,9 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
 
     def executeWriteAck(cmd: WriteAck): Future[Any] = {
       val rm = ReactiveMessage(key = Key(cmd.processorId, sequenceNr = cmd.ackSequenceNr, confirmingChannelId = cmd.channelId))
-      collection.insert(rm, GetLastError(fsync = true))
+      val future = collection.insert(rm, GetLastError(fsync = true))
+      future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeWriteAck] " + e.getMessage) }
+      future
     }
 
     def executeDeleteOutMsg(cmd: DeleteOutMsg): Future[Any] = {
@@ -85,7 +89,9 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
         "initiatingChannelId" -> BSONInteger(cmd.channelId),
         "sequenceNr"          -> BSONLong(cmd.msgSequenceNr),
         "confirmingChannelId" -> BSONInteger(0))
-      collection.remove(qry, GetLastError(fsync = true))
+      val future = collection.remove(qry, GetLastError(fsync = true))
+      future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeDeleteOutMsg] " + e.getMessage) }
+      future
     }
   }
 
@@ -122,7 +128,7 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
             "initiatingChannelId" -> BSONInteger(startKey.initiatingChannelId),
             "sequenceNr"          -> BSONDocument("$gte" -> BSONLong(startKey.sequenceNr), "$lte"  -> BSONLong(stopKey.sequenceNr))),
           "$orderby" -> BSONDocument("sequenceNr" -> BSONLong(1)))
-        collection.find(qry).toList()
+        collection.find(qry).cursor[ReactiveMessage].toList()
       }
 
       def result(startKey: Key, stopKey: Key): Future[List[Message]] = {
@@ -163,8 +169,9 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
 
   def storedCounter = {
     def storedCounter: Future[Long] = {
-      val qb = QueryBuilder().query(BSONDocument()).sort("sequenceNr" -> SortOrder.Descending)
-      collection.find(qb).headOption().map {
+      collection
+        .find(BSONDocument())
+        .sort(BSONDocument("sequenceNr" -> -1)).cursor[ReactiveMessage].headOption().map {
         case Some(doc) => doc.key.sequenceNr
         case None => 0L
       }
@@ -173,24 +180,38 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   }
 
   override def start() {
-    connection = MongoConnection(props.nodes, props.authentications, props.nbChannelsPerNode, props.mongoDBSystemName)
+    val driver = new MongoDriver
+    connection = driver.connection(props.nodes, props.authentications, props.nbChannelsPerNode, props.mongoDBSystemName)
     val db = DB(props.dbName, connection)
-    collection = db(props.collName)
+    collection = db[BSONCollection](props.collName)
 
      // Create unique index as ObjectId is used as "_id".
-    val idx: Index = Index(List(
+    val idx1: Index = Index(List(
       "processorId"         -> IndexType.Ascending,
       "initiatingChannelId" -> IndexType.Ascending,
       "sequenceNr"          -> IndexType.Ascending,
       "confirmingChannelId" -> IndexType.Ascending), unique = true)
 
+    // Create index for replay.fetch
+    val idx2: Index = Index(List(
+      "processorId"         -> IndexType.Ascending,
+      "initiatingChannelId" -> IndexType.Ascending,
+      "sequenceNr"          -> IndexType.Ascending))
+
+    // Create index for storedCounter
+    val idx3: Index = Index(List("sequenceNr" -> IndexType.Ascending))
+
     // Enforce the index.
     val idxs: IndexesManager = new IndexesManager(db)
-    Await.result(idxs.ensure(NSIndex(collection.fullCollectionName, idx)), props.initTimeout)
+    Await.result(idxs.ensure(NSIndex(collection.fullCollectionName, idx1)), props.initTimeout)
+    Await.result(idxs.ensure(NSIndex(collection.fullCollectionName, idx2)), props.initTimeout)
+    Await.result(idxs.ensure(NSIndex(collection.fullCollectionName, idx3)), props.initTimeout)
   }
 
   override def stop() {
-    connection.close()
+    import scala.concurrent.duration._
+    implicit val timeout = 30.seconds
+    connection.askClose()
   }
 }
 
@@ -198,30 +219,24 @@ case class ReactiveMessage(id: BSONObjectID = BSONObjectID.generate, key: Key, m
 
 object ReactiveMessage {
 
-  implicit object ReactiveMessageReader extends BSONReader[ReactiveMessage] {
-    def fromBSON(doc: BSONDocument): ReactiveMessage = {
-      val doct = doc.toTraversable
-      ReactiveMessage(
-        doct.getAs[BSONObjectID]("_id").get,
-        Key(
-          doct.getAs[BSONInteger]("processorId").get.value,
-          doct.getAs[BSONInteger]("initiatingChannelId").get.value,
-          doct.getAs[BSONLong]("sequenceNr").get.value,
-          doct.getAs[BSONInteger]("confirmingChannelId").get.value),
-        doct.getAs[BSONBinary]("message").get.value.array()
-      )
+  implicit object ReactiveMessageReader extends BSONDocumentReader[ReactiveMessage] {
+    def read(doc: BSONDocument): ReactiveMessage = {
+      ReactiveMessage(doc.getAs[BSONObjectID]("_id").get,
+        Key(doc.getAs[Int]("processorId").get,
+          doc.getAs[Int]("initiatingChannelId").get,
+          doc.getAs[Long]("sequenceNr").get,
+          doc.getAs[Int]("confirmingChannelId").get),
+        doc.getAs[BSONBinary]("message").get.value.readArray(doc.getAs[BSONBinary]("message").get.value.readable()))
     }
   }
 
-  implicit object ReactiveMessageWriter extends BSONWriter[ReactiveMessage] {
-    def toBSON(reactiveMsg: ReactiveMessage) = {
-      BSONDocument(
-        "_id"                 -> reactiveMsg.id,
-        "processorId"         -> BSONInteger(reactiveMsg.key.processorId),
-        "initiatingChannelId" -> BSONInteger(reactiveMsg.key.initiatingChannelId),
-        "sequenceNr"          -> BSONLong(reactiveMsg.key.sequenceNr),
-        "confirmingChannelId" -> BSONInteger(reactiveMsg.key.confirmingChannelId),
-        "message"             -> new BSONBinary(reactiveMsg.msgAsBytes, Subtype.GenericBinarySubtype))
-    }
+  implicit object ReactiveMessageWriter extends BSONDocumentWriter[ReactiveMessage] {
+    def write(reactiveMsg: ReactiveMessage) = BSONDocument(
+      "_id"                 -> reactiveMsg.id,
+      "processorId"         -> BSONInteger(reactiveMsg.key.processorId),
+      "initiatingChannelId" -> BSONInteger(reactiveMsg.key.initiatingChannelId),
+      "sequenceNr"          -> BSONLong(reactiveMsg.key.sequenceNr),
+      "confirmingChannelId" -> BSONInteger(reactiveMsg.key.confirmingChannelId),
+      "message"             -> BSONBinary(reactiveMsg.msgAsBytes, Subtype.GenericBinarySubtype))
   }
 }
