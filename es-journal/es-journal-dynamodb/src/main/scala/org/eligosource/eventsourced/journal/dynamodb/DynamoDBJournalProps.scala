@@ -43,7 +43,6 @@ case class DynamoDBJournalProps(
   operationTimeout: Timeout = Timeout(10 seconds),
   replayOperationTimeout: Timeout = Timeout(1 minute),
   counterShards:Int=10000,
-  system: ActorSystem,
   factory: Option[ActorRefFactory] = None,
   dynamoEndpoint:String = "dynamodb.us-east-1.amazonaws.com",
   name: Option[String] = None, dispatcherName: Option[String] = None,
@@ -111,7 +110,7 @@ case class DynamoDBJournalProps(
   def createJournalActor =
     new DynamoDBJournal(this)
 
-  def clientProps =
+  def clientProps(system:ActorSystem) =
     DynamoDBClientProps(key, secret, operationTimeout, system, factory.getOrElse(system), dynamoEndpoint)
 }
 
@@ -119,6 +118,6 @@ object DynamoDBJournalProps {
   /**
    * Java API.
    */
-  def create(journalTable: String, eventSourcedApp: String, key: String, secret: String, system: ActorSystem) =
-    DynamoDBJournalProps(journalTable, eventSourcedApp, key, secret, system = system)
+  def create(journalTable: String, eventSourcedApp: String, key: String, secret: String) =
+    DynamoDBJournalProps(journalTable, eventSourcedApp, key, secret)
 }

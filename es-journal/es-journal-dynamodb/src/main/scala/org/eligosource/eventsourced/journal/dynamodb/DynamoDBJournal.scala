@@ -61,7 +61,7 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
 
   implicit val ctx = context.system.dispatcher
 
-  val dynamo = new DynamoDBClient(props.clientProps)
+  val dynamo = new DynamoDBClient(props.clientProps(context.system))
 
   def snapshotter = new Snapshotter {
     def loadSnapshot(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) =
@@ -304,7 +304,7 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
 
   class DynamoWriter extends Writer {
 
-    val dynamoWriter = new DynamoDBClient(props.clientProps)
+    val dynamoWriter = new DynamoDBClient(props.clientProps(context.system))
 
     def executeDeleteOutMsg(cmd: DeleteOutMsg) = {
       val del: DeleteItemRequest = new DeleteItemRequest().withTableName(props.journalTable).withKey(cmd)
