@@ -30,13 +30,14 @@ import java.nio.ByteBuffer
 import java.util.Collections
 import java.util.{List => JList, Map => JMap, HashMap => JHMap}
 import org.eligosource.eventsourced.core.JournalProtocol._
-import org.eligosource.eventsourced.core.Message
+import org.eligosource.eventsourced.core.{Snapshot, SnapshotMetadata, Message}
 import org.eligosource.eventsourced.journal.common.serialization._
 import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
 import org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport
 import org.eligosource.eventsourced.journal.common.util._
+import scala.util.{Failure, Success}
 
-private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging with HadoopFilesystemSnapshotting {
+private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging with HadoopFilesystemSnapshotting { outer =>
   val serialization = MessageSerialization(context.system)
 
   implicit def msgToBytes(msg: Message): Array[Byte] = serialization.serializeMessage(msg)
@@ -45,7 +46,7 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
 
   val channelMarker = Array(1.toByte)
 
-  log.debug("new Journal")
+  log.debug(s"new Journal $props")
 
 
   def counterAtt(cntr: Long) = S(props.eventSourcedApp + Counter + (cntr % maxCounterShards))
@@ -60,9 +61,18 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
 
   implicit val ctx = context.system.dispatcher
 
-  val dynamo = new DynamoDBClient(props.clientProps)
+  val dynamo = new DynamoDBClient(props.clientProps(context.system))
 
-  def snapshotter = ???
+  def snapshotter = new Snapshotter {
+    def loadSnapshot(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) =
+      outer.loadSnapshot(processorId, snapshotFilter)
+
+    def saveSnapshot(snapshot: Snapshot) =
+      outer.saveSnapshot(snapshot)
+
+    def snapshotSaved(metadata: SnapshotMetadata) =
+      outer.snapshotSaved(metadata)
+  }
 
   def writer = new DynamoWriter
 
@@ -294,7 +304,7 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
 
   class DynamoWriter extends Writer {
 
-    val dynamoWriter = new DynamoDBClient(props.clientProps)
+    val dynamoWriter = new DynamoDBClient(props.clientProps(context.system))
 
     def executeDeleteOutMsg(cmd: DeleteOutMsg) = {
       val del: DeleteItemRequest = new DeleteItemRequest().withTableName(props.journalTable).withKey(cmd)
@@ -365,7 +375,8 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
           val msgs = (cmd.toSequenceNr - cmd.fromSequenceNr).toInt + 1
           log.debug(s"replayingIn from ${from} for up to ${msgs}")
           val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p(_, cmd.target))))
-          Future.sequence(replayer ? ReplayDone :: replayIn(from, msgs, cmd.processorId, replayer).toList)
+          val done = replayer ? ReplayDone
+          Future.sequence(done:: replayIn(from, msgs, cmd.processorId, replayer).toList)
       }
       Future.sequence(replayOps)
     }
@@ -375,7 +386,8 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
       val msgs = (cmd.toSequenceNr - cmd.fromSequenceNr).toInt + 1
       log.debug(s"replayingIn from ${from} for up to ${msgs}")
       val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
-      Future.sequence(replayer ? ReplayDone ::replayIn(from, msgs, cmd.processorId, replayer).toList)
+      val done = replayer ? ReplayDone
+      Future.sequence(done ::replayIn(from, msgs, cmd.processorId, replayer).toList)
     }
 
     def executeReplayOutMsgs(cmd: ReplayOutMsgs, p: (Message) => Unit, sender: ActorRef) = {
@@ -383,7 +395,8 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
       val msgs = (cmd.toSequenceNr - cmd.fromSequenceNr).toInt + 1
       log.debug(s"replayingOut from ${from} for up to ${msgs}")
       val replayer = context.actorOf(Props(new ReplayResequencer(from, msgs, p)))
-      Future.sequence(replayer ? ReplayDone ::replayOut(from, msgs, cmd.channelId, replayer).toList)
+      val done = replayer ? ReplayDone
+      Future.sequence(done ::replayOut(from, msgs, cmd.channelId, replayer).toList)
     }
   }
 
@@ -399,7 +412,9 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
     def receive = {
       case (seqnr: Long, Some(message: Message)) => resequence(seqnr, Some(message))
       case (seqnr: Long, None) => resequence(seqnr, None)
-      case ReplayDone => replayDone = Some(sender)
+      case ReplayDone =>
+        replayDone = Some(sender)
+        if(maxMessages == 0L) signalDone()
     }
 
     @scala.annotation.tailrec
@@ -413,10 +428,14 @@ private [dynamodb] class DynamoDBJournal(val props: DynamoDBJournalProps) extend
       val eo = delayed.remove(delivered + 1)
       if (eo.isDefined) resequence(delivered + 1, eo.get)
       else if (delivered == done) {
-        log.debug("replay resequencer finished, shutting down")
-        replayDone.foreach(_ ! ReplayDone)
-        self ! PoisonPill
+         signalDone()
       }
+    }
+
+    private def signalDone(){
+      log.debug("replay resequencer finished, shutting down")
+      replayDone.foreach(_ ! ReplayDone)
+      self ! PoisonPill
     }
 
   }
