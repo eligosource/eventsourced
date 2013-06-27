@@ -17,7 +17,10 @@ package org.eligosource.eventsourced.journal.dynamodb
 
 import akka.actor.ActorSystem
 
-import org.eligosource.eventsourced.journal.common.{JournalProps, PersistentJournalSpec}
+import org.eligosource.eventsourced.journal.common.{PersistentReplaySpec, JournalProps, PersistentJournalSpec}
 
 class DynamoDBJournalSpec extends PersistentJournalSpec with DynamoDBJournalSupport
+
+class DynamoDBReplaySpec extends PersistentReplaySpec with DynamoDBJournalSupport
+
 
