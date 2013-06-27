@@ -211,7 +211,10 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   override def stop() {
     import scala.concurrent.duration._
     implicit val timeout = 30.seconds
-    connection.askClose()
+    val system = connection.actorSystem
+    connection.askClose() onComplete {
+      case _ => system.shutdown()
+    }
   }
 }
 
