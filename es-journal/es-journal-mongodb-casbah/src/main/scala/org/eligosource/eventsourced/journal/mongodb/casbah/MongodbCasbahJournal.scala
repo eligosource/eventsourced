@@ -168,17 +168,26 @@ private [eventsourced] class MongodbCasbahJournal(val props: MongodbCasbahJourna
 
      // The mongoDB journal requires a unique index that is an ascending sort on (processorId, initiatingChannelId,
      // sequenceNr, confirmingChannelId).
-    val indexes = MongoDBObject(
+    val idx1 = MongoDBObject(
       "processorId"         -> 1,
       "initiatingChannelId" -> 1,
       "sequenceNr"          -> 1,
       "confirmingChannelId" -> 1)
 
+    val idx2 = MongoDBObject(
+      "processorId"         -> 1,
+      "initiatingChannelId" -> 1,
+      "sequenceNr"          -> 1)
+
+    val idx3 = MongoDBObject("sequenceNr" -> 1)
+
     // Create index option for uniqueness. Required so we do not get duplicates.
     val options = MongoDBObject("unique" -> true)
 
      // Enforce unique index on collection.
-    collection.ensureIndex(indexes, options)
+    collection.ensureIndex(idx1, options)
+    collection.ensureIndex(idx2)
+    collection.ensureIndex(idx3)
   }
 
   override def stop() {
