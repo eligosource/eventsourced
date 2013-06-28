@@ -1323,7 +1323,7 @@ Snapshots
 
 Snapshots represent processor state at a certain point in time and can dramatically reduce [recovery](#recovery) times. Snapshot capturing and saving is triggered by applications and does not delete entries from the event message history unless explicitly requested by an application.
 
-Applications can create snapshots by sending a processor a [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest$) message (Scala API) or `SnapshotRequest.get()` message (Java API).
+Applications can create snapshots by sending an Eventsourced processor a [`SnapshotRequest`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotRequest$) message (Scala API) or `SnapshotRequest.get()` message (Java API).
 
 **Scala:**
 
