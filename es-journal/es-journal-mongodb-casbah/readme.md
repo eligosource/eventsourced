@@ -19,6 +19,8 @@ A mongoDB backed journal has the following properties when running on a real mon
 
 Experimental. The Casbah based MongoDB journal is fully functional.
 
+Casbah Driver Version: 2.6.2
+
 ## Example
 
 This section shows how to initialize a journal that connects to a local, standalone mongoDB instance.
