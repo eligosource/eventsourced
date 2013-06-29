@@ -20,11 +20,6 @@ import reactivemongo.api.{DB, MongoConnection, MongoDriver}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
-object MongodbReactiveFixtureSupport {
-  val driver = new MongoDriver
-  val connection = driver.connection(List("localhost:34567"))
-}
-
 trait MongodbReactiveFixtureSupport {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -40,4 +35,9 @@ trait MongodbReactiveFixtureSupport {
     } catch { case _: Throwable => /* ignore */ }
     cleanup()
   }
+}
+
+object MongodbReactiveFixtureSupport {
+  val driver = new MongoDriver
+  val connection = driver.connection(List("localhost:34567"))
 }
