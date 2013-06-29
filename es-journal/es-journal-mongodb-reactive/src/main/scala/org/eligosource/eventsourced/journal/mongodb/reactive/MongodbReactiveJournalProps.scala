@@ -16,9 +16,18 @@
 package org.eligosource.eventsourced.journal.mongodb.reactive
 
 import akka.actor.Actor
+
+import org.apache.hadoop.fs.{FileSystem, Path}
+
 import org.eligosource.eventsourced.journal.common.JournalProps
+import org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem
+
 import scala.concurrent.duration._
+
 import reactivemongo.core.actors.Authenticate
+import reactivemongo.core.commands.GetLastError
 
 /**
  * Configuration object for an Mongodb/Reactive based journal.
@@ -42,10 +51,10 @@ import reactivemongo.core.actors.Authenticate
  * @param mongoDBSystemName Optional name of the newly created {@see MongoDBSystem} actor, if needed
  * @param dbName Optional mongoDB database name. Defaults to {@see DefaultDatabaseName}
  * @param collName Optional mongoDB collection name. Defaults to {@see DefaultCollectionName}
+ * @param writeConcern Optional GetLastError. Defaults to awaitJournalCommit = false, waitForReplicatedOn = None, fsync = false.
  * @param name Optional journal actor name.
  * @param dispatcherName Optional journal actor dispatcher name.
- * @param initTimeout Timeout for journal initialization. During initialization
- *        the highest stored sequence number is loaded from the event message table.
+ * @param initTimeout Timeout for journal initialization. During initialization the highest stored sequence number is loaded from the event message table.
  * @param replayChunkSize Maximum number of event messages to keep in memory during replay.
  */
 
@@ -57,10 +66,17 @@ case class MongodbReactiveJournalProps(
   mongoDBSystemName: Option[String] = None,
   dbName: String = DefaultDatabaseName,
   collName: String = DefaultCollectionName,
+  writeConcern: GetLastError = GetLastError(awaitJournalCommit = false, waitForReplicatedOn = None, fsync = false),
   name: Option[String] = None,
   dispatcherName: Option[String] = None,
   initTimeout: FiniteDuration = 30 seconds,
-  replayChunkSize: Int = 16 * 100) extends JournalProps {
+  replayChunkSize: Int = 16 * 100,
+  snapshotPath: Path = new Path("snapshots"),
+  snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
+  snapshotLoadTimeout: FiniteDuration = 1 hour,
+  snapshotSaveTimeout: FiniteDuration = 1 hour,
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+    extends JournalProps with HadoopFilesystemSnapshottingProps[MongodbReactiveJournalProps] {
 
   /** Returns a new `MongodbReactiveJournalProps` with specified list of authentications. */
   def withAuthentications(authentications: List[Authenticate]) = copy(authentications = authentications)
@@ -89,6 +105,26 @@ case class MongodbReactiveJournalProps(
   /** Returns a new `MongodbReactiveJournalProps` with specified replay chunk size. */
   def withReplayChunkSize(replayChunkSize: Int) = copy(replayChunkSize = replayChunkSize)
 
+  /** Java API. */
+  def withSnapshotPath(snapshotPath: Path) = copy(snapshotPath = snapshotPath)
+
+  /** Java API. */
+  def withSnapshotSerializer(snapshotSerializer: SnapshotSerializer) = copy(snapshotSerializer = snapshotSerializer)
+
+  /** Java API. */
+  def withSnapshotLoadTimeout(snapshotLoadTimeout: FiniteDuration) = copy(snapshotLoadTimeout = snapshotLoadTimeout)
+
+  /** Java API. */
+  def withSnapshotSaveTimeout(snapshotSaveTimeout: FiniteDuration) = copy(snapshotSaveTimeout = snapshotSaveTimeout)
+
+  /** Java API. */
+  def withSnapshotFilesystem(snapshotFilesystem: FileSystem) = copy(snapshotFilesystem = snapshotFilesystem)
+
   /** Returns a new `MongodbRactiveJournal`. */
   def createJournalActor: Actor = new MongodbReactiveJournal(this)
+}
+
+/** Companion object **/
+object MongodbReactiveJournalProps {
+  def create(nodes: List[String]) = MongodbReactiveJournalProps(nodes)
 }

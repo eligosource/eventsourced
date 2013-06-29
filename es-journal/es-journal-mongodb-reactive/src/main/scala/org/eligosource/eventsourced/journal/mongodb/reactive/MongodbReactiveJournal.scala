@@ -22,6 +22,7 @@ import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.JournalProtocol._
 import org.eligosource.eventsourced.journal.common.serialization._
 import org.eligosource.eventsourced.journal.common.support.AsynchronousWriteReplaySupport
+import org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting
 import org.eligosource.eventsourced.journal.common.util._
 
 import reactivemongo.api._
@@ -35,7 +36,10 @@ import scala.Some
 import scala.util._
 import reactivemongo.core.commands.GetLastError
 
-private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJournalProps) extends AsynchronousWriteReplaySupport with ActorLogging {
+import play.api.libs.iteratee.Iteratee
+
+private [eventsourced] class MongodbReactiveJournal(val props: MongodbReactiveJournalProps) extends AsynchronousWriteReplaySupport
+  with ActorLogging  with HadoopFilesystemSnapshotting { outer =>
 
   import context.dispatcher
 
@@ -46,18 +50,28 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
 
   val serialization = MessageSerialization(context.system)
 
+  var driver: MongoDriver = _
   var connection: MongoConnection = _
   var collection: BSONCollection = _
 
   def journalProps = props
 
-  def snapshotter = ???
+  def snapshotter = new Snapshotter {
+    def loadSnapshot(processorId: Int, snapshotFilter: (SnapshotMetadata) => Boolean) =
+      outer.loadSnapshot(processorId, snapshotFilter)
+
+    def saveSnapshot(snapshot: Snapshot) =
+      outer.saveSnapshot(snapshot)
+
+    def snapshotSaved(metadata: SnapshotMetadata) =
+      outer.snapshotSaved(metadata)
+  }
 
   def writer = new Writer {
 
     def executeWriteInMsg(cmd: WriteInMsg): Future[Any] = {
       val rm = ReactiveMessage(key = Key(cmd.processorId, sequenceNr = cmd.message.sequenceNr), msgAsBytes = msgToBytes(cmd.message.clearConfirmationSettings))
-      val future = collection.insert(rm, GetLastError(fsync = true))
+      val future = collection.insert(rm, journalProps.writeConcern)
       future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeWriteInMsg] " + e.getMessage) }
       future
     }
@@ -65,10 +79,10 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
     def executeWriteOutMsg(cmd: WriteOutMsg): Future[Any] = {
       val rm = ReactiveMessage(key = Key(initiatingChannelId = cmd.channelId, sequenceNr = cmd.message.sequenceNr),
         msgAsBytes = msgToBytes(cmd.message.clearConfirmationSettings))
-      val msgFtr = collection.insert(rm, GetLastError(fsync = true))
+      val msgFtr = collection.insert(rm, journalProps.writeConcern)
       val ackFtr = if (cmd.ackSequenceNr != SkipAck) {
         val rm = ReactiveMessage(key = Key(cmd.ackProcessorId, sequenceNr = cmd.ackSequenceNr, confirmingChannelId = cmd.channelId))
-        val future = collection.insert(rm, GetLastError(fsync = true))
+        val future = collection.insert(rm, journalProps.writeConcern)
         future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeWriteOutMsg] " + e.getMessage) }
         future
       } else msgFtr
@@ -78,7 +92,7 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
 
     def executeWriteAck(cmd: WriteAck): Future[Any] = {
       val rm = ReactiveMessage(key = Key(cmd.processorId, sequenceNr = cmd.ackSequenceNr, confirmingChannelId = cmd.channelId))
-      val future = collection.insert(rm, GetLastError(fsync = true))
+      val future = collection.insert(rm, journalProps.writeConcern)
       future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeWriteAck] " + e.getMessage) }
       future
     }
@@ -89,7 +103,7 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
         "initiatingChannelId" -> BSONInteger(cmd.channelId),
         "sequenceNr"          -> BSONLong(cmd.msgSequenceNr),
         "confirmingChannelId" -> BSONInteger(0))
-      val future = collection.remove(qry, GetLastError(fsync = true))
+      val future = collection.remove(qry, journalProps.writeConcern)
       future.onFailure { case e: DatabaseException => log.error("[MongodbReactiveJournal.executeDeleteOutMsg] " + e.getMessage) }
       future
     }
@@ -180,7 +194,11 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   }
 
   override def start() {
-    val driver = new MongoDriver
+    initSnapshotting()
+
+    // user the applications actor system.
+    driver = new MongoDriver(context.system)
+
     connection = driver.connection(props.nodes, props.authentications, props.nbChannelsPerNode, props.mongoDBSystemName)
     val db = DB(props.dbName, connection)
     collection = db[BSONCollection](props.collName)
@@ -211,7 +229,7 @@ private [eventsourced] class MongodbReactiveJournal(props: MongodbReactiveJourna
   override def stop() {
     import scala.concurrent.duration._
     implicit val timeout = 30.seconds
-    connection.askClose()
+    driver.close()
   }
 }
 
@@ -226,7 +244,7 @@ object ReactiveMessage {
           doc.getAs[Int]("initiatingChannelId").get,
           doc.getAs[Long]("sequenceNr").get,
           doc.getAs[Int]("confirmingChannelId").get),
-        doc.getAs[BSONBinary]("message").get.value.readArray(doc.getAs[BSONBinary]("message").get.value.readable()))
+        doc.getAs[BSONBinary]("message").map(data => data.value.readArray(data.value.size)).get)
     }
   }
 
