@@ -39,7 +39,7 @@ class MongodbCasbahReplaySpec extends PersistentReplaySpec with MongodbSpecSuppo
   // Since multiple embedded instances will run, each one must have a different port.
   override def mongoPort = 54322
 
-  def journalProps = MongodbCasbahJournalProps(MongoClient(mongoLocalHostName, mongoPort), dbName, collName)
+  def journalProps = MongodbCasbahJournalProps(MongoClient(mongoLocalHostName, mongoPort), dbName, collName, snapshotFilesystem = snapshotFilesystem)
 
   override def afterEach() {
     MongoClient(mongoLocalHostName, mongoPort)(dbName)(collName).dropCollection()

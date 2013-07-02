@@ -15,6 +15,8 @@
  */
 package org.eligosource.eventsourced.journal.mongodb.reactive
 
+import java.io.File
+
 import akka.actor.{Props, ActorSystem}
 
 import de.flapdoodle.embed.mongo.{Command, MongodProcess, MongodExecutable, MongodStarter}
@@ -23,6 +25,10 @@ import de.flapdoodle.embed.mongo.distribution.Version
 import de.flapdoodle.embed.process.config.io.ProcessOutput
 import de.flapdoodle.embed.process.io.{NullProcessor, Processors}
 import de.flapdoodle.embed.process.runtime.Network
+
+import org.apache.commons.io.FileUtils
+import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.hadoop.conf.Configuration
 
 import org.eligosource.eventsourced.core._
 import org.eligosource.eventsourced.core.JournalProtocol._
@@ -173,6 +179,17 @@ class MongodbReactiveJournalWithWriteConcernSpec extends PersistentJournalSpec w
 }
 
 class MongodbReactiveReplaySpec extends PersistentReplaySpec with MongodbReactiveSpec {
+  val snapshotFileSystemRoot = "es-journal/es-journal-mongodb-reactive/target/journal"
+  val snapshotFilesystem = FileSystem.getLocal(new Configuration)
+
+  snapshotFilesystem.setWorkingDirectory(new Path(snapshotFileSystemRoot))
+
   def mongoPort = 57000
-  def journalProps = MongodbReactiveJournalProps(List(mongoLocalHostName + ":" + mongoPort))
+  def journalProps = MongodbReactiveJournalProps(List(mongoLocalHostName + ":" + mongoPort), snapshotFilesystem = snapshotFilesystem)
+
+  override def afterEach() {
+    FileUtils.deleteDirectory(new File(snapshotFileSystemRoot))
+    super.afterEach()
+  }
+
 }
