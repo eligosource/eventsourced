@@ -21,6 +21,8 @@ import com.typesafe.sbt.SbtGhPages._
 import com.typesafe.sbt.SbtGit.{GitKeys => git}
 import com.typesafe.sbt.SbtSite._
 
+import net.virtualvoid.sbt.graph.{Plugin => Dep}
+
 import sbtunidoc.Plugin._
 import sbtunidoc.Plugin.UnidocKeys._
 
@@ -110,7 +112,8 @@ object EventsourcedBuild extends Build {
     Compiler.defaultSettings ++
     Publish.defaultSettings ++
     Tests.defaultSettings ++
-    Osgi.defaultSettings
+    Osgi.defaultSettings ++
+    Dep.graphSettings
 
   lazy val unidocExcludeSettings = Seq(
     excludedProjects in unidoc in ScalaUnidoc ++= Seq(esCoreTest.id, esExamples.id)
