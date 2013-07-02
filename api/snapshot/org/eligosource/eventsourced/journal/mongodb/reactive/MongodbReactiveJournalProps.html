@@ -29,9 +29,9 @@
         </head>
         <body class="type">
       <div id="definition">
-        <img src="../../../../../../lib/class_big.png" />
+        <a href="MongodbReactiveJournalProps$.html" title="Go to companion"><img src="../../../../../../lib/class_to_object_big.png" /></a>
         <p id="owner"><a href="../../../../../package.html" class="extype" name="org">org</a>.<a href="../../../../package.html" class="extype" name="org.eligosource">eligosource</a>.<a href="../../../package.html" class="extype" name="org.eligosource.eventsourced">eventsourced</a>.<a href="../../package.html" class="extype" name="org.eligosource.eventsourced.journal">journal</a>.<a href="../package.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb">mongodb</a>.<a href="package.html" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive">reactive</a></p>
-        <h1>MongodbReactiveJournalProps</h1>
+        <h1><a href="MongodbReactiveJournalProps$.html" title="Go to companion">MongodbReactiveJournalProps</a></h1>
       </div>
 
       <h4 id="signature" class="signature">
@@ -40,7 +40,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">MongodbReactiveJournalProps</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="authentications">authentications: <span class="extype" name="scala.List">List</span>[<span class="extype" name="reactivemongo.core.actors.Authenticate">Authenticate</span>] = <span class="symbol">immutable.this.List.empty[Nothing]</span></span>, <span name="nbChannelsPerNode">nbChannelsPerNode: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">10</span></span>, <span name="mongoDBSystemName">mongoDBSystemName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultDatabaseName">...</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultCollectionName">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="initTimeout">initTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(30).seconds">...</span></span>, <span name="replayChunkSize">replayChunkSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">16.*(100)</span></span>)</span><span class="result"> extends <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">MongodbReactiveJournalProps</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="authentications">authentications: <span class="extype" name="scala.List">List</span>[<span class="extype" name="reactivemongo.core.actors.Authenticate">Authenticate</span>] = <span class="symbol">immutable.this.List.empty[Nothing]</span></span>, <span name="nbChannelsPerNode">nbChannelsPerNode: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">10</span></span>, <span name="mongoDBSystemName">mongoDBSystemName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultDatabaseName">...</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultCollectionName">...</span></span>, <span name="writeConcern">writeConcern: <span class="extype" name="reactivemongo.core.commands.GetLastError">GetLastError</span> = <span class="defval" name="reactivemongo.core.commands.GetLastError.apply(false, scala.None, false)">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="initTimeout">initTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(30).seconds">...</span></span>, <span name="replayChunkSize">replayChunkSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">16.*(100)</span></span>, <span name="snapshotPath">snapshotPath: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span> = <span class="defval" name="new org.apache.hadoop.fs.Path(&quot;snapshots&quot;)">...</span></span>, <span name="snapshotSerializer">snapshotSerializer: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a> = <span class="defval" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer.java">...</span></span>, <span name="snapshotLoadTimeout">snapshotLoadTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotFilesystem">snapshotFilesystem: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span> = <span class="defval" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem">...</span></span>)</span><span class="result"> extends <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a> with <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a>[<a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
@@ -51,11 +51,10 @@
 
 <span class="kw">implicit</span> <span class="kw">val</span> system: ActorSystem = ...
 
-<span class="kw">val</span> journal: ActorRef = Journal(MongodbReactiveJournalProps(<span class="std">List</span>(<span class="lit">"localhost:27017"</span>))</pre></div><dl class="paramcmts block"><dt class="param">nodes</dt><dd class="cmt"><p>Required nodes to connect to.</p></dd><dt class="param">authentications</dt><dd class="cmt"><p>Optional authentication list. Defaults to List.empty.</p></dd><dt class="param">nbChannelsPerNode</dt><dd class="cmt"><p>Optional number of channels to open per node. Defaults to 10.</p></dd><dt class="param">mongoDBSystemName</dt><dd class="cmt"><p>Optional name of the newly created {@see MongoDBSystem} actor, if needed</p></dd><dt class="param">dbName</dt><dd class="cmt"><p>Optional mongoDB database name. Defaults to {@see DefaultDatabaseName}</p></dd><dt class="param">collName</dt><dd class="cmt"><p>Optional mongoDB collection name. Defaults to {@see DefaultCollectionName}</p></dd><dt class="param">name</dt><dd class="cmt"><p>Optional journal actor name.</p></dd><dt class="param">dispatcherName</dt><dd class="cmt"><p>Optional journal actor dispatcher name.</p></dd><dt class="param">initTimeout</dt><dd class="cmt"><p>Timeout for journal initialization. During initialization
-       the highest stored sequence number is loaded from the event message table.</p></dd><dt class="param">replayChunkSize</dt><dd class="cmt"><p>Maximum number of event messages to keep in memory during replay.
+<span class="kw">val</span> journal: ActorRef = Journal(MongodbReactiveJournalProps(<span class="std">List</span>(<span class="lit">"localhost:27017"</span>))</pre></div><dl class="paramcmts block"><dt class="param">nodes</dt><dd class="cmt"><p>Required nodes to connect to.</p></dd><dt class="param">authentications</dt><dd class="cmt"><p>Optional authentication list. Defaults to List.empty.</p></dd><dt class="param">nbChannelsPerNode</dt><dd class="cmt"><p>Optional number of channels to open per node. Defaults to 10.</p></dd><dt class="param">mongoDBSystemName</dt><dd class="cmt"><p>Optional name of the newly created {@see MongoDBSystem} actor, if needed</p></dd><dt class="param">dbName</dt><dd class="cmt"><p>Optional mongoDB database name. Defaults to {@see DefaultDatabaseName}</p></dd><dt class="param">collName</dt><dd class="cmt"><p>Optional mongoDB collection name. Defaults to {@see DefaultCollectionName}</p></dd><dt class="param">writeConcern</dt><dd class="cmt"><p>Optional GetLastError. Defaults to awaitJournalCommit = false, waitForReplicatedOn = None, fsync = false.</p></dd><dt class="param">name</dt><dd class="cmt"><p>Optional journal actor name.</p></dd><dt class="param">dispatcherName</dt><dd class="cmt"><p>Optional journal actor dispatcher name.</p></dd><dt class="param">initTimeout</dt><dd class="cmt"><p>Timeout for journal initialization. During initialization the highest stored sequence number is loaded from the event message table.</p></dd><dt class="param">replayChunkSize</dt><dd class="cmt"><p>Maximum number of event messages to keep in memory during replay.
 </p></dd></dl><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a>[<a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a>], <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -73,7 +72,7 @@
                 <span class="filtertype">Inherited<br />
                 </span>
                 <ol id="linearization">
-                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"><span>MongodbReactiveJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                  <li class="in" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"><span>MongodbReactiveJournalProps</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps"><span>HadoopFilesystemSnapshottingProps</span></li><li class="in" name="org.eligosource.eventsourced.journal.common.JournalProps"><span>JournalProps</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                 </ol>
               </div><div id="ancestors">
             <span class="filtertype"></span>
@@ -94,7 +93,7 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="&lt;init&gt;(nodes:List[String],authentications:List[reactivemongo.core.actors.Authenticate],nbChannelsPerNode:Int,mongoDBSystemName:Option[String],dbName:String,collName:String,name:Option[String],dispatcherName:Option[String],initTimeout:scala.concurrent.duration.FiniteDuration,replayChunkSize:Int):org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"></a>
+      <a id="&lt;init&gt;(nodes:List[String],authentications:List[reactivemongo.core.actors.Authenticate],nbChannelsPerNode:Int,mongoDBSystemName:Option[String],dbName:String,collName:String,writeConcern:reactivemongo.core.commands.GetLastError,name:Option[String],dispatcherName:Option[String],initTimeout:scala.concurrent.duration.FiniteDuration,replayChunkSize:Int,snapshotPath:org.apache.hadoop.fs.Path,snapshotSerializer:org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer,snapshotLoadTimeout:scala.concurrent.duration.FiniteDuration,snapshotSaveTimeout:scala.concurrent.duration.FiniteDuration,snapshotFilesystem:org.apache.hadoop.fs.FileSystem):org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"></a>
       <a id="&lt;init&gt;:MongodbReactiveJournalProps"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -102,11 +101,10 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">MongodbReactiveJournalProps</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="authentications">authentications: <span class="extype" name="scala.List">List</span>[<span class="extype" name="reactivemongo.core.actors.Authenticate">Authenticate</span>] = <span class="symbol">immutable.this.List.empty[Nothing]</span></span>, <span name="nbChannelsPerNode">nbChannelsPerNode: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">10</span></span>, <span name="mongoDBSystemName">mongoDBSystemName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultDatabaseName">...</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultCollectionName">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="initTimeout">initTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(30).seconds">...</span></span>, <span name="replayChunkSize">replayChunkSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">16.*(100)</span></span>)</span>
+        <span class="name">MongodbReactiveJournalProps</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="authentications">authentications: <span class="extype" name="scala.List">List</span>[<span class="extype" name="reactivemongo.core.actors.Authenticate">Authenticate</span>] = <span class="symbol">immutable.this.List.empty[Nothing]</span></span>, <span name="nbChannelsPerNode">nbChannelsPerNode: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">10</span></span>, <span name="mongoDBSystemName">mongoDBSystemName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dbName">dbName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultDatabaseName">...</span></span>, <span name="collName">collName: <span class="extype" name="scala.Predef.String">String</span> = <span class="defval" name="reactive.this.`package`.DefaultCollectionName">...</span></span>, <span name="writeConcern">writeConcern: <span class="extype" name="reactivemongo.core.commands.GetLastError">GetLastError</span> = <span class="defval" name="reactivemongo.core.commands.GetLastError.apply(false, scala.None, false)">...</span></span>, <span name="name">name: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="dispatcherName">dispatcherName: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">scala.None</span></span>, <span name="initTimeout">initTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(30).seconds">...</span></span>, <span name="replayChunkSize">replayChunkSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">16.*(100)</span></span>, <span name="snapshotPath">snapshotPath: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span> = <span class="defval" name="new org.apache.hadoop.fs.Path(&quot;snapshots&quot;)">...</span></span>, <span name="snapshotSerializer">snapshotSerializer: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a> = <span class="defval" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer.java">...</span></span>, <span name="snapshotLoadTimeout">snapshotLoadTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="defval" name="scala.concurrent.duration.`package`.DurationInt(1).hour">...</span></span>, <span name="snapshotFilesystem">snapshotFilesystem: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span> = <span class="defval" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshotting.defaultLocalFilesystem">...</span></span>)</span>
       </span>
       </h4>
-      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="paramcmts block"><dt class="param">nodes</dt><dd class="cmt"><p>Required nodes to connect to.</p></dd><dt class="param">authentications</dt><dd class="cmt"><p>Optional authentication list. Defaults to List.empty.</p></dd><dt class="param">nbChannelsPerNode</dt><dd class="cmt"><p>Optional number of channels to open per node. Defaults to 10.</p></dd><dt class="param">mongoDBSystemName</dt><dd class="cmt"><p>Optional name of the newly created {@see MongoDBSystem} actor, if needed</p></dd><dt class="param">dbName</dt><dd class="cmt"><p>Optional mongoDB database name. Defaults to {@see DefaultDatabaseName}</p></dd><dt class="param">collName</dt><dd class="cmt"><p>Optional mongoDB collection name. Defaults to {@see DefaultCollectionName}</p></dd><dt class="param">name</dt><dd class="cmt"><p>Optional journal actor name.</p></dd><dt class="param">dispatcherName</dt><dd class="cmt"><p>Optional journal actor dispatcher name.</p></dd><dt class="param">initTimeout</dt><dd class="cmt"><p>Timeout for journal initialization. During initialization
-       the highest stored sequence number is loaded from the event message table.</p></dd><dt class="param">replayChunkSize</dt><dd class="cmt"><p>Maximum number of event messages to keep in memory during replay.
+      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="paramcmts block"><dt class="param">nodes</dt><dd class="cmt"><p>Required nodes to connect to.</p></dd><dt class="param">authentications</dt><dd class="cmt"><p>Optional authentication list. Defaults to List.empty.</p></dd><dt class="param">nbChannelsPerNode</dt><dd class="cmt"><p>Optional number of channels to open per node. Defaults to 10.</p></dd><dt class="param">mongoDBSystemName</dt><dd class="cmt"><p>Optional name of the newly created {@see MongoDBSystem} actor, if needed</p></dd><dt class="param">dbName</dt><dd class="cmt"><p>Optional mongoDB database name. Defaults to {@see DefaultDatabaseName}</p></dd><dt class="param">collName</dt><dd class="cmt"><p>Optional mongoDB collection name. Defaults to {@see DefaultCollectionName}</p></dd><dt class="param">writeConcern</dt><dd class="cmt"><p>Optional GetLastError. Defaults to awaitJournalCommit = false, waitForReplicatedOn = None, fsync = false.</p></dd><dt class="param">name</dt><dd class="cmt"><p>Optional journal actor name.</p></dd><dt class="param">dispatcherName</dt><dd class="cmt"><p>Optional journal actor dispatcher name.</p></dd><dt class="param">initTimeout</dt><dd class="cmt"><p>Timeout for journal initialization. During initialization the highest stored sequence number is loaded from the event message table.</p></dd><dt class="param">replayChunkSize</dt><dd class="cmt"><p>Maximum number of event messages to keep in memory during replay.
 </p></dd></dl></div>
     </li></ol>
             </div>
@@ -344,8 +342,7 @@
         <span class="name">initTimeout</span><span class="result">: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>
       </span>
       </h4>
-      <p class="shortcomment cmt">Timeout for journal initialization.</p><div class="fullcomment"><div class="comment cmt"><p>Timeout for journal initialization. During initialization
-       the highest stored sequence number is loaded from the event message table.</p></div></div>
+      <p class="shortcomment cmt">Timeout for journal initialization.</p><div class="fullcomment"><div class="comment cmt"><p>Timeout for journal initialization. During initialization the highest stored sequence number is loaded from the event message table.</p></div></div>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <a id="isInstanceOf[T0]:Boolean"></a>
@@ -463,6 +460,77 @@
       </span>
       </h4>
       <p class="shortcomment cmt">Maximum number of event messages to keep in memory during replay.</p>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#snapshotFilesystem" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotFilesystem:org.apache.hadoop.fs.FileSystem"></a>
+      <a id="snapshotFilesystem:FileSystem"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotFilesystem</span><span class="result">: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Hadoop filesystem for storing snapshots.</p><div class="fullcomment"><div class="comment cmt"><p>Hadoop filesystem for storing snapshots.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#snapshotLoadTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotLoadTimeout:scala.concurrent.duration.FiniteDuration"></a>
+      <a id="snapshotLoadTimeout:FiniteDuration"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotLoadTimeout</span><span class="result">: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Timeout for loading a snapshot.</p><div class="fullcomment"><div class="comment cmt"><p>Timeout for loading a snapshot.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#snapshotPath" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotPath:org.apache.hadoop.fs.Path"></a>
+      <a id="snapshotPath:Path"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotPath</span><span class="result">: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Path where snapshots are stored on <code>snapshotFilesystem</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Path where snapshots are stored on <code>snapshotFilesystem</code>. A relative path is relative to
+<code>snapshotFilesystem</code>'s working directory.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#snapshotSaveTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotSaveTimeout:scala.concurrent.duration.FiniteDuration"></a>
+      <a id="snapshotSaveTimeout:FiniteDuration"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotSaveTimeout</span><span class="result">: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Timeout for saving a snapshot.</p><div class="fullcomment"><div class="comment cmt"><p>Timeout for saving a snapshot.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#snapshotSerializer" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="snapshotSerializer:org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer"></a>
+      <a id="snapshotSerializer:SnapshotSerializer"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">snapshotSerializer</span><span class="result">: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Serializer for writing and reading snapshots.</p><div class="fullcomment"><div class="comment cmt"><p>Serializer for writing and reading snapshots.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a>
       <a id="synchronized[T0](⇒T0):T0"></a>
@@ -641,6 +709,84 @@
       </span>
       </h4>
       <p class="shortcomment cmt">Returns a new <code>MongodbReactiveJournalProps</code> with specified replay chunk size.</p>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#withSnapshotFilesystem" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotFilesystem(snapshotFilesystem:org.apache.hadoop.fs.FileSystem):org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"></a>
+      <a id="withSnapshotFilesystem(FileSystem):MongodbReactiveJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotFilesystem</span><span class="params">(<span name="snapshotFilesystem">snapshotFilesystem: <span class="extype" name="org.apache.hadoop.fs.FileSystem">FileSystem</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#withSnapshotLoadTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotLoadTimeout(snapshotLoadTimeout:scala.concurrent.duration.FiniteDuration):org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"></a>
+      <a id="withSnapshotLoadTimeout(FiniteDuration):MongodbReactiveJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotLoadTimeout</span><span class="params">(<span name="snapshotLoadTimeout">snapshotLoadTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#withSnapshotPath" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="withSnapshotPath(snapshotPath:org.apache.hadoop.fs.Path):org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"></a>
+      <a id="withSnapshotPath(Path):MongodbReactiveJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotPath</span><span class="params">(<span name="snapshotPath">snapshotPath: <span class="extype" name="org.apache.hadoop.fs.Path">Path</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#withSnapshotSaveTimeout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotSaveTimeout(snapshotSaveTimeout:scala.concurrent.duration.FiniteDuration):org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"></a>
+      <a id="withSnapshotSaveTimeout(FiniteDuration):MongodbReactiveJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotSaveTimeout</span><span class="params">(<span name="snapshotSaveTimeout">snapshotSaveTimeout: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#withSnapshotSerializer" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withSnapshotSerializer(snapshotSerializer:org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer):org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps"></a>
+      <a id="withSnapshotSerializer(SnapshotSerializer):MongodbReactiveJournalProps"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withSnapshotSerializer</span><span class="params">(<span name="snapshotSerializer">snapshotSerializer: <a href="../../common/serialization/SnapshotSerializer.html" class="extype" name="org.eligosource.eventsourced.journal.common.serialization.SnapshotSerializer">SnapshotSerializer</a></span>)</span><span class="result">: <a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Java API.</p><div class="fullcomment"><div class="comment cmt"><p>Java API.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a> → <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps#writeConcern" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="writeConcern:reactivemongo.core.commands.GetLastError"></a>
+      <a id="writeConcern:GetLastError"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">writeConcern</span><span class="result">: <span class="extype" name="reactivemongo.core.commands.GetLastError">GetLastError</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Optional GetLastError.</p><div class="fullcomment"><div class="comment cmt"><p>Optional GetLastError. Defaults to awaitJournalCommit = false, waitForReplicatedOn = None, fsync = false.</p></div></div>
     </li></ol>
             </div>
 
@@ -658,6 +804,8 @@
               <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
             </div><div class="parent" name="scala.Equals">
               <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
+            </div><div class="parent" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">
+              <h3>Inherited from <a href="../../common/snapshot/HadoopFilesystemSnapshottingProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps">HadoopFilesystemSnapshottingProps</a>[<a href="" class="extype" name="org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps">MongodbReactiveJournalProps</a>]</h3>
             </div><div class="parent" name="org.eligosource.eventsourced.journal.common.JournalProps">
               <h3>Inherited from <a href="../../common/JournalProps.html" class="extype" name="org.eligosource.eventsourced.journal.common.JournalProps">JournalProps</a></h3>
             </div><div class="parent" name="scala.AnyRef">
