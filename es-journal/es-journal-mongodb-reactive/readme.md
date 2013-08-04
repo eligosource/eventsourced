@@ -1,6 +1,6 @@
 # MongoDB Reactive Journal
 
-[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.0) applications can create a [mongoDB](http://www.mongodb.org/) [reactivemongo](http://reactivemongo.org/) backed journal using the [MongodbReactiveJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps) configuration object.
+[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.1) applications can create a [mongoDB](http://www.mongodb.org/) [reactivemongo](http://reactivemongo.org/) backed journal using the [MongodbReactiveJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps) configuration object.
 
 ## Properties
 
@@ -26,9 +26,9 @@ First, download, install and start a standalone mongoDB instance by following th
 
     resolvers += "Eligosource Releases" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.0"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.1"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-reactive" % "0.5.0"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-reactive" % "0.5.1"
 
 ### Mongodb Casbah Based Journal Initialization
 

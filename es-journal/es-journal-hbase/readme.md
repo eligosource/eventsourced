@@ -1,7 +1,7 @@
 HBase Journal
 =============
 
-[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.0) applications create an [HBase](http://hbase.apache.org) backed journal using the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) configuration object.
+[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.1) applications create an [HBase](http://hbase.apache.org) backed journal using the [HBaseJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.hbase.HBaseJournalProps) configuration object.
 
 Properties
 ----------
@@ -35,9 +35,9 @@ Add the required depedencies to your project's `build.sbt` file:
 
     resolvers += "Eligosource Releases" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.0"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.1"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-hbase" % "0.5.0"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-hbase" % "0.5.1"
 
 Initialize the HBase journal in your application:
 

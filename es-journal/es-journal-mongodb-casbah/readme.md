@@ -1,6 +1,6 @@
 # MongoDB Casbah Journal
 
-[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.0) applications can create a [mongoDB](http://www.mongodb.org/) Casbah backed journal.
+[Eventsourced](https://github.com/eligosource/eventsourced/tree/0.5.1) applications can create a [mongoDB](http://www.mongodb.org/) Casbah backed journal.
 
 - Using the [Casbah](http://api.mongodb.org/scala/casbah/2.0/) based [MongodbCasbahJournalProps](http://eligosource.github.com/eventsourced/api/0.5/#org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps) configuration object.
 
@@ -27,9 +27,9 @@ First, download, install and start a standalone mongoDB instance by following th
 
     resolvers += "Eligosource Releases" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-releases"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.0"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.5.1"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-casbah" % "0.5.0"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-casbah" % "0.5.1"
 
 ### Mongodb Casbah Based Journal Initialization
 
