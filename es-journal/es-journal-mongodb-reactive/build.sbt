@@ -11,10 +11,10 @@ resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repos
 resolvers += "Typesafe"               at "http://repo.typesafe.com/typesafe/releases"
 
 libraryDependencies ++= Seq(
-  "org.reactivemongo"   %% "reactivemongo"              % "0.9-AKKA-2.2.0-RC1-SNAPSHOT"    % "compile,it"
+  "org.reactivemongo"   %% "reactivemongo"              % "0.9-AKKA-2.2.0"  % "compile,it"
       exclude("ch.qos.logback", "logback-core")
       exclude("ch.qos.logback", "logback-classic"),
-  "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo"  % "1.33"                           % "it",
+  "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo"  % "1.33"            % "it",
   "org.slf4j"            % "slf4j-log4j12"              % "1.6.0",
   "org.scalatest"       %% "scalatest"                  % Version.ScalaTest % "it"
 )
