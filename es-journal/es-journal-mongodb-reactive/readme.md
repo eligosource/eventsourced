@@ -26,9 +26,9 @@ First, download, install and start a standalone mongoDB instance by following th
 
     resolvers += "Eligosource Snapshots" at "http://repo.eligotech.com/nexus/content/repositories/eligosource-snapshots"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.6-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-core" % "0.7-SNAPSHOT"
 
-    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-reactive" % "0.6-SNAPSHOT"
+    libraryDependencies += "org.eligosource" %% "eventsourced-journal-mongodb-reactive" % "0.7-SNAPSHOT"
 
 ### Mongodb Reactive Based Journal Initialization
 
