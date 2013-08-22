@@ -51,7 +51,7 @@ Contents
         - [Remote destinations](#remote-destinations)
     - [Channel alternatives](#channel-alternatives)
 - [Recovery](#recovery)
-    - [Replay parameters](#replay-parameters) 
+    - [Replay parameters](#replay-parameters)
         - [Recovery without snapshots](#recovery-without-snapshots)
         - [Recovery with snapshots](#recovery-with-snapshots)
     - [Await processing](#await-processing)
@@ -221,25 +221,29 @@ An `EventsourcingExtension` is initialized with an `ActorSystem` and a journal `
 
 **Scala:**
 
-    import java.io.File
-    import akka.actor._
-    import org.eligosource.eventsourced.core._
-    import org.eligosource.eventsourced.journal.leveldb._
+```scala
+import java.io.File
+import akka.actor._
+import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.leveldb._
 
-    val system: ActorSystem = ActorSystem("example")
-    val journal: ActorRef = LeveldbJournalProps(new File("target/example-1"), native = false).createJournal
-    val extension: EventsourcingExtension = EventsourcingExtension(system, journal)
+val system: ActorSystem = ActorSystem("example")
+val journal: ActorRef = LeveldbJournalProps(new File("target/example-1"), native = false).createJournal
+val extension: EventsourcingExtension = EventsourcingExtension(system, journal)
+```
 
 **Java:**
 
-    import java.io.File;
-    import akka.actor.*;    
-    import org.eligosource.eventsourced.core.*;
-    import org.eligosource.eventsourced.journal.leveldb.*;
+```java
+import java.io.File;
+import akka.actor.*;
+import org.eligosource.eventsourced.core.*;
+import org.eligosource.eventsourced.journal.leveldb.*;
 
-    final ActorSystem system = ActorSystem.create("guide");
-    final ActorRef journal = LeveldbJournalProps.create(new File("target/guide-1-java")).withNative(false).createJournal(system);
-    final EventsourcingExtension extension = EventsourcingExtension.create(system, journal);
+final ActorSystem system = ActorSystem.create("guide");
+final ActorRef journal = LeveldbJournalProps.create(new File("target/guide-1-java")).withNative(false).createJournal(system);
+final EventsourcingExtension extension = EventsourcingExtension.create(system, journal);
+```
 
 This example uses a [LevelDB journal](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.leveldb.LeveldbJournalProps) but any other [journal implementation](#journals) can be used as well.
 
@@ -249,36 +253,40 @@ With the Scala API, event-sourced actors can be defined as 'plain' actors. With 
 
 **Scala:**
 
-    class Processor extends Actor {
-      var counter = 0
+```scala
+class Processor extends Actor {
+  var counter = 0
 
-      def receive = {
-        case msg: Message => {
-          counter = counter + 1
-          println("[processor] event = %s (%d)" format (msg.event, counter))
-        }
-      }
+  def receive = {
+    case msg: Message => {
+      counter = counter + 1
+      println("[processor] event = %s (%d)" format (msg.event, counter))
     }
+  }
+}
+```
 
 **Java:**
 
-    public class Processor extends UntypedEventsourcedActor {
-        private int counter = 0;
+```java
+public class Processor extends UntypedEventsourcedActor {
+    private int counter = 0;
 
-        @Override
-        public int id() {
-            return 1;
-        }
+    @Override
+    public int id() {
+        return 1;
+    }
 
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof Message) {
-                Message msg = (Message)message;
-                counter = counter + 1;
-                System.out.println(String.format("[processor] event = %s (%d)", msg.event(), counter));
-            }
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof Message) {
+            Message msg = (Message)message;
+            counter = counter + 1;
+            System.out.println(String.format("[processor] event = %s (%d)", msg.event(), counter));
         }
     }
+}
+```
 
 is an actor that counts the number of received event [`Message`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s. In Eventsourced applications, events are always communicated (transported) via event `Message`s.
 
@@ -288,19 +296,23 @@ To make the Scala `Processor` an event-sourced actor, it must be modified with t
 
 **Scala:**
 
-    // create and register event-sourced processor
-    val processor: ActorRef = extension.processorOf(Props(new Processor with Eventsourced { val id = 1 } ))
+```scala
+// create and register event-sourced processor
+val processor: ActorRef = extension.processorOf(Props(new Processor with Eventsourced { val id = 1 } ))
 
-    // recover registered processors by replaying journaled events
-    extension.recover()
+// recover registered processors by replaying journaled events
+extension.recover()
+```
 
 **Java:**
 
-    // create and register event-sourced processor
-    final ActorRef processor = extension.processorOf(Props.create(Processor.class), system);
+```java
+// create and register event-sourced processor
+final ActorRef processor = extension.processorOf(Props.create(Processor.class), system);
 
-    // recover registered processors by replaying journaled events
-    extension.recover();
+// recover registered processors by replaying journaled events
+extension.recover();
+```
 
 An actor that is modified with `Eventsourced` (or extends `UntypedEventsourcedActor`) writes event `Message`s to a journal before its `receive`  method (or `onReceive` method, respectively) is called. The `processorOf` method registers that actor under a unique `id`. The processor `id` is defined by implementing the abstract `Eventsourced.id` member which must be a positive integer and consistently re-used across applications runs. The `recover` method recovers the state of `processor` by replaying all event messages that `processor` received in previous application runs.
 
@@ -312,13 +324,17 @@ The event-sourced `processor` can be used like any other actor. Messages of type
 
 **Scala:**
 
-    // send event message to processor (will be journaled)
-    processor ! Message("foo")
+```scala
+// send event message to processor (will be journaled)
+processor ! Message("foo")
+```
 
 **Java:**
 
-    // send event message to processor (will be journaled)
-    processor.tell(Message.create("foo"), null);
+```java
+// send event message to processor (will be journaled)
+processor.tell(Message.create("foo"), null);
+```
 
 A first application run will create an empty journal. Hence, no event messages will be replayed and the `processor` writes
 
@@ -339,55 +355,59 @@ In this step, the event-sourced `processor` is extended to send out new event me
 
 **Scala:**
 
-    class Processor(destination: ActorRef) extends Actor {
-      var counter = 0;
+```scala
+class Processor(destination: ActorRef) extends Actor {
+  var counter = 0;
 
-      def receive = {
-        case msg: Message => {
-          counter = counter + 1
-          // …
-          destination ! msg.copy(event = "processed %d event messages so far" format counter)
-        }
-      }
+  def receive = {
+    case msg: Message => {
+      counter = counter + 1
+      // …
+      destination ! msg.copy(event = "processed %d event messages so far" format counter)
     }
+  }
+}
 
-    val destination: ActorRef = system.actorOf(Props[Destination])
-    // instantiate processor by passing the destination as constructor argument
-    val processor: ActorRef = extension.processorOf(Props(new Processor(destination) with Eventsourced { val id = 1 } ))
+val destination: ActorRef = system.actorOf(Props[Destination])
+// instantiate processor by passing the destination as constructor argument
+val processor: ActorRef = extension.processorOf(Props(new Processor(destination) with Eventsourced { val id = 1 } ))
 
-    extension.recover()
+extension.recover()
+```
 
 **Java:**
 
-    public class Processor extends UntypedEventsourcedActor {
-        private ActorRef destination;
-        private int counter = 0;
+```java
+public class Processor extends UntypedEventsourcedActor {
+    private ActorRef destination;
+    private int counter = 0;
 
-        public Processor(ActorRef destination) {
-            this.destination = destination;
-        }
-
-        @Override
-        public int id() {
-            return 1;
-        }
-
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof Message) {
-                Message msg = (Message)message;
-                counter = counter + 1;
-                // … 
-                destination.tell(msg.withEvent(String.format("processed %d event messages so far", counter)), getSelf());
-            }
-        }
+    public Processor(ActorRef destination) {
+        this.destination = destination;
     }
 
-    final ActorRef destination = system.actorOf(Props.create(Destination.class));
-    // instantiate processor by passing the destination as constructor argument
-    final ActorRef processor = extension.processorOf(Props.create(Processor.class, destination), system);
+    @Override
+    public int id() {
+        return 1;
+    }
 
-    extension.recover();
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof Message) {
+            Message msg = (Message)message;
+            counter = counter + 1;
+            // …
+            destination.tell(msg.withEvent(String.format("processed %d event messages so far", counter)), getSelf());
+        }
+    }
+}
+
+final ActorRef destination = system.actorOf(Props.create(Destination.class));
+// instantiate processor by passing the destination as constructor argument
+final ActorRef processor = extension.processorOf(Props.create(Processor.class, destination), system);
+
+extension.recover();
+```
 
 Without any further actions, this would also send event messages to `destination` during recovery (i.e. during replay of event messages). With every application restart, `destination` would redundantly receive the whole event message history again and again. This is not acceptable in most cases, such as when `destination` represents an external service, for example.
 
@@ -395,19 +415,23 @@ To prevent redundant message delivery to `destination` we need something that *r
 
 **Scala:**
 
-    val destination: ActorRef = system.actorOf(Props[Destination])
-    // wrap destination by channel
-    val channel: ActorRef = extension.channelOf(DefaultChannelProps(1, destination))
-    // instantiate processor by passing the channel (i.e. wrapped destination) as constructor argument
-    val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
+```scala
+val destination: ActorRef = system.actorOf(Props[Destination])
+// wrap destination by channel
+val channel: ActorRef = extension.channelOf(DefaultChannelProps(1, destination))
+// instantiate processor by passing the channel (i.e. wrapped destination) as constructor argument
+val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
+```
 
 **Java:**
 
-    final ActorRef destination = system.actorOf(Props.create(Destination.class));
-    // wrap destination by channel
-    final ActorRef channel = extension.channelOf(DefaultChannelProps.create(1, destination), system);
-    // instantiate processor by passing the channel (i.e. wrapped destination) as constructor argument
-    final ActorRef processor = extension.processorOf(Props.create(Processor.class, channel), system);
+```java
+final ActorRef destination = system.actorOf(Props.create(Destination.class));
+// wrap destination by channel
+final ActorRef channel = extension.channelOf(DefaultChannelProps.create(1, destination), system);
+// instantiate processor by passing the channel (i.e. wrapped destination) as constructor argument
+final ActorRef processor = extension.processorOf(Props.create(Processor.class, channel), system);
+```
 
 A channel must have a unique id (`1` in our example), a positive integer that must be consistently defined across application runs. Here, we create a [default channel](#defaultchannel) that is configured with a [`DefaultChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.DefaultChannelProps) configuration object. If applications need reliable event message delivery to destinations, they should use a [reliable channel](#reliablechannel) that is configured with a [`ReliableChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannelProps) configuration object.
 
@@ -415,28 +439,32 @@ Assuming the following definition of a `Destination` actor
 
 **Scala:**
 
-    class Destination extends Actor {
-      def receive = {
-        case msg: Message => {
-          println("[destination] event = '%s'" format msg.event)
-          // confirm receipt of event message from channel
-          msg.confirm()
-        }
-      }
+```scala
+class Destination extends Actor {
+  def receive = {
+    case msg: Message => {
+      println("[destination] event = '%s'" format msg.event)
+      // confirm receipt of event message from channel
+      msg.confirm()
     }
+  }
+}
+```
 
 **Java:**
 
-    public class Destination extends UntypedActor {
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof Message) {
-                Message msg = (Message)message;
-                System.out.println(String.format("[destination] event = %s", msg.event()));
-                msg.confirm(true);
-            }
+```java
+public class Destination extends UntypedActor {
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof Message) {
+            Message msg = (Message)message;
+            System.out.println(String.format("[destination] event = %s", msg.event()));
+            msg.confirm(true);
         }
     }
+}
+```
 
 and that we're starting again from an empty journal, you should see
 
@@ -464,15 +492,21 @@ The [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#or
 
 **Scala:**
 
-    new MyActor with Receiver with Confirm with Eventsourced
+```scala
+new MyActor with Receiver with Confirm with Eventsourced
+```
 
 **Java:**
 
-    public class MyActor extends UntypedEventsourcedConfirmingReceiver
+```java
+public class MyActor extends UntypedEventsourcedConfirmingReceiver
+```
 
 The Eventsourced Java API provides some predefined combinations of stackable traits as abstract base classes. For example, [`UntypedEventsourcedConfirmingReceiver`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.UntypedEventsourcedConfirmingReceiver) is defined as
 
-    abstract class UntypedEventsourcedReceiver extends UntypedActor with Receiver with Confirm with Eventsourced
+```scala
+abstract class UntypedEventsourcedReceiver extends UntypedActor with Receiver with Confirm with Eventsourced
+```
 
 Other predefined combinations of stackable traits in the Java API are described in the following subsections. Refer to the `Untyped*` abstract classes in the [API docs](http://eligosource.github.io/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package) for all predefined combinations.
 
@@ -484,65 +518,77 @@ An actor that receives event [`Message`](http://eligosource.github.com/eventsour
 
 **Scala:**
 
-    class MyActor extends Actor {
-      def receive = {
-        case event => println("received event %s" format event)
-      }
-    }
+```scala
+class MyActor extends Actor {
+  def receive = {
+    case event => println("received event %s" format event)
+  }
+}
 
-    val myActor = system.actorOf(Props(new MyActor with Receiver))
+val myActor = system.actorOf(Props(new MyActor with Receiver))
 
-    myActor ! Message("foo")
+myActor ! Message("foo")
+```
 
 **Java:**
 
-    public class MyActor extends UntypedReceiver {
-        @Override
-        public void onReceive(Object event) throws Exception {
-            System.out.println(String.format("received event = %s", event));
-        }
+```java
+public class MyActor extends UntypedReceiver {
+    @Override
+    public void onReceive(Object event) throws Exception {
+        System.out.println(String.format("received event = %s", event));
     }
+}
 
-    final ActorRef myActor = system.actorOf(Props.create(MyActor.class));
+final ActorRef myActor = system.actorOf(Props.create(MyActor.class));
 
-    myActor.tell(Message.create("foo"), null);
+myActor.tell(Message.create("foo"), null);
+```
 
 In the above example, sending `Message("foo")` to `myActor` will write `received event foo` to `stdout`. The `Receiver` trait stores the received event message as *current* event message in a field, extracts the contained `event` from that message and calls the `receive` (or `onReceive`) method of `MyActor` with `event` as argument. If `MyActor` wants to have access to the current event message it must be defined with a `Receiver` self-type and call the `message` method (Scala API) or just call the `message()` method (Java API).
 
 **Scala:**
 
-    class MyActor extends Actor { this: Receiver =>
-      def receive = {
-        case event => {
-          // obtain current event message
-          val currentMessage = message
-          // …
-          println("received event %s" format event)
-        }
-      }
+```scala
+class MyActor extends Actor { this: Receiver =>
+  def receive = {
+    case event => {
+      // obtain current event message
+      val currentMessage = message
+      // …
+      println("received event %s" format event)
     }
+  }
+}
+```
 
 **Java:**
 
-    public class MyActor extends UntypedReceiver {
-        @Override
-        public void onReceive(Object event) throws Exception {
-            // obtain current event message
-            Message currentMessage = message();
-            // … 
-            System.out.println(String.format("received event = %s", event));
-        }
+```java
+public class MyActor extends UntypedReceiver {
+    @Override
+    public void onReceive(Object event) throws Exception {
+        // obtain current event message
+        Message currentMessage = message();
+        // …
+        System.out.println(String.format("received event = %s", event));
     }
+}
+```
 
 The `Receiver` trait can also be combined with the stackable `Eventsourced` and/or `Confirm` traits where `Receiver` must always be the first modification. For example:
 
 **Scala:**
 
-    new MyActor with Receiver with Eventsourced
+```scala
+new MyActor with Receiver with Eventsourced
+```
 
 **Java:**
 
-    public class MyActor extends UntypedEventsourcedReceiver 
+```java
+public class MyActor extends UntypedEventsourcedReceiver
+```
 
 Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Receiver) for further details.
 
@@ -554,73 +600,85 @@ Where a `Receiver` modification allows actors to pattern-match against incoming 
 
 **Scala:**
 
-    class MyActor extends Actor { this: Emitter =>
-        def receive = {
-          case event => {
-            // emit event to channel "myChannel"
-            emitter("myChannel") sendEvent ("received: %s" format event)
-          }
-        }
+```scala
+class MyActor extends Actor { this: Emitter =>
+    def receive = {
+      case event => {
+        // emit event to channel "myChannel"
+        emitter("myChannel") sendEvent ("received: %s" format event)
       }
+    }
+  }
 
-    // create register channel under name "myChannel"
-    extension.channelOf(DefaultChannelProps(1, destination).withName("myChannel"))
+// create register channel under name "myChannel"
+extension.channelOf(DefaultChannelProps(1, destination).withName("myChannel"))
 
-    val myActor = system.actorOf(Props(new MyActor with Emitter))
+val myActor = system.actorOf(Props(new MyActor with Emitter))
+```
 
 **Java:**
 
-    public class MyActor extends UntypedEmitter {
-        @Override
-        public void onReceive(Object event) throws Exception {
-            // emit event to channel "myChannel"
-            emitter("myChannel").sendEvent(String.format("received: %s", event), getSelf());
-        }
+```java
+public class MyActor extends UntypedEmitter {
+    @Override
+    public void onReceive(Object event) throws Exception {
+        // emit event to channel "myChannel"
+        emitter("myChannel").sendEvent(String.format("received: %s", event), getSelf());
     }
+}
 
-    // create register channel under name "myChannel"
-    extension.channelOf(DefaultChannelProps.create(1, destination).withName("myChannel"), system);
-    
-    final ActorRef myActor = extension.processorOf(Props.create(MyActor.class), system);
+// create register channel under name "myChannel"
+extension.channelOf(DefaultChannelProps.create(1, destination).withName("myChannel"), system);
+
+final ActorRef myActor = extension.processorOf(Props.create(MyActor.class), system);
+```
 
 Event messages sent by an emitter to a channel are always derived from (i.e. are a copy of) the current event message (an `Emitter` is also `Receiver` and maintains a *current* event message, see also section [Receiver](#receiver)). A call to the `emitter` method with a channel name as argument creates a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) object that captures the named channel and the current event message. Calling `sendEvent` on that object modifies the captured event message with the specified event argument and sends the updated event message to the channel (see also channel [usage hints](#usage-hints)). A `MessageEmitter` object can also be sent to other actors (or threads) and be used there i.e. a `MessageEmitter` object is thread-safe. Channels can also be referred to by id when creating a `MessageEmitter` i.e. there's no need to define a custom channel name:
 
 **Scala:**
 
-    class MyActor extends Actor { this: Emitter =>
-        def receive = {
-          case event => {
-            // emit event to channel with id 1
-            emitter(1) sendEvent ("received: %s" format event)
-          }
-        }
-      }
+```scala
+class MyActor extends Actor { this: Emitter =>
+  def receive = {
+    case event => {
+      // emit event to channel with id 1
+      emitter(1) sendEvent ("received: %s" format event)
+    }
+  }
+}
 
-    // create register channel
-    extension.channelOf(DefaultChannelProps(1, destination))
+// create register channel
+extension.channelOf(DefaultChannelProps(1, destination))
+```
 
 **Java:**
 
-    public class MyActor extends UntypedEmitter {
-        @Override
-        public void onReceive(Object event) throws Exception {
-            // emit event to channel with id 1
-            emitter(1).sendEvent(String.format("received: %s", event), getSelf());
-        }
+```java
+public class MyActor extends UntypedEmitter {
+    @Override
+    public void onReceive(Object event) throws Exception {
+        // emit event to channel with id 1
+        emitter(1).sendEvent(String.format("received: %s", event), getSelf());
     }
+}
 
-    // create register channel
-    extension.channelOf(DefaultChannelProps.create(1, destination), system);
+// create register channel
+extension.channelOf(DefaultChannelProps.create(1, destination), system);
+```
 
 The `Emitter` trait can also be combined with the stackable `Eventsourced` and/or `Confirm` traits where `Emitter` must always be the first modification. For example:
 
 **Scala:**
 
-    new MyActor with Emitter with Eventsourced
+```scala
+new MyActor with Emitter with Eventsourced
+```
 
 **Java:**
 
-    public class MyActor extends UntypedEventsourcedEmitter
+```java
+public class MyActor extends UntypedEventsourcedEmitter
+```
 
 Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Emitter) for further details.
 
@@ -636,21 +694,29 @@ This trait can either be used standalone
 
 **Scala:**
 
-    new MyActor with Confirm
+```scala
+new MyActor with Confirm
+```
 
 **Java:**
 
-    public class MyActor extends UntypedConfirmingActor
+```java
+public class MyActor extends UntypedConfirmingActor
+```
 
 or in combination with the stackable `Receiver`, `Emitter` and/or `Eventsourced` traits where the `Confirm` modification must be made after a `Receiver` or `Emitter` modification but before an `Eventsourced` modification. For example:
 
 **Scala:**
 
-    new MyActor with Receiver with Confirm with Eventsourced
+```scala
+new MyActor with Receiver with Confirm with Eventsourced
+```
 
 **Java:**
 
-    public class MyActor extends UntypedEventsourcedConfirmingReceiver
+```java
+public class MyActor extends UntypedEventsourcedConfirmingReceiver
+```
 
 Refer to the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Confirm) for further details.
 
@@ -668,7 +734,7 @@ For the Java API
 - `Processor` will extend `UntypedEventsourcedEmitter`
 - `Destination` will extend `UntypedConfirmingReceiver`
 
-Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and 
+Code from this section is contained in [StackableTraits.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/guide/StackableTraits.scala) and
 [StackableTraits.java](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/java/org/eligosource/eventsourced/guide/japi/StackableTraits.java). It can be executed from the sbt prompt with
 
 **Scala:**
@@ -685,86 +751,106 @@ The new Scala definition of `Processor` now has a self-type `Emitter` and patter
 
 **Scala:**
 
-    class Processor extends Actor { this: Emitter =>
-      var counter = 0
+```scala
+class Processor extends Actor { this: Emitter =>
+  var counter = 0
 
-      def receive = {
-        case event => {
-          counter = counter + 1
-          println("[processor] event = %s (%d)" format (event, counter))
-          emitter("destination") sendEvent ("processed %d events so far" format counter)
-        }
-      }
+  def receive = {
+    case event => {
+      counter = counter + 1
+      println("[processor] event = %s (%d)" format (event, counter))
+      emitter("destination") sendEvent ("processed %d events so far" format counter)
     }
+  }
+}
+```
 
 **Java:**
 
-    public class Processor extends UntypedEventsourcedEmitter {
-        private int counter = 0;
+```java
+public class Processor extends UntypedEventsourcedEmitter {
+    private int counter = 0;
 
-        @Override
-        public int id() {
-            return 1;
-        }
-
-        @Override
-        public void onReceive(Object event) throws Exception {
-            counter = counter + 1;
-            System.out.println(String.format("[processor] event = %s (%d)", event, counter));
-            emitter("destination").sendEvent(String.format("processed %d event messages so far", counter), getSelf());
-        }
+    @Override
+    public int id() {
+        return 1;
     }
+
+    @Override
+    public void onReceive(Object event) throws Exception {
+        counter = counter + 1;
+        System.out.println(String.format("[processor] event = %s (%d)", event, counter));
+        emitter("destination").sendEvent(String.format("processed %d event messages so far", counter), getSelf());
+    }
+}
+```
 
 Instead of passing the channel via the constructor it is now looked-up by name (`"destination"`). The channel name is specified during channel creation.
 
 **Scala:**
 
-    extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
+```scala
+extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
+```
 
 **Java:**
 
-    extension.channelOf(DefaultChannelProps.create(1, destination).withName("destination"), system);
+```java
+extension.channelOf(DefaultChannelProps.create(1, destination).withName("destination"), system);
+```
 
 The Scala `Processor` must be instantiated with an additional `Emitter` modification to conform to the `Processor` self-type. No further modification is needed for the Java `Processor`.
 
 **Scala:**
 
-    val processor: ActorRef = extension.processorOf(Props(new Processor with Emitter with Eventsourced { val id = 1 } ))
+```scala
+val processor: ActorRef = extension.processorOf(Props(new Processor with Emitter with Eventsourced { val id = 1 } ))
+```
 
 **Java:**
 
-    final ActorRef processor = extension.processorOf(Props.create(Processor.class), system);
+```java
+final ActorRef processor = extension.processorOf(Props.create(Processor.class), system);
+```
 
 The new definition of `Destination`
 
 **Scala:**
 
-    class Destination extends Actor {
-      def receive = {
-        case event => {
-          println("[destination] event = '%s'" format event)
-        }
-      }
+```scala
+class Destination extends Actor {
+  def receive = {
+    case event => {
+      println("[destination] event = '%s'" format event)
     }
+  }
+}
+```
 
 **Java:**
 
-    public class Destination extends UntypedConfirmingReceiver {
-        @Override
-        public void onReceive(Object event) throws Exception {
-            System.out.println(String.format("[destination] event = %s", event));
-        }
+```java
+public class Destination extends UntypedConfirmingReceiver {
+    @Override
+    public void onReceive(Object event) throws Exception {
+        System.out.println(String.format("[destination] event = %s", event));
     }
+}
+```
 
 pattern-matches against events directly and leaves event message receipt confirmation to the `Confirm` trait. The Scala `Destination` must be instantiated with a `Receiver` and a `Confirm` modification and again, no further modification is needed for the Java `Destination`.
 
 **Scala:**
 
-    val destination: ActorRef = system.actorOf(Props(new Destination with Receiver with Confirm))
+```scala
+val destination: ActorRef = system.actorOf(Props(new Destination with Receiver with Confirm))
+```
 
 **Java:**
 
-    final ActorRef destination = system.actorOf(Props.create(Destination.class));
+```java
+final ActorRef destination = system.actorOf(Props.create(Destination.class));
+```
 
 Sender references
 -----------------
@@ -782,50 +868,58 @@ For example, taking the code from section [First steps](#first-steps) as a start
 
 **Scala:**
 
-    class Processor(destination: ActorRef) extends Actor {
-      // …
+```scala
+class Processor(destination: ActorRef) extends Actor {
+  // …
 
-      def receive = {
-        case msg: Message => {
-          // …
-          // reply to sender
-          sender ! ("done processing event = %s" format msg.event)
-        }
-      }
+  def receive = {
+    case msg: Message => {
+      // …
+      // reply to sender
+      sender ! ("done processing event = %s" format msg.event)
     }
+  }
+}
+```
 
 
 **Java:**
 
-    public class Processor extends UntypedEventsourcedActor {
-        // …         
+```java
+public class Processor extends UntypedEventsourcedActor {
+    // …
 
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof Message) {
-                // … 
-                getSender().tell(String.format("done processing event = %s", msg.event()), getSelf());
-            }
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof Message) {
+            // …
+            getSender().tell(String.format("done processing event = %s", msg.event()), getSelf());
         }
     }
+}
+```
 
 
 Applications can now *ask* the `processor` and will get a response asynchronously.
 
 **Scala:**
 
-    processor ? Message("foo") onSuccess {
-      case response => println(response)
-    }
+```scala
+processor ? Message("foo") onSuccess {
+  case response => println(response)
+}
+```
 
 **Java:**
 
-    ask(processor, Message.create("foo"), 5000L).onSuccess(new OnSuccess<Object>() {
-        @Override
-        public void onSuccess(Object response) throws Throwable {
-            System.out.println(response);
-        }
-    }, system.dispatcher());
+```java
+ask(processor, Message.create("foo"), 5000L).onSuccess(new OnSuccess<Object>() {
+    @Override
+    public void onSuccess(Object response) throws Throwable {
+        System.out.println(response);
+    }
+}, system.dispatcher());
+```
 
 
 No surprise here. The sender reference in this example represents the future that is returned from the `?` or `ask` method call. But what happens during a replay? During a replay, the sender reference will be `deadLetters` because `Eventsourced` processors don't store sender references in the journal. The main reason for this is that applications usually do not want to redundantly reply to senders during replays.
@@ -836,72 +930,76 @@ Instead of replying to the sender, the processor can also forward the sender ref
 
 **Scala:**
 
-    class Processor(destination: ActorRef) extends Actor {
-      var counter = 0
+```scala
+class Processor(destination: ActorRef) extends Actor {
+  var counter = 0
 
-      def receive = {
-        case msg: Message => {
-          // …
-          // forward modified event message to destination (together with sender reference)
-          destination forward msg.copy(event = "processed %d event messages so far" format counter)
-        }
-      }
+  def receive = {
+    case msg: Message => {
+      // …
+      // forward modified event message to destination (together with sender reference)
+      destination forward msg.copy(event = "processed %d event messages so far" format counter)
     }
+  }
+}
 
-    class Destination extends Actor {
-      def receive = {
-        case msg: Message => {
-          // …
-          // reply to sender
-          sender ! ("done processing event = %s (%d)" format msg.event)
-        }
-      }
+class Destination extends Actor {
+  def receive = {
+    case msg: Message => {
+      // …
+      // reply to sender
+      sender ! ("done processing event = %s (%d)" format msg.event)
     }
+  }
+}
 
-    val destination: ActorRef = system.actorOf(Props[Destination])
-    val channel: ActorRef = extension.channelOf(DefaultChannelProps(1, destination))
-    val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
+val destination: ActorRef = system.actorOf(Props[Destination])
+val channel: ActorRef = extension.channelOf(DefaultChannelProps(1, destination))
+val processor: ActorRef = extension.processorOf(Props(new Processor(channel) with Eventsourced { val id = 1 } ))
+```
 
 **Java:**
 
-    public class Processor extends UntypedEventsourcedActor {
-        private ActorRef destination;
-        private int counter = 0;
+```java
+public class Processor extends UntypedEventsourcedActor {
+    private ActorRef destination;
+    private int counter = 0;
 
-        public Processor(ActorRef destination) {
-            this.destination = destination;
-        }
-
-        @Override
-        public int id() {
-            return 1;
-        }
-
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof Message) {
-                Message msg = (Message)message;
-                // forward modified event message to destination (together with sender reference)
-                destination.forward(msg.withEvent(String.format("processed %d event messages so far", counter)), getContext());
-            }
-        }
+    public Processor(ActorRef destination) {
+        this.destination = destination;
     }
 
-    public class Destination extends UntypedActor {
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof Message) {
-                Message msg = (Message)message;
-                // … 
-                // reply to sender
-                getSender().tell(String.format("done processing event = %s", msg.event()), getSelf());
-            }
-        }
+    @Override
+    public int id() {
+        return 1;
     }
 
-    final ActorRef destination = system.actorOf(Props.create(Destination.class));
-    final ActorRef channel = extension.channelOf(DefaultChannelProps.create(1, destination), system);
-    final ActorRef processor = extension.processorOf(Props.create(Processor.class, channel), system);
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof Message) {
+            Message msg = (Message)message;
+            // forward modified event message to destination (together with sender reference)
+            destination.forward(msg.withEvent(String.format("processed %d event messages so far", counter)), getContext());
+        }
+    }
+}
+
+public class Destination extends UntypedActor {
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof Message) {
+            Message msg = (Message)message;
+            // …
+            // reply to sender
+            getSender().tell(String.format("done processing event = %s", msg.event()), getSelf());
+        }
+    }
+}
+
+final ActorRef destination = system.actorOf(Props.create(Destination.class));
+final ActorRef channel = extension.channelOf(DefaultChannelProps.create(1, destination), system);
+final ActorRef processor = extension.processorOf(Props.create(Processor.class, channel), system);
+```
 
 When using a [`MessageEmitter`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.MessageEmitter) (see also section [Emitter](#emitter)) applications can choose between methods `sendEvent` and `forwardEvent` where `sendEvent` takes an (implicit) sender reference as parameter and `forwardEvent` forwards the current sender reference. They work in the same way as the `tell` (`!`) and `forward` methods on `ActorRef`, respectively.
 
@@ -936,30 +1034,36 @@ Event messages that are negatively confirmed by the destination (via a call to `
 
 A `DefaultChannel` is created and registered at an `EventsourcingExtension` as follows.
 
-    val extension: EventsourcingExtension = …
-    val destination: ActorRef = …
-    val channelId: Int = …
+```scala
+val extension: EventsourcingExtension = …
+val destination: ActorRef = …
+val channelId: Int = …
 
-    val channel: ActorRef = extension.channelOf(DefaultChannelProps(channelId, destination))
+val channel: ActorRef = extension.channelOf(DefaultChannelProps(channelId, destination))
+```
 
 The `channelId` must be a positive integer and consistently defined across application runs. The map of registered channels can be obtained via the `channels` method of `EventsourcingExtension` which returns a map of type `Map[Int, ActorRef]` where the mapping key is the channel id. Channels can optionally be registered under a custom name (see also section [Emitter](#emitter)).
 
-    // …
-    val channelId: Int = …
-    val channelName: String = …
+```scala
+// …
+val channelId: Int = …
+val channelName: String = …
 
-    val channel: ActorRef = extension.channelOf(DefaultChannelProps(channelId, destination).withName(channelName))
+val channel: ActorRef = extension.channelOf(DefaultChannelProps(channelId, destination).withName(channelName))
+```
 
 The map of registered named channels can be obtained via the `namedChannels` method which returns a map of type `Map[String, ActorRef]` where the mapping key is the channel name.
 
 A default channel preserves [sender references](#sender-references). Applications can therefore use `?` and `forward` as well to communicate with channel destinations via channel actor refs. However, special care must be taken when using `?`: replayed messages that have already been confirmed by a channel destination will be ignored by the corresponding channel and the destination cannot reply. Hence, the sender will see a reply timeout. This can be avoided by finding out in advance if the channel will ignore a message or not. Applications do that by investigating the `Message.acks` list. If the channel's id is contained in that list, the message will be ignored and should not be used for asking.
 
-    val channelId: Int = … 
-    val channel: ActorRef = … 
+```scala
+val channelId: Int = …
+val channel: ActorRef = …
 
-    if (!message.acks.contains(channelId)) channel ? message.copy(…) onComplete {
-      case result => … 
-    }
+if (!message.acks.contains(channelId)) channel ? message.copy(…) onComplete {
+  case result => …
+}
+```
 
 See also [usage-hints](#usage-hints) regarding `message.copy(…)`.
 
@@ -967,14 +1071,16 @@ See also [usage-hints](#usage-hints) regarding `message.copy(…)`.
 
 ![Reliable channel](https://raw.github.com/eligosource/eventsourced/master/doc/images/channels-2.png)
 
-A reliable channel is a persistent channel that writes event messages to a journal before delivering them to a destination actor. In contrast to a default channel, a reliable channel preserves the order of messages as produced by an event-sourced processor and attempts to re-deliver event messages on destination failures. Therefore, a reliable channel enables applications to recover from temporary destination failures without having to run an event message replay. Furthermore, a reliable channel can also recover from crashes of the JVM it is running in. This allows applications to guarantee at-least-once message delivery in case of both, destination failures and sender failures. 
+A reliable channel is a persistent channel that writes event messages to a journal before delivering them to a destination actor. In contrast to a default channel, a reliable channel preserves the order of messages as produced by an event-sourced processor and attempts to re-deliver event messages on destination failures. Therefore, a reliable channel enables applications to recover from temporary destination failures without having to run an event message replay. Furthermore, a reliable channel can also recover from crashes of the JVM it is running in. This allows applications to guarantee at-least-once message delivery in case of both, destination failures and sender failures.
 
 If a destination positively confirms the receipt of an event message, the stored message is removed from the channel and the next one is delivered. If a destination negatively confirms the receipt of an event message or if no confirmation is made (i.e. a timeout occurs), a re-delivery attempt is made after a certain *redelivery delay*. If the maximum number of re-delivery attempts have been made, the channel restarts itself after a certain *restart delay* and starts again with re-deliveries. If the maximum number of restarts has been reached, the channel stops message delivery and publishes a [`DeliveryStopped`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Channel$$DeliveryStopped) event to the event stream of the actor system this channel belongs to. Applications can then re-activate the channel by calling the `deliver(Int)` method of `EventsourcingExtension` with the channel id as argument. Refer to the [`ReliableChannel`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannel) API docs for details.
 
 A `ReliableChannel` is created and registered in the same way as a default channel except that a [`ReliableChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.ReliableChannelProps) configuration object is used.
 
-    // …
-    val channel: ActorRef = extension.channelOf(ReliableChannelProps(channelId, destination))
+```scala
+// …
+val channel: ActorRef = extension.channelOf(ReliableChannelProps(channelId, destination))
+```
 
 This configuration object additionally allows applications to configure a [`RedeliveryPolicy`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.RedeliveryPolicy) for the channel.
 
@@ -998,10 +1104,12 @@ A reliable request-reply channel is a pattern implemented on top of a [reliable 
 
 A reliable request-reply channel is created and registered in the same way as a reliable channel except that a [`ReliableRequestReplyChannelProps`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.patterns.reliable.requestreply.ReliableRequestReply$ReliableRequestReplyChannelProps) configuration object is used.
 
-    // …
-    import org.eligosource.eventsourced.patterns.reliable.requestreply._
+```scala
+// …
+import org.eligosource.eventsourced.patterns.reliable.requestreply._
 
-    val channel: ActorRef = extension.channelOf(ReliableRequestReplyChannelProps(channelId, destination))
+val channel: ActorRef = extension.channelOf(ReliableRequestReplyChannelProps(channelId, destination))
+```
 
 This configuration object additionally allows applications to configure a `replyTimeout` for replies from the destination. A detailed usage example of a reliable request-reply channel is given in [this article](http://krasserm.blogspot.com/2013/01/event-sourcing-and-external-service.html).
 
@@ -1015,14 +1123,16 @@ Channels must be activated before usage, see extension.deliver().
 
 For channels to work properly, event-sourced processors must copy the `processorId` and `sequenceNr` values from a received (and journaled) input event message to output event messages. This is usually done by calling `copy()` on the received input event message and updating only those fields that are relevant for the application such as `event` or `ack`, for example:
 
-    class Processor(channel: ActorRef) extends Actor {
-      def receive = {
-        case msg: Message => {
-          // …
-          channel ! msg.copy(event = …, ack = …)
-        }
-      }
+```scala
+class Processor(channel: ActorRef) extends Actor {
+  def receive = {
+    case msg: Message => {
+      // …
+      channel ! msg.copy(event = …, ack = …)
     }
+  }
+}
+```
 
 When using a [message emitter](#emitter), this is done automatically.
 
@@ -1030,86 +1140,96 @@ When using a [message emitter](#emitter), this is done automatically.
 
 [Reliable channels](#reliablechannel) and [reliable request-reply channels](#reliable-request-reply-channel) can also be used independently of `Eventsourced` processors (i.e. standalone). For standalone channel usage, senders must set the `Message.processorId` of the sent `Message` to `0` (which is the default value):
 
-    val channel = extension.channelOf(ReliableChannelProps(…))
+```scala
+val channel = extension.channelOf(ReliableChannelProps(…))
 
-    channel ! Message("my event") // processorId == 0
+channel ! Message("my event") // processorId == 0
+```
 
 This is equivalent to directly sending the `Message.event`:
 
-    channel ! "my event"
+```scala
+channel ! "my event"
+```
 
 A reliable channel internally wraps a received event into a `Message` with `processorId` set to `0`. Setting the `processorId` to `0` causes a reliable channel to skip writing an acknowledgement. An acknowledgement always refers to an event message received by an `Eventsourced` processor, so there's no need to write one in this case. Another (unrelated) use case for turning off writing acknowledgements is the emission of [event message series](#event-series) in context of [event-sourced channel usage](#eventsourced-usage).
 
 #### Remote destinations
 
-Applications should consider using reliable channels whenever a sender processor should deliver messages to a **remote** destination at-least-once and in sending order, even in cases of 
+Applications should consider using reliable channels whenever a sender processor should deliver messages to a **remote** destination at-least-once and in sending order, even in cases of
 
 1. network errors between sender and destination (remote actor ref remains valid but remote actor is temporarily unavailable)
 2. destination JVM crashes (remote actor ref becomes invalid) and
 3. sender JVM crashes (messages already received by a sender processor but not yet delivered to the remote destination must be automatically delivered when the sender [recovers](#recovery) from a crash)
 
-Using a remote actor ref as channel destination would work in case 1 but not in case 2. One possible way to deal with case 2, is to use a local actor (a destination proxy) that communicates with the remote destination via an `ActorSelection`. An `ActorSelection` can be created from an actor path and is not bound to the remote destination's life-cycle.  
+Using a remote actor ref as channel destination would work in case 1 but not in case 2. One possible way to deal with case 2, is to use a local actor (a destination proxy) that communicates with the remote destination via an `ActorSelection`. An `ActorSelection` can be created from an actor path and is not bound to the remote destination's life-cycle.
 
-    class DestinationProxy(destinationPath: String) extends Actor {
-      val destinationSelection: ActorSelection = context.actorSelection(destinationPath)
-    
-      def receive = {
-        case msg => destinationSelection tell (msg, sender) // forward
-      }
-    }
+```scala
+class DestinationProxy(destinationPath: String) extends Actor {
+  val destinationSelection: ActorSelection = context.actorSelection(destinationPath)
 
-    val destinationPath: String = …
-    val proxy = system.actorOf(Props(new DestinationProxy(destinationPath)))
-    val channel = extension.channelOf(ReliableChannelProps(1, proxy))
+  def receive = {
+    case msg => destinationSelection tell (msg, sender) // forward
+  }
+}
+
+val destinationPath: String = …
+val proxy = system.actorOf(Props(new DestinationProxy(destinationPath)))
+val channel = extension.channelOf(ReliableChannelProps(1, proxy))
+```
 
 Using an `ActorSelection` also covers case 1, of course. Case 3 is automatically covered by the fact that a sender processor uses a reliable channel for sending messages to a destination. Here's an example:
 
-    class Sender extends Actor {
-      val id = 1
-      val ext = EventsourcingExtension(context.system)
-      val proxy = context.actorOf(Props(new DestinationProxy("akka.tcp://example@127.0.0.1:2852/user/destination")))
-      val channel = ext.channelOf(ReliableChannelProps(1, proxy))
-    
-      def receive = {
-        case msg: Message => channel forward msg
-      }
+```scala
+class Sender extends Actor {
+  val id = 1
+  val ext = EventsourcingExtension(context.system)
+  val proxy = context.actorOf(Props(new DestinationProxy("akka.tcp://example@127.0.0.1:2852/user/destination")))
+  val channel = ext.channelOf(ReliableChannelProps(1, proxy))
+
+  def receive = {
+    case msg: Message => channel forward msg
+  }
+}
+
+// create and recover sender and its channel
+val sender = extension.processorOf(Props(new Sender with Eventsourced))
+
+sender ! Message("hello")
+```
+
+Special care must be taken if the remote destination actor is an `Eventsourced` actor. In this case, the application must ensure that the destination actor can only be accessed remotely **after** it has been successfully recovered. This can be achieved, for example, by using an additional *endpoint* actor that simply forwards to the destination actor. The endpoint actor is registered under the destination path after the destination actor has been successfully recovered.
+
+```scala
+class DestinationEndpoint(destination: ActorRef) extends Actor {
+  def receive = {
+    case msg => destination forward msg
+  }
+}
+
+class Destination extends Actor {
+  val id = 2
+
+  def receive = {
+    case msg: Message => {
+      println(s"received ${msg.event}")
+      msg.confirm()
     }
+  }
+}
 
-    // create and recover sender and its channel
-    val sender = extension.processorOf(Props(new Sender with Eventsourced))
+val destination = extension.processorOf(Props(new Destination with Eventsourced))
 
-    sender ! Message("hello")
+// wait for destination recovery to complete
+extension.recover()
 
-Special care must be taken if the remote destination actor is an `Eventsourced` actor. In this case, the application must ensure that the destination actor can only be accessed remotely **after** it has been successfully recovered. This can be achieved, for example, by using an additional *endpoint* actor that simply forwards to the destination actor. The endpoint actor is registered under the destination path after the destination actor has been successfully recovered. 
+// make destination remotely accessible after recovery
+system.actorOf(Props(new DestinationEndpoint(destination)), "destination")
+```
 
-    class DestinationEndpoint(destination: ActorRef) extends Actor {
-      def receive = {
-        case msg => destination forward msg
-      }
-    }
-    
-    class Destination extends Actor {
-      val id = 2
-    
-      def receive = {
-        case msg: Message => {
-          println(s"received ${msg.event}")
-          msg.confirm()
-        }
-      }
-    }
+This ensures that new remote messages never interleave with messages that are replayed to the destination actor during recovery.
 
-    val destination = extension.processorOf(Props(new Destination with Eventsourced))
-
-    // wait for destination recovery to complete
-    extension.recover()
-
-    // make destination remotely accessible after recovery
-    system.actorOf(Props(new DestinationEndpoint(destination)), "destination")
-
-This ensures that new remote messages never interleave with messages that are replayed to the destination actor during recovery. 
-
-Code from this section is contained in [ReliableChannelExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ReliableChannelExample.scala). The sender application can be started from sbt with 
+Code from this section is contained in [ReliableChannelExample.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/ReliableChannelExample.scala). The sender application can be started from sbt with
 
     > project eventsourced-examples
     > run-main org.eligosource.eventsourced.example.Sender
@@ -1130,24 +1250,26 @@ Recovery
 
 Recovery is a procedure that re-creates the state of event-sourced applications consisting of [`Eventsourced`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Eventsourced) actors (processors) and [channels](#channels). Recovery is usually done at application start, either after normal termination or after a crash (but can also be done any time later, even for individual processors and channels).
 
-    val system: ActorSystem = …
-    val journal: ActorRef = …
+```scala
+val system: ActorSystem = …
+val journal: ActorRef = …
 
-    val extension = EventsourcingExtension(system, journal)
+val extension = EventsourcingExtension(system, journal)
 
-    // create and register event-sourced processors
-    extension.processorOf(…)
-    // …
+// create and register event-sourced processors
+extension.processorOf(…)
+// …
 
-    // create and register channels
-    extension.channelOf(…)
-    // …
+// create and register channels
+extension.channelOf(…)
+// …
 
-    // recover state of registered processors and activate channels
-    extension.recover()
+// recover state of registered processors and activate channels
+extension.recover()
 
-    // processors and channels are now ready to use
-    // …
+// processors and channels are now ready to use
+// …
+```
 
 The `recover()` method first replays journaled event messages to all registered processors. By replaying the event message history, processors can recover state. Processors that emit event messages to one or more channels will also do so during replay. These channels will either ignore (discard) event messages that have already been successfully delivered (i.e. *acknowledged*) in previous application runs or buffer them for later delivery. After replay, the `recover()` method triggers the delivery of buffered messages by activating channels.
 
@@ -1166,29 +1288,39 @@ The following two subsections demonstrate some `ReplayParams` usage examples. Fo
 
 As already explained above
 
-    val extension: EventsourcingExtension = … 
+```scala
+val extension: EventsourcingExtension = …
 
-    import extension._
+import extension._
 
-    recover()
+recover()
+```
 
-recovers all processors with no lower and upper sequence number bound i.e. all event messages are replayed. This is equivalent to 
+recovers all processors with no lower and upper sequence number bound i.e. all event messages are replayed. This is equivalent to
 
-    recover(replayParams.allFromScratch)
+```scala
+recover(replayParams.allFromScratch)
+```
 
-or 
+or
 
-    recover(processors.keys.map(pid => ReplayParams(pid)).toSeq)
+```scala
+recover(processors.keys.map(pid => ReplayParams(pid)).toSeq)
+```
 
 If an application only wants to recover specific processors it should create `ReplayParams` only for these processors. For example
 
-    recover(Seq(ReplayParams(1), ReplayParams(2)))
+```scala
+recover(Seq(ReplayParams(1), ReplayParams(2)))
+```
 
 only recovers processors with ids `1` and `2`. Upper and lower sequence number bounds can be specified as well.
 
-    recover(Seq(ReplayParams(1, toSequenceNr = 12651L), ReplayParams(2, fromSequenceNr = 10L)))
+```scala
+recover(Seq(ReplayParams(1, toSequenceNr = 12651L), ReplayParams(2, fromSequenceNr = 10L)))
+```
 
-Here processor `1` will receive replayed event messages with sequence numbers within range `0` and `12615` (inclusive), processor `2` with receive event messages with sequence numbers starting from `10` with no upper sequence number bound. 
+Here processor `1` will receive replayed event messages with sequence numbers within range `0` and `12615` (inclusive), processor `2` with receive event messages with sequence numbers starting from `10` with no upper sequence number bound.
 
 #### Recovery with snapshots
 
@@ -1196,51 +1328,63 @@ During snapshot based recovery, a processor receives a [`SnapshotOffer`](http://
 
 **Scala:**
 
-    class Processor extends Actor {
-      var state = … 
+```scala
+class Processor extends Actor {
+  var state = // …
 
-      def receive = {
-        case so: SnapshotOffer => state = so.snapshot.state
-        … 
-      }
-    }
+  def receive = {
+    case so: SnapshotOffer => state = so.snapshot.state
+    // …
+  }
+}
+```
 
 **Java:**
 
-    public class Processor extends UntypedEventsourcedActor {
-        private Object state = … 
+```java
+public class Processor extends UntypedEventsourcedActor {
+    private Object state = // …
 
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof SnapshotOffer) {
-                SnapshotOffer so = (SnapshotOffer)message;
-                state = so.snapshot().state();
-            }
-            // … 
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof SnapshotOffer) {
+            SnapshotOffer so = (SnapshotOffer)message;
+            state = so.snapshot().state();
         }
+        // …
     }
+}
+```
 
 Snapshot based recovery will only send a `SnapshotOffer` message to a processor if one or more snapshots have been created for that processor before and these snapshots match the criteria in the corresponding `ReplayParams`. Relevant criteria are `toSequenceNr` and `snapshotFilter`. If there are no snapshots for a processor or existing snapshots do not match `ReplayParams` criteria, event messages will be replayed from scratch i.e. from sequence number `0`.
 
 To recover all processors from their latest snapshot
 
-    recover(replayParams.allWithSnapshot)
+```scala
+recover(replayParams.allWithSnapshot)
+```
 
 can be used. This is equivalent to
 
-    recover(processors.keys.map(pid => ReplayParams(pid, snapshot = true)).toSeq)
+```scala
+recover(processors.keys.map(pid => ReplayParams(pid, snapshot = true)).toSeq)
+```
 
 Snapshot based recovery can also be made with upper sequence number bound.
 
-    recover(Seq(ReplayParams(1, snapshot = true, toSequenceNr = 12651L)))
+```scala
+recover(Seq(ReplayParams(1, snapshot = true, toSequenceNr = 12651L)))
+```
 
 This recovers processor `1` with the latest snapshot that has a sequence number `<= 12561`. Remaining event messages (if there are any) are replayed up to sequence number `12561` (inclusive). Applications may also define further constraints on snapshots. For example
 
-    import scala.concurrent.duration._
+```scala
+import scala.concurrent.duration._
 
-    val limit = System.currentTimeMillis - 24.hours.toMillis
+val limit = System.currentTimeMillis - 24.hours.toMillis
 
-    recover(Seq(ReplayParams(1, snapshotFilter = snapshotMetadata => snapshotMetadata.timestamp < limit)))
+recover(Seq(ReplayParams(1, snapshotFilter = snapshotMetadata => snapshotMetadata.timestamp < limit)))
+```
 
 uses the latest snapshot of processor `1` that is older than 24 hours. This is done with a `snapshotFilter` that filters snapshots based on their timestamp. Snapshot filters operate on [`SnapshotMetadata`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.SnapshotMetadata).
 
@@ -1248,10 +1392,12 @@ uses the latest snapshot of processor `1` that is older than 24 hours. This is d
 
 The `recover` method waits for replayed messages being sent to all processors (via `!`) but does not wait for replayed event messages being processed by these processors. However, any new message sent to any registered processor, after `recover` successfully returned, will be processed after the replayed event messages. Applications that want to wait for processors to complete processing of replayed event messages, should use the `awaitProcessing()` method of [`EventsourcingExtension`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension).
 
-    val extension: EventsourcingExtension = …
+```scala
+val extension: EventsourcingExtension = …
 
-    extension.recover()
-    extension.awaitProcessing()
+extension.recover()
+extension.awaitProcessing()
+```
 
 This can be useful in situations where event-sourced processors maintain state via STM references and the application wants to ensure that the (externally visible) state is fully recovered before accepting new read requests from client applications. By default, the `awaitProcessing()` method waits for all registered processors to complete processing but applications can also specify a subset of registered processors.
 
@@ -1259,17 +1405,19 @@ This can be useful in situations where event-sourced processors maintain state v
 
 The `recover` and `awaitProcessing` methods block the calling thread. This may be convenient in scenarios where a main thread wants to recover the state of an event-sourced application before taking any further actions. In other scenarios, for example, where recovery is done for individual child processors (and channels) inside an actor (see [OrderExampleReliable.scala](https://github.com/eligosource/eventsourced/blob/master/es-examples/src/main/scala/org/eligosource/eventsourced/example/OrderExampleReliable.scala)), the non-blocking recovery API should be used:
 
-    val extension: EventsourcingExtension = …
+```scala
+val extension: EventsourcingExtension = …
 
-    val future = for {
-      _ <- extension.replay(…)
-      _ <- extension.deliver(…)            // optional
-      _ <- extension.completeProcessing(…) // optional
-    } yield ()
+val future = for {
+  _ <- extension.replay(…)
+  _ <- extension.deliver(…)            // optional
+  _ <- extension.completeProcessing(…) // optional
+} yield ()
 
-    future onSuccess {
-      case _ => // event-sourced processors now ready to use …
-    }
+future onSuccess {
+  case _ => // event-sourced processors now ready to use …
+}
+```
 
 Here, the futures returned by `replay`, `deliver` and `completeProcessing` are monadically composed with a for-comprehension which ensures a sequential execution of the corresponding asynchronous operations. When the composite `future` completes, the recovered processors and channels are ready to use. More details in the [API docs](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.EventsourcingExtension). The `replay` method can also be parameterized with a `ReplayParams` sequence (see section [Replay parameters](#replay-parameters)).
 
@@ -1277,43 +1425,45 @@ Here, the futures returned by `replay`, `deliver` and `completeProcessing` are m
 
 Channels can even be used by applications immediately after creation i.e. before activating them. This is especially important when event-sourced (parent) processors create new event-sourced child processors during handling of an event:
 
-    class Parent extends Actor { this: Receiver with Eventsourced =>
-      import context.dispatcher
+```scala
+class Parent extends Actor { this: Receiver with Eventsourced =>
+  import context.dispatcher
 
-      var child: Option[ActorRef] = None
+  var child: Option[ActorRef] = None
 
-      def receive = {
-        case event => {
-            // create child processor wrapped by channel
-            if (child.isEmpty) { child = Some(createChildProcessor(2, 2)) }
-            // channel can be used immediately
-            child.foreach(_ ! message.copy(…))
-        }
-      }
-
-      def createChildProcessor(pid: Int, cid: Int): ActorRef = {
-        implicit val recoveryTimeout = Timeout(10 seconds)
-
-        val childProcessor = extension.processorOf(Props(new Child with Receiver with Eventsourced { val id = pid } ))
-        val childChannel = extension.channelOf(DefaultChannelProps(cid, childProcessor))
-
-        for { // asynchronous, non-blocking recovery
-          _ <- extension.replay(Seq(ReplayParams(pid)))
-          _ <- extension.deliver(cid)
-        } yield ()
-
-        childChannel
-      }
+  def receive = {
+    case event => {
+        // create child processor wrapped by channel
+        if (child.isEmpty) { child = Some(createChildProcessor(2, 2)) }
+        // channel can be used immediately
+        child.foreach(_ ! message.copy(…))
     }
+  }
 
-    class Child extends Actor { this: Receiver =>
-      def receive = {
-        case event => {
-          … 
-          confirm()
-        }
-      }
+  def createChildProcessor(pid: Int, cid: Int): ActorRef = {
+    implicit val recoveryTimeout = Timeout(10 seconds)
+
+    val childProcessor = extension.processorOf(Props(new Child with Receiver with Eventsourced { val id = pid } ))
+    val childChannel = extension.channelOf(DefaultChannelProps(cid, childProcessor))
+
+    for { // asynchronous, non-blocking recovery
+      _ <- extension.replay(Seq(ReplayParams(pid)))
+      _ <- extension.deliver(cid)
+    } yield ()
+
+    childChannel
+  }
+}
+
+class Child extends Actor { this: Receiver =>
+  def receive = {
+    case event => {
+      …
+      confirm()
     }
+  }
+}
+```
 
 
 Here, `Parent` lazily creates a new `childProcessor` (wrapped by a default channel) on receiving an `event`. The `childChannel` is used by `Parent` immediately after creation i.e. concurrently to `childProcessor` message replay and `childChannel` activation. This is possible because a channel internally buffers new messages before its activation and delivers them to its destination after activation. This ensures that new messages will only be delivered to `childProcessor` after `childChannel` has been activated. During `Parent` recovery, `childChannel` will ignore messages that have already been successfully delivered to `childActor` (i.e. confirmed by `childActor`).
@@ -1331,62 +1481,74 @@ Applications can create snapshots by sending an `Eventsourced` processor a [`Sna
 
 **Scala:**
 
-    import org.eligosource.eventsourced.core._
-    // … 
+```scala
+import org.eligosource.eventsourced.core._
+// …
 
-    val processor: ActorRef = … 
+val processor: ActorRef = …
 
-    processor ! SnapshotRequest
+processor ! SnapshotRequest
+```
 
 **Java:**
 
-    import org.eligosource.eventsourced.core.*;
-    // … 
+```java
+import org.eligosource.eventsourced.core.*;
+// …
 
-    final ActorRef processor = … 
+final ActorRef processor = …
 
-    processor.tell(SnapshotRequest.get(), …)
+processor.tell(SnapshotRequest.get(), …)
+```
 
 This will asynchronously capture and save a snapshot of `processor`'s state. The sender will be notified when the snapshot has been successfully saved.
 
 **Scala:**
 
-    (processor ? SnapshotRequest).mapTo[SnapshotSaved].onComplete {
-      case Success(SnapshotSaved(processorId, sequenceNr, timestamp)) => …  
-      case Failure(e)                                                 => … 
-    }
+```scala
+(processor ? SnapshotRequest).mapTo[SnapshotSaved].onComplete {
+  case Success(SnapshotSaved(processorId, sequenceNr, timestamp)) => …
+  case Failure(e)                                                 => …
+}
+```
 
 **Java:**
 
-    ask(processor, SnapshotRequest.get(), 5000L).mapTo(Util.classTag(SnapshotSaved.class)).onComplete(new OnComplete<SnapshotSaved>() {
-        public void onComplete(Throwable failure, SnapshotSaved result) {
-            if (failure != null) { … } else { … }
-        }
-    }, system.dispatcher());
+```java
+ask(processor, SnapshotRequest.get(), 5000L).mapTo(Util.classTag(SnapshotSaved.class)).onComplete(new OnComplete<SnapshotSaved>() {
+    public void onComplete(Throwable failure, SnapshotSaved result) {
+        if (failure != null) { … } else { … }
+    }
+}, system.dispatcher());
+```
 
 Alternatively, applications may also use the `EventsourcingExtension.snapshot` method to trigger snapshot creation. For example,
 
 **Scala:**
 
-    val extension: EventsourcingExtension = … 
+```scala
+val extension: EventsourcingExtension = …
 
-    extension.snapshot(Set(1, 2)) onComplete {
-      case Success(snapshotSavedSet: Set[SnapshotSaved]) => … 
-      case Failure(_)                                    => … 
-    }
+extension.snapshot(Set(1, 2)) onComplete {
+  case Success(snapshotSavedSet: Set[SnapshotSaved]) => …
+  case Failure(_)                                    => …
+}
+```
 
 **Java:**
 
-    Set<Integer> processorIds = new HashSet<Integer>();
+```java
+Set<Integer> processorIds = new HashSet<Integer>();
 
-    processorIds.add(1);
-    processorIds.add(2);
+processorIds.add(1);
+processorIds.add(2);
 
-    extension.snapshot(processorIds, new Timeout(5000L)).onComplete(new OnComplete<Set<SnapshotSaved>>() {
-        public void onComplete(Throwable failure, Set<SnapshotSaved> snapshotSavedSet) {
-            if (failure != null) { … } else { … }
-        }
-    }, system.dispatcher());
+extension.snapshot(processorIds, new Timeout(5000L)).onComplete(new OnComplete<Set<SnapshotSaved>>() {
+    public void onComplete(Throwable failure, Set<SnapshotSaved> snapshotSavedSet) {
+        if (failure != null) { … } else { … }
+    }
+}, system.dispatcher());
+```
 
 
 creates snapshots of processors with ids `1` and `2`. The returned future (of type `Future[scala.immutable.Set[SnapshotSaved]]` (Scala API) or `Future<java.util.Set<SnapshotSaved>>` (Java API)) successfully completes when the snapshots of both processors have been successfully saved.
@@ -1395,29 +1557,33 @@ To participate in snapshot capturing, a processor must process [`SnapshotRequest
 
 **Scala:**
 
-    class Processor extends Actor {
-      var state = … 
+```scala
+class Processor extends Actor {
+  var state = …
 
-      def receive = {
-        case sr: SnapshotRequest => sr.process(state)
-        // … 
-      }
-    }
+  def receive = {
+    case sr: SnapshotRequest => sr.process(state)
+    // …
+  }
+}
+```
 
 **Java:**
 
-    public class Processor extends UntypedEventsourcedActor {
-        private Object state = …
+```java
+public class Processor extends UntypedEventsourcedActor {
+    private Object state = …
 
-        @Override
-        public void onReceive(Object message) throws Exception {
-            if (message instanceof SnapshotRequest) {
-                SnapshotRequest sr = (SnapshotRequest)message;
-                sr.process(state, getContext());
-            }
-            // … 
+    @Override
+    public void onReceive(Object message) throws Exception {
+        if (message instanceof SnapshotRequest) {
+            SnapshotRequest sr = (SnapshotRequest)message;
+            sr.process(state, getContext());
         }
+        // …
     }
+}
+```
 
 Calling `process` will asynchronously save the `state` argument together with (generated) snapshot metadata. Creating a new snapshot does not delete older snapshots unless explicitly requested by an application. Hence, there can be n snapshots per processor.
 
@@ -1439,21 +1605,25 @@ Snapshotting is supported by all journals via the Hadoop [`FileSystem`](http://h
 
 **Scala:**
 
-    ...
-    import org.apache.hadoop.fs.FileSystem
+```scala
+// …
+import org.apache.hadoop.fs.FileSystem
 
-    ...
-    val hdfs: FileSystem = FileSystem.get(...)
-    val journal: ActorRef = LeveldbJournalProps(..., snapshotFilesystem = hdfs).createJournal
+// …
+val hdfs: FileSystem = FileSystem.get(...)
+val journal: ActorRef = LeveldbJournalProps(..., snapshotFilesystem = hdfs).createJournal
+```
 
 **Java:**
 
-    ...
-    import org.apache.hadoop.fs.FileSystem;
+```java
+// …
+import org.apache.hadoop.fs.FileSystem;
 
-    ...
-    final FileSystem hdfs = FileSystem.get(…);
-    final ActorRef journal = LeveldbJournalProps.create(...).withSnapshotFilesystem(hdfs).createJournal(system);
+// …
+final FileSystem hdfs = FileSystem.get(…);
+final ActorRef journal = LeveldbJournalProps.create(...).withSnapshotFilesystem(hdfs).createJournal(system);
+```
 
 
 Find out more in the [HadoopFilesystemSnapshottingProps](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.common.snapshot.HadoopFilesystemSnapshottingProps) API docs.
@@ -1472,31 +1642,35 @@ Event series
 
 When a processor derives more than one output event message from a single input event message and emits those output messages to a single channel, it generates a series of event messages. For an event message series, the event processor should set the `ack` field for all but the last emitted message to `false`.
 
-    class Processor(channel: ActorRef) extends Actor {
-      def receive = {
-        case msg: Message => {
-          // …
-          channel ! msg.copy(event = "event 1", ack = false) // 1st message of series
-          channel ! msg.copy(event = "event 2", ack = false) // 2nd message of series
-          // …
-          channel ! msg.copy(event = "event n") // last message of series
-        }
-      }
+```scala
+class Processor(channel: ActorRef) extends Actor {
+  def receive = {
+    case msg: Message => {
+      // …
+      channel ! msg.copy(event = "event 1", ack = false) // 1st message of series
+      channel ! msg.copy(event = "event 2", ack = false) // 2nd message of series
+      // …
+      channel ! msg.copy(event = "event n") // last message of series
     }
+  }
+}
+```
 
 Processors that use an emitter do that in the following way.
 
-    class Processor extends Actor { this: Emitter =>
-      def receive = {
-        case event => {
-          // …
-          emitter("channelName") send (msg => msg.copy(event = "event 1", ack = false)) // 1st message of series
-          emitter("channelName") send (msg => msg.copy(event = "event 2", ack = false)) // 2nd message of series
-          // …
-          emitter("channelName") sendEvent "event n"
-        }
-      }
+```scala
+class Processor extends Actor { this: Emitter =>
+  def receive = {
+    case event => {
+      // …
+      emitter("channelName") send (msg => msg.copy(event = "event 1", ack = false)) // 1st message of series
+      emitter("channelName") send (msg => msg.copy(event = "event 2", ack = false)) // 2nd message of series
+      // …
+      emitter("channelName") sendEvent "event n"
     }
+  }
+}
+```
 
 This ensures that an acknowledgement is only written to the journal after the last message of a series has been successfully
 
@@ -1514,55 +1688,61 @@ For these (but also other) reasons, channel destinations must be idempotent even
 
 For detecting duplicates, applications should use identifiers with their events. Identifier values should be set by an event-sourced processor before an event is emitted via a channel. Channel destinations (or other downstream consumers) should keep track of identifiers of successfully processed events and compare them to identifiers of newly received events. A newly received event with an already known identifier can be considered as a duplicate (assuming that the emitting processor generates unique identifiers). For generating unique identifiers, processors can use the sequence number of received event messages:
 
-    case class MyEvent(details: Any, eventId: Long)
+```scala
+case class MyEvent(details: Any, eventId: Long)
 
-    class Processor extends Actor { this: Emitter with Eventsourced =>
-      def receive = {
-        case event => {
-          // get sequence number of current event message
-          val snr: Long = sequenceNr
-          val details: Any = …
-          // …
-          emitter("channelName") sendEvent MyEvent(details, snr)
-        }
-      }
+class Processor extends Actor { this: Emitter with Eventsourced =>
+  def receive = {
+    case event => {
+      // get sequence number of current event message
+      val snr: Long = sequenceNr
+      val details: Any = …
+      // …
+      emitter("channelName") sendEvent MyEvent(details, snr)
     }
+  }
+}
+```
 
 Using the sequence number has the advantage that consumers of emitted events only need to remember the identifier of the last successfully consumed event. If the identifier of a newly received event is less than or equal to that of the last consumed event then it is a duplicate and can therefore be ignored.
 
-    class Consumer extends Actor {
-      var lastEventId = 0L
+```scala
+class Consumer extends Actor {
+  var lastEventId = 0L
 
-      def receive = {
-        case MyEvent(details, eventId) =>
-          if (eventId <= lastEventId) {
-            // duplicate
-          } else {
-            // … 
-            lastEventId = eventId
-          }
+  def receive = {
+    case MyEvent(details, eventId) =>
+      if (eventId <= lastEventId) {
+        // duplicate
+      } else {
+        // …
+        lastEventId = eventId
       }
-    }
+  }
+}
+```
 
 Consumers that are event-sourced processors can store the event identifier as part of their state which will be recovered during an event message replay. Other consumers must store the identifier somewhere else.
 
 Processors that emit [event message series](#event-series) should use an event message index in addition to the sequence number to uniquely identify an emitted event:
 
-    case class MyEvent(details: Any, eventId: (Long, Int))
+```scala
+case class MyEvent(details: Any, eventId: (Long, Int))
 
-    class Processor extends Actor { this: Emitter with Eventsourced =>
-      def receive = {
-        case event => {
-          // get sequence number of current event message
-          val snr: Long = sequenceNr
-          val details: Seq[Any] = …
-          // …
-          emitter("channelName") send (msg => msg.copy(event = MyEvent(details(0), (snr, 0)), ack = false))
-          emitter("channelName") send (msg => msg.copy(event = MyEvent(details(1), (snr, 1)), ack = false))
-          // …
-        }
-      }
+class Processor extends Actor { this: Emitter with Eventsourced =>
+  def receive = {
+    case event => {
+      // get sequence number of current event message
+      val snr: Long = sequenceNr
+      val details: Seq[Any] = …
+      // …
+      emitter("channelName") send (msg => msg.copy(event = MyEvent(details(0), (snr, 0)), ack = false))
+      emitter("channelName") send (msg => msg.copy(event = MyEvent(details(1), (snr, 1)), ack = false))
+      // …
     }
+  }
+}
+```
 
 Consumers should then compare the sequence number - index pairs for detecting duplicates.
 
@@ -1584,15 +1764,17 @@ Applications can configure custom serializers for events of event `Message`s. Cu
 
 Here, `example.MyEvent` is an application-specific event type and `example.MyEventSerializer` is an application-specific serializer that extends `akka.serialization.Serializer`
 
-    import akka.serialization.Serializer
+```scala
+import akka.serialization.Serializer
 
-    class CustomEventSerializer extends Serializer {
-      def identifier = …
-      def includeManifest = true
+class CustomEventSerializer extends Serializer {
+  def identifier = …
+  def includeManifest = true
 
-      def toBinary(o: AnyRef) = …
-      def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = …
-    }
+  def toBinary(o: AnyRef) = …
+  def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]) = …
+}
+```
 
 Event [Message](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.Message)s themselves are serialized with a [pre-configured](https://github.com/eligosource/eventsourced/blob/master/es-journal/es-journal-common/src/main/resources/reference.conf#L4), library-specific serializer. This serializer is automatically used for event `Message`s when the `eventsourced-journal-common-*.jar` is on the classpath of an Akka application.
 
@@ -1617,84 +1799,94 @@ This can be implemented with the Eventsourced library as shown in the following 
 
 The `Order` domain object, the domain events and the `OrderProcessor` are defined as follows:
 
-    // domain object
-    case class Order(id: Int = -1, details: String, validated: Boolean = false, creditCardNumber: String)
+```scala
+// domain object
+case class Order(id: Int = -1, details: String, validated: Boolean = false, creditCardNumber: String)
 
-    // domain events
-    case class OrderSubmitted(order: Order)
-    case class OrderAccepted(order: Order)
-    case class CreditCardValidationRequested(order: Order)
-    case class CreditCardValidated(orderId: Int)
+// domain events
+case class OrderSubmitted(order: Order)
+case class OrderAccepted(order: Order)
+case class CreditCardValidationRequested(order: Order)
+case class CreditCardValidated(orderId: Int)
 
-    // event-sourced order processor
-    class OrderProcessor extends Actor { this: Emitter =>
-      var orders = Map.empty[Int, Order] // processor state
+// event-sourced order processor
+class OrderProcessor extends Actor { this: Emitter =>
+  var orders = Map.empty[Int, Order] // processor state
 
-      def receive = {
-        case OrderSubmitted(order) => {
-          val id = orders.size
-          val upd = order.copy(id = id)
-          orders = orders + (id -> upd)
-          emitter("validation_requests") forwardEvent CreditCardValidationRequested(upd)
-        }
-        case CreditCardValidated(orderId) => {
-          orders.get(orderId).foreach { order =>
-            val upd = order.copy(validated = true)
-            orders = orders + (orderId -> upd)
-            sender ! upd
-            emitter("accepted_orders") sendEvent OrderAccepted(upd)
-          }
-        }
+  def receive = {
+    case OrderSubmitted(order) => {
+      val id = orders.size
+      val upd = order.copy(id = id)
+      orders = orders + (id -> upd)
+      emitter("validation_requests") forwardEvent CreditCardValidationRequested(upd)
+    }
+    case CreditCardValidated(orderId) => {
+      orders.get(orderId).foreach { order =>
+        val upd = order.copy(validated = true)
+        orders = orders + (orderId -> upd)
+        sender ! upd
+        emitter("accepted_orders") sendEvent OrderAccepted(upd)
       }
     }
+  }
+}
+```
 
 The `OrderProcessor` uses a message `emitter` to send `CreditCardValidationRequested` events to `CreditCardValidator` via the named `"validation_requests"` channel. The `forwardEvent` method not only sends the event but also forwards the initial [sender reference](#sender-references). Upon receiving a `CreditCardValidationRequested` event, the `CreditCardValidator` runs a credit card validation in the background and sends a `CreditCardValidated` event back to the `OrderProcessor`
 
-    class CreditCardValidator(orderProcessor: ActorRef) extends Actor { this: Receiver =>
-      def receive = {
-        case CreditCardValidationRequested(order) => {
-          val sdr = sender  // initial sender
-          val msg = message // current event message
-          Future {
-            // do some credit card validation
-            // ...
+```scala
+class CreditCardValidator(orderProcessor: ActorRef) extends Actor { this: Receiver =>
+  def receive = {
+    case CreditCardValidationRequested(order) => {
+      val sdr = sender  // initial sender
+      val msg = message // current event message
+      Future {
+        // do some credit card validation
+        // …
 
-            // and send back a successful validation result (preserving the initial sender)
-            orderProcessor tell (msg.copy(event = CreditCardValidated(order.id)), sdr)
-          }
-        }
+        // and send back a successful validation result (preserving the initial sender)
+        orderProcessor tell (msg.copy(event = CreditCardValidated(order.id)), sdr)
       }
     }
+  }
+}
+```
 
 
 The `CreditCardValidator` again forwards the initial sender reference which finally enables the `OrderProcessor` to reply to the initial sender when it receives the `CreditCardValidated` event. The `OrderProcessor` also sends an `OrderAccepted` event to `Destination` via the named `"accepted_orders"` channel.
 
-    class Destination extends Actor {
-      def receive = {
-        case event => println("received event %s" format event)
-      }
-    }
+```scala
+class Destination extends Actor {
+  def receive = {
+    case event => println("received event %s" format event)
+  }
+}
+```
 
 Next step is to wire the collaborators and to recover them:
 
-    val extension: EventsourcingExtension = …
+```scala
+val extension: EventsourcingExtension = …
 
-    val processor = extension.processorOf(Props(new OrderProcessor with Emitter with Confirm with Eventsourced { val id = 1 }))
-    val validator = system.actorOf(Props(new CreditCardValidator(processor) with Receiver))
-    val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
+val processor = extension.processorOf(Props(new OrderProcessor with Emitter with Confirm with Eventsourced { val id = 1 }))
+val validator = system.actorOf(Props(new CreditCardValidator(processor) with Receiver))
+val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
 
-    extension.channelOf(ReliableChannelProps(1, validator).withName("validation_requests"))
-    extension.channelOf(DefaultChannelProps(2, destination).withName("accepted_orders"))
+extension.channelOf(ReliableChannelProps(1, validator).withName("validation_requests"))
+extension.channelOf(DefaultChannelProps(2, destination).withName("accepted_orders"))
 
-    extension.recover()
+extension.recover()
+```
 
 The named `"validation requests"` channel is a reliable channel that re-delivers `CreditCardValidationRequested` events in case of `CreditCardValidator` failures (for example, when the external credit card validation service is temporarily unavailable). Furthermore, it should be noted that the `CreditCardValidator` does not confirm event message deliveries (it neither calls `confirm()` explicitly nor is it modified with the `Confirm` trait during instantiation). Delivery confirmation will take place when the `OrderProcessor` successfully processed the `CreditCardValidated` event.
 
 The `Order processor` is now ready to receive `OrderSubmitted` events.
 
-    processor ? Message(OrderSubmitted(Order(details = "jelly beans", creditCardNumber = "1234-5678-1234-5678"))) onSuccess {
-      case order: Order => println("received response %s" format order)
-    }
+```scala
+processor ? Message(OrderSubmitted(Order(details = "jelly beans", creditCardNumber = "1234-5678-1234-5678"))) onSuccess {
+  case order: Order => println("received response %s" format order)
+}
+```
 
 Running this example with an empty journal will write
 
@@ -1719,69 +1911,77 @@ An advanced version of this example, using a [reliable request-reply channel](#r
 
 With a [change](https://www.assembla.com/spaces/akka/tickets/2680) since Akka 2.1, event-sourcing Akka [FSM](http://doc.akka.io/docs/akka/2.1.0/scala/fsm.html)s is now pretty easy. The following state machine example is a `Door` which can be in one of two states: `Open` and `Closed`.
 
-    sealed trait DoorState
+```scala
+sealed trait DoorState
 
-    case object Open extends DoorState
-    case object Closed extends DoorState
+case object Open extends DoorState
+case object Closed extends DoorState
 
-    case class DoorMoved(state: DoorState, times: Int)
-    case class DoorNotMoved(state: DoorState, cmd: String)
-    case class NotSupported(cmd: Any)
+case class DoorMoved(state: DoorState, times: Int)
+case class DoorNotMoved(state: DoorState, cmd: String)
+case class NotSupported(cmd: Any)
 
-    class Door extends Actor with FSM[DoorState, Int] { this: Emitter =>
-      startWith(Closed, 0)
+class Door extends Actor with FSM[DoorState, Int] { this: Emitter =>
+  startWith(Closed, 0)
 
-      when(Closed) {
-        case Event("open", counter) => {
-          emit(DoorMoved(Open, counter + 1))
-          goto(Open) using(counter + 1)
-        }
-      }
-
-      when(Open) {
-        case Event("close", counter) => {
-          emit(DoorMoved(Closed, counter + 1))
-          goto(Closed) using(counter + 1)
-        }
-      }
-
-      whenUnhandled {
-        case Event(cmd @ ("open" | "close"), counter) => {
-          emit(DoorNotMoved(stateName, "cannot %s door" format cmd))
-          stay
-        }
-        case Event(cmd, counter) => {
-          emit(NotSupported(cmd))
-          stay
-        }
-      }
-
-      def emit(event: Any) = emitter("destination") forwardEvent event
+  when(Closed) {
+    case Event("open", counter) => {
+      emit(DoorMoved(Open, counter + 1))
+      goto(Open) using(counter + 1)
     }
+  }
+
+  when(Open) {
+    case Event("close", counter) => {
+      emit(DoorMoved(Closed, counter + 1))
+      goto(Closed) using(counter + 1)
+    }
+  }
+
+  whenUnhandled {
+    case Event(cmd @ ("open" | "close"), counter) => {
+      emit(DoorNotMoved(stateName, "cannot %s door" format cmd))
+      stay
+    }
+    case Event(cmd, counter) => {
+      emit(NotSupported(cmd))
+      stay
+    }
+  }
+
+  def emit(event: Any) = emitter("destination") forwardEvent event
+}
+```
 
 On state changes, a door emits `DoorMoved` events to the named `"destination"` channel. `DoorMoved` events contain the door's current state and the number of moves so far. On invalid attempts to move a door e.g. trying to open an opened door, a `DoorNotMoved` event is emitted. The channel destination is an actor that simply prints received events to `stdout`.
 
-    class Destination extends Actor {
-      def receive = { case event => println("received event %s" format event) }
-    }
+```scala
+class Destination extends Actor {
+  def receive = { case event => println("received event %s" format event) }
+}
+```
 
 After configuring the application
 
-    val system: ActorSystem = …
-    val extension: EventsourcingExtension = …
+```scala
+val system: ActorSystem = …
+val extension: EventsourcingExtension = …
 
-    val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
+val destination = system.actorOf(Props(new Destination with Receiver with Confirm))
 
-    extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
-    extension.processorOf(Props(new Door with Emitter with Eventsourced { val id = 1 } ))
-    extension.recover()
+extension.channelOf(DefaultChannelProps(1, destination).withName("destination"))
+extension.processorOf(Props(new Door with Emitter with Eventsourced { val id = 1 } ))
+extension.recover()
 
-    val door = extension.processors(1)
+val door = extension.processors(1)
+```
 
 we can start sending event messages to `door`:
 
-    door ! Message("open")
-    door ! Message("close")
+```scala
+door ! Message("open")
+door ! Message("close")
+```
 
 This will write
 
@@ -1790,7 +1990,9 @@ This will write
 
 to `stdout`. When trying to attempt an invalid state change with
 
-    door ! Message("close")
+```scala
+door ! Message("close")
+```
 
 the `destination` will receive a `DoorNotMoved` event:
 
@@ -1798,8 +2000,10 @@ the `destination` will receive a `DoorNotMoved` event:
 
 Restarting the example application will recover the door's state so that
 
-    door ! Message("open")
-    door ! Message("close")
+```scala
+door ! Message("open")
+door ! Message("close")
+```
 
 will produce
 
@@ -1887,25 +2091,31 @@ The [`Multicast`](http://eligosource.github.com/eventsourced/api/snapshot/#org.e
 
 Applications can create a `Multicast` processor with the `multicast` factory method which is defined in package [`core`](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.core.package).
 
-    // …
-    import org.eligosource.eventsourced.core._
+```scala
+// …
+import org.eligosource.eventsourced.core._
 
-    val extension: EventsourcingExtension = …
+val extension: EventsourcingExtension = …
 
-    val processorId: Int = …
-    val target1: ActorRef = …
-    val target2: ActorRef = …
+val processorId: Int = …
+val target1: ActorRef = …
+val target2: ActorRef = …
 
-    val multicast = extension.processorOf(Props(multicast(processorId, List(target1, target2))))
+val multicast = extension.processorOf(Props(multicast(processorId, List(target1, target2))))
+```
 
 This is equivalent to
 
-    val multicast = extension.processorOf(Props(new Multicast(List(target1, target2), identity) with Eventsourced { val id = processorId } ))
+```scala
+val multicast = extension.processorOf(Props(new Multicast(List(target1, target2), identity) with Eventsourced { val id = processorId } ))
+```
 
 Applications that want to modify received event `Message`s, before they are forwarded to targets, can specify a `transformer` function.
 
-    val transformer: Message => Any = msg => msg.event
-    val multicast = extension.processorOf(Props(multicast(1, List(target1, target2), transformer)))
+```scala
+val transformer: Message => Any = msg => msg.event
+val multicast = extension.processorOf(Props(multicast(1, List(target1, target2), transformer)))
+```
 
 In the above example, the `transformer` function extracts the `event` from a received event `Message`. If the `transformer` function is not specified, it defaults to the `identity` function. Another `Multicast` factory method is the `decorator` method for creating a multicast processor with a single target.
 
