@@ -41,33 +41,37 @@ Add the required depedencies to your project's `build.sbt` file:
 
 Initialize the HBase journal in your application:
 
-    import akka.actor._
-    import org.eligosource.eventsourced.core._
-    import org.eligosource.eventsourced.journal.hbase.HBaseJournalProps
+```scala
+import akka.actor._
+import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.hbase.HBaseJournalProps
 
-    implicit val system = ActorSystem("example")
+implicit val system = ActorSystem("example")
 
-    // create and start the HBase journal
-    val journal: ActorRef = HBaseJournalProps("localhost").createJournal
+// create and start the HBase journal
+val journal: ActorRef = HBaseJournalProps("localhost").createJournal
 
-    // create an event-sourcing extension that uses the HBase journal
-    val extension = EventsourcingExtension(system, journal)
+// create an event-sourcing extension that uses the HBase journal
+val extension = EventsourcingExtension(system, journal)
 
-    // ...
+// ...
+```
 
 Cluster setup
 -------------
 
 For storing event messages to a real HBase cluster, a table must be initially created with the [CreateTable](http://eligosource.github.com/eventsourced/api/snapshot/#org.eligosource.eventsourced.journal.hbase.CreateTable$) utility as shown in the following example:
 
-    import org.eligosource.eventsourced.journal.hbase.CreateTable
+```scala
+import org.eligosource.eventsourced.journal.hbase.CreateTable
 
-    class Example {
-      val zookeeperQuorum = "localhost:2181" // comma separated list of servers in the ZooKeeper quorum
-      val tableName       = "event"          // name of the event message table to be created
-      val partitionCount  = 16               // number of regions the event message table is pre-split
-  
-      CreateTable(zookeeperQuorum, tableName, partitionCount)
-    }
+class Example {
+  val zookeeperQuorum = "localhost:2181" // comma separated list of servers in the ZooKeeper quorum
+  val tableName       = "event"          // name of the event message table to be created
+  val partitionCount  = 16               // number of regions the event message table is pre-split
+
+  CreateTable(zookeeperQuorum, tableName, partitionCount)
+}
+```
 
 This creates an event message table with the name `event` that is pre-split into 16 regions. The journal actor will evenly distribute (partition) event messages across regions.

@@ -35,17 +35,19 @@ First, download, install and start a standalone mongoDB instance by following th
 
 ### Mongodb Casbah Based Journal Initialization
 
-    import akka.actor._
-    import com.mongodb.casbah.Imports._
-    import org.eligosource.eventsourced.core._
-    import org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps
+```scala
+import akka.actor._
+import com.mongodb.casbah.Imports._
+import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.mongodb.casbah.MongodbCasbahJournalProps
 
-    implicit val system = ActorSystem("example")
+implicit val system = ActorSystem("example")
 
-    // create and start the Casbah based mongoDB journal
-    val journal: ActorRef = MongodbCasbahJournalProps(MongoClient(), "eventsourced", "event").createJournal
+// create and start the Casbah based mongoDB journal
+val journal: ActorRef = MongodbCasbahJournalProps(MongoClient(), "eventsourced", "event").createJournal
 
-    // create an event-sourcing extension that uses the Casbah based mongoDB journal
-    val extension = EventsourcingExtension(system, journal)
+// create an event-sourcing extension that uses the Casbah based mongoDB journal
+val extension = EventsourcingExtension(system, journal)
 
-    // ...
+// ...
+```

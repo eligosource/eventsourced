@@ -32,16 +32,18 @@ First, download, install and start a standalone mongoDB instance by following th
 
 ### Mongodb Reactive Based Journal Initialization
 
-    import akka.actor._
-    import org.eligosource.eventsourced.core._
-    import org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps
+```scala
+import akka.actor._
+import org.eligosource.eventsourced.core._
+import org.eligosource.eventsourced.journal.mongodb.reactive.MongodbReactiveJournalProps
 
-    implicit val system = ActorSystem("example")
+implicit val system = ActorSystem("example")
 
-    // create and start the reactive based mongoDB journal
-    val journal: ActorRef = MongodbReactiveJournalProps(List("localhost:27017").createJournal
+// create and start the reactive based mongoDB journal
+val journal: ActorRef = MongodbReactiveJournalProps(List("localhost:27017").createJournal
 
-    // create an event-sourcing extension that uses the ReactiveMongo based mongoDB journal
-    val extension = EventsourcingExtension(system, journal)
+// create an event-sourcing extension that uses the ReactiveMongo based mongoDB journal
+val extension = EventsourcingExtension(system, journal)
 
-    // ...
+// ...
+```
