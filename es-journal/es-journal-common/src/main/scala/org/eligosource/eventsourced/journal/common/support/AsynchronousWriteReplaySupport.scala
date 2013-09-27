@@ -191,7 +191,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
 
         ftr onComplete {
           case Success(_) => { self ! (seqnr + 1L, ReplayDone); sdr ! ReplayDone }
-          case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)) }
+          case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)); sdr ! Status.Failure(e) }
         }
       }
       case cmd: ReplayInMsgs => {
@@ -202,7 +202,7 @@ trait AsynchronousWriteReplaySupport extends Actor {
 
         ftr onComplete {
           case Success(_) => { self ! (seqnr + 1L, ReplayDone); sdr ! ReplayDone }
-          case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)) }
+          case Failure(e) => { self ! (seqnr + 1L, ReplayFailed(cmd, e)); sdr ! Status.Failure(e) }
         }
       }
       case cmd: ReplayOutMsgs => {

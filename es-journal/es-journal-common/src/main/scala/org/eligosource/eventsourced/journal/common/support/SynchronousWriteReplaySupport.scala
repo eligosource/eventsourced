@@ -61,13 +61,17 @@ trait SynchronousWriteReplaySupport extends Actor {
     }
     case BatchReplayInMsgs(replays) => {
       val cs = replays.map(offerSnapshot(_))
-      executeBatchReplayInMsgs(cs, (msg, target) => target tell (Written(msg), deadLetters))
-      sender ! ReplayDone
+      Try(executeBatchReplayInMsgs(cs, (msg, target) => target tell (Written(msg), deadLetters))) match {
+        case Success(_) => sender ! ReplayDone
+        case Failure(e) => sender ! Status.Failure(e)
+      }
     }
     case cmd: ReplayInMsgs => {
       val c = offerSnapshot(cmd)
-      executeReplayInMsgs(c, msg => c.target tell (Written(msg), deadLetters))
-      sender ! ReplayDone
+      Try(executeReplayInMsgs(c, msg => c.target tell (Written(msg), deadLetters))) match {
+        case Success(_) => sender ! ReplayDone
+        case Failure(e) => sender ! Status.Failure(e)
+      }
     }
     case cmd: ReplayOutMsgs => {
       executeReplayOutMsgs(cmd, resetPromiseActorRef(initialCounter)(msg => cmd.target tell (Written(msg), deadLetters)))
