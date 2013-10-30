@@ -1376,7 +1376,7 @@ Snapshot based recovery can also be made with upper sequence number bound.
 recover(Seq(ReplayParams(1, snapshot = true, toSequenceNr = 12651L)))
 ```
 
-This recovers processor `1` with the latest snapshot that has a sequence number `<= 12651`. Remaining event messages (if there are any) are replayed up to sequence number `12561` (inclusive). Applications may also define further constraints on snapshots. For example
+This recovers processor `1` with the latest snapshot that has a sequence number `<= 12651`. Remaining event messages (if there are any) are replayed up to sequence number `12651` (inclusive). Applications may also define further constraints on snapshots. For example
 
 ```scala
 import scala.concurrent.duration._
