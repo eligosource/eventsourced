@@ -92,10 +92,27 @@ object CreateTable extends App {
    * @param partitionCount number of regions the event message table is pre-split.
    */
   def apply(config: Configuration, tableName: String = DefaultTableName, partitionCount: Int = DefaultPartitionCount) {
+    apply(config,tableName,partitionCount,(_) => Unit)
+  }
+
+  /**
+   * Creates an HBase event message table.
+   *
+   * @param config HBase configuration object.
+   * @param tableName name of the event message table to be created.
+   * @param partitionCount number of regions the event message table is pre-split.
+   * @param customizeCf a function which takes the HColumnDescriptor as input; for customizing cf.
+   */
+  def apply(config: Configuration,
+            tableName: String,
+            partitionCount: Int,
+            customizeCf: (HColumnDescriptor) => Unit) {
     val admin = new HBaseAdmin(config)
     admin.createTable(new HTableDescriptor(tableName), Keysplit(partitionCount))
     admin.disableTable(tableName)
-    admin.addColumn(tableName, new HColumnDescriptor(ColumnFamilyName))
+    val cf = new HColumnDescriptor(ColumnFamilyName)
+    customizeCf(cf)
+    admin.addColumn(tableName, cf)
     admin.enableTable(tableName)
     admin.close()
 
