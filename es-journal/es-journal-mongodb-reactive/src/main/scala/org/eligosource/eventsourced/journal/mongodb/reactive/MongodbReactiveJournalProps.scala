@@ -75,7 +75,8 @@ case class MongodbReactiveJournalProps(
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
-  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem,
+  readOnly:Boolean = false)
     extends JournalProps with HadoopFilesystemSnapshottingProps[MongodbReactiveJournalProps] {
 
   /** Returns a new `MongodbReactiveJournalProps` with specified list of authentications. */
@@ -119,6 +120,9 @@ case class MongodbReactiveJournalProps(
 
   /** Java API. */
   def withSnapshotFilesystem(snapshotFilesystem: FileSystem) = copy(snapshotFilesystem = snapshotFilesystem)
+
+  /** Java API. */
+  def withReadOnly(ro:Boolean) = copy(readOnly = ro)
 
   /** Returns a new `MongodbRactiveJournal`. */
   def createJournalActor: Actor = new MongodbReactiveJournal(this)

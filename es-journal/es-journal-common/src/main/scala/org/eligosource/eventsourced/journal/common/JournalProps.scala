@@ -36,11 +36,21 @@ trait JournalProps {
   /**
    * Creates and starts a new journal using the settings of this configuration object.
    */
-  def createJournal(implicit actorRefFactory: ActorRefFactory): ActorRef =
-    actor(createJournalActor, name, dispatcherName)
+  def createJournal(implicit actorRefFactory: ActorRefFactory): ActorRef = {
+    val journalRef = actor(createJournalActor, name, dispatcherName)
+    if(readOnly)
+      actor(new ReadOnlyFacade(journalRef))
+    else
+      journalRef
+  }
 
   /**
    * Creates a journal actor instance.
    */
   protected def createJournalActor: Actor
+
+  /**
+   * Make journal read only (e.g. offline snapshot)
+   */
+  def readOnly: Boolean
 }

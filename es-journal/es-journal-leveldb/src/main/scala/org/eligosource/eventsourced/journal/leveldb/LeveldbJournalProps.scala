@@ -76,7 +76,8 @@ case class LeveldbJournalProps(
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
-  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem,
+  readOnly: Boolean=false)
   extends JournalProps with HadoopFilesystemSnapshottingProps[LeveldbJournalProps] {
 
   val snapshotPath =
@@ -208,6 +209,14 @@ case class LeveldbJournalProps(
    */
   def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
     copy(snapshotFilesystem = snapshotFilesystem)
+
+  /**
+   * Java API.
+   *
+   * Returns a new `LeveldbJournalProps` with specified read only property
+   */
+  def withReadOnly(ro:Boolean) =
+    copy(readOnly = ro)
 
   def createJournalActor: Actor = {
     if (processorStructured) {

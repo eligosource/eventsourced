@@ -74,7 +74,8 @@ case class JournalioJournalProps(
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
-  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem,
+  readOnly: Boolean = false)
   extends JournalProps with HadoopFilesystemSnapshottingProps[JournalioJournalProps] {
 
   val snapshotPath =
@@ -155,6 +156,14 @@ case class JournalioJournalProps(
    */
   def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
     copy(snapshotFilesystem = snapshotFilesystem)
+
+  /**
+   * Java API.
+   *
+   * Returns a new `JournalioJournalProps` with specified read only property
+   */
+  def withReadOnly(ro:Boolean) =
+    copy(readOnly = ro)
 
   def createJournalActor: Actor =
     new JournalioJournal(this)
