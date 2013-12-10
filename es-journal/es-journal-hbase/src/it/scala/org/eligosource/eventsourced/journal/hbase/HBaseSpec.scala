@@ -20,7 +20,7 @@ import org.apache.hadoop.hbase.client._
 
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
-import org.eligosource.eventsourced.journal.common.{PersistentReplaySpec, PersistentJournalSpec}
+import org.eligosource.eventsourced.journal.common.{ReadOnlyJournalSpec, PersistentReplaySpec, PersistentJournalSpec}
 
 trait HBaseSpec extends HBaseCleanup with BeforeAndAfterEach with BeforeAndAfterAll { self: Suite =>
   var port: Int = 0
@@ -29,11 +29,15 @@ trait HBaseSpec extends HBaseCleanup with BeforeAndAfterEach with BeforeAndAfter
   var client: HTable = _
 
   def zookeeperQuorum = "localhost:%d" format port
-  def journalProps = {
+  lazy val props = {
     HBaseJournalProps(zookeeperQuorum)
       .withReplayChunkSize(8)
       .withSnapshotFilesystem(util.getTestFileSystem)
   }
+
+  def journalProps = props
+
+  def readOnlyJournalProps = props.withReadOnly(true)
 
   override def afterEach() {
     cleanup()
@@ -55,5 +59,5 @@ trait HBaseSpec extends HBaseCleanup with BeforeAndAfterEach with BeforeAndAfter
   } catch { case _: Throwable => /* ignore */ }
 }
 
-class HBaseJournalSpec extends PersistentJournalSpec with HBaseSpec
+class HBaseJournalSpec extends PersistentJournalSpec with ReadOnlyJournalSpec with HBaseSpec
 class HBaseReplaySpec extends PersistentReplaySpec with HBaseSpec

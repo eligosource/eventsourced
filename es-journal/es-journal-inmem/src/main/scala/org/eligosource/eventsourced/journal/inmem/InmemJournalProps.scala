@@ -40,7 +40,8 @@ import org.eligosource.eventsourced.journal.common.JournalProps
  */
 case class InmemJournalProps(
   name: Option[String] = None,
-  dispatcherName: Option[String] = None) extends JournalProps {
+  dispatcherName: Option[String] = None,
+  readOnly: Boolean = false) extends JournalProps {
 
   /**
    * Java API.
@@ -57,6 +58,12 @@ case class InmemJournalProps(
    */
   def withDispatcherName(dispatcherName: String) =
     copy(dispatcherName = Some(dispatcherName))
+
+  /**
+   * Java API.
+   */
+  def withReadOnly(ro:Boolean) =
+    copy(readOnly = ro)
 
   def createJournalActor: Actor =
     new InmemJournal

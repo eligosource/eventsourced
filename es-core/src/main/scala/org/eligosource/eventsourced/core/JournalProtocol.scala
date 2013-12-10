@@ -24,6 +24,8 @@ import akka.actor._
 object JournalProtocol {
   val SkipAck: Long = -1L
 
+  sealed trait ReadCommand
+
   /**
    * Instructs a `Journal` to write an input `message`. An input message is an event message
    * sent to an `Eventsourced` processor.
@@ -115,7 +117,7 @@ object JournalProtocol {
    *
    * @see [[org.eligosource.eventsourced.core.JournalProtocol.ReplayInMsgs]]
    */
-  case class BatchReplayInMsgs(replays: Seq[ReplayInMsgs])
+  case class BatchReplayInMsgs(replays: Seq[ReplayInMsgs]) extends ReadCommand
 
   /**
    * Instructs a `Journal` to replay input messages to a single `Eventsourced` processor.
@@ -126,7 +128,7 @@ object JournalProtocol {
    *        [[org.eligosource.eventsourced.core.JournalProtocol.Written]] message. The
    *        sender reference is set to `system.deadLetters`.
    */
-  case class ReplayInMsgs(params: ReplayParams, target: ActorRef) {
+  case class ReplayInMsgs(params: ReplayParams, target: ActorRef) extends ReadCommand {
     def processorId: Int = params.processorId
     def fromSequenceNr: Long = params.fromSequenceNr
     def toSequenceNr: Long = params.toSequenceNr
@@ -159,7 +161,7 @@ object JournalProtocol {
    *        [[org.eligosource.eventsourced.core.JournalProtocol.Written]] message. The
    *        sender reference is set to `system.deadLetters`.
    */
-  case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, toSequenceNr: Long, target: ActorRef)
+  case class ReplayOutMsgs(channelId: Int, fromSequenceNr: Long, toSequenceNr: Long, target: ActorRef) extends ReadCommand
 
   object ReplayOutMsgs {
     /**

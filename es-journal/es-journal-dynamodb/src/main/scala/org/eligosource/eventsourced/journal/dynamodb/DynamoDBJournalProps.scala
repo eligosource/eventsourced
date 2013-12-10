@@ -50,7 +50,8 @@ case class DynamoDBJournalProps(
   snapshotSerializer: SnapshotSerializer = SnapshotSerializer.java,
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
-  snapshotFilesystem: FileSystem = defaultLocalFilesystem)
+  snapshotFilesystem: FileSystem = defaultLocalFilesystem,
+  readOnly:Boolean = false)
   extends JournalProps with HadoopFilesystemSnapshottingProps[DynamoDBJournalProps] {
 
   /**
@@ -106,6 +107,12 @@ case class DynamoDBJournalProps(
    */
   def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
     copy(snapshotFilesystem = snapshotFilesystem)
+
+  /**
+   * Java API.
+   */
+  def withReadOnly(ro:Boolean) =
+    copy(readOnly = ro)
 
   def createJournalActor =
     new DynamoDBJournal(this)

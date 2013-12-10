@@ -59,7 +59,8 @@ case class MongodbCasbahJournalProps(
   snapshotLoadTimeout: FiniteDuration = 1 hour,
   snapshotSaveTimeout: FiniteDuration = 1 hour,
   snapshotFilesystem: FileSystem = defaultLocalFilesystem,
-  name: Option[String] = None, dispatcherName: Option[String] = None)
+  name: Option[String] = None, dispatcherName: Option[String] = None,
+  readOnly:Boolean = false)
   extends JournalProps with HadoopFilesystemSnapshottingProps[MongodbCasbahJournalProps] {
 
   /**
@@ -105,6 +106,12 @@ case class MongodbCasbahJournalProps(
    */
   def withSnapshotFilesystem(snapshotFilesystem: FileSystem) =
     copy(snapshotFilesystem = snapshotFilesystem)
+
+  /**
+   * Java API.
+   */
+  def withReadOnly(ro:Boolean) =
+    copy(readOnly = ro)
 
   def createJournalActor: Actor = new MongodbCasbahJournal(this)
 }
