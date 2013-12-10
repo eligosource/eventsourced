@@ -96,7 +96,7 @@
       </h4>
       <p class="comment cmt">Instructs a <code>Journal</code> to initiate message delivery for <code>channels</code>.</p>
     </li><li name="org.eligosource.eventsourced.core.JournalProtocol.BatchReplayInMsgs" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="BatchReplayInMsgsextendsProductwithSerializable"></a>
+      <a id="BatchReplayInMsgsextendsJournalProtocol.ReadCommandwithProductwithSerializable"></a>
       <a id="BatchReplayInMsgs:BatchReplayInMsgs"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -104,7 +104,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="JournalProtocol$$BatchReplayInMsgs.html"><span class="name">BatchReplayInMsgs</span></a><span class="params">(<span name="replays">replays: <span class="extype" name="scala.Seq">Seq</span>[<a href="JournalProtocol$$ReplayInMsgs.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.ReplayInMsgs">ReplayInMsgs</a>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="JournalProtocol$$BatchReplayInMsgs.html"><span class="name">BatchReplayInMsgs</span></a><span class="params">(<span name="replays">replays: <span class="extype" name="scala.Seq">Seq</span>[<a href="JournalProtocol$$ReplayInMsgs.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.ReplayInMsgs">ReplayInMsgs</a>]</span>)</span><span class="result"> extends <a href="JournalProtocol$$ReadCommand.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.ReadCommand">ReadCommand</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       <p class="comment cmt">Instructs a <code>Journal</code> to batch-replay input messages to multiple <code>Eventsourced</code> processors.</p>
@@ -150,8 +150,21 @@
       </h4>
       <p class="comment cmt">Message wrapper used by the <a href="JournalProtocol$$Loop.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.Loop">org.eligosource.eventsourced.core.JournalProtocol.Loop</a>
 command.</p>
+    </li><li name="org.eligosource.eventsourced.core.JournalProtocol.ReadCommand" visbl="pub" data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="ReadCommandextendsAnyRef"></a>
+      <a id="ReadCommand:ReadCommand"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">sealed </span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a href="JournalProtocol$$ReadCommand.html"><span class="name">ReadCommand</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      </h4>
+      
     </li><li name="org.eligosource.eventsourced.core.JournalProtocol.ReplayInMsgs" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ReplayInMsgsextendsProductwithSerializable"></a>
+      <a id="ReplayInMsgsextendsJournalProtocol.ReadCommandwithProductwithSerializable"></a>
       <a id="ReplayInMsgs:ReplayInMsgs"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -159,12 +172,12 @@ command.</p>
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="JournalProtocol$$ReplayInMsgs.html"><span class="name">ReplayInMsgs</span></a><span class="params">(<span name="params">params: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>, <span name="target">target: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="JournalProtocol$$ReplayInMsgs.html"><span class="name">ReplayInMsgs</span></a><span class="params">(<span name="params">params: <a href="ReplayParams.html" class="extype" name="org.eligosource.eventsourced.core.ReplayParams">ReplayParams</a></span>, <span name="target">target: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>)</span><span class="result"> extends <a href="JournalProtocol$$ReadCommand.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.ReadCommand">ReadCommand</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       <p class="comment cmt">Instructs a <code>Journal</code> to replay input messages to a single <code>Eventsourced</code> processor.</p>
     </li><li name="org.eligosource.eventsourced.core.JournalProtocol.ReplayOutMsgs" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ReplayOutMsgsextendsProductwithSerializable"></a>
+      <a id="ReplayOutMsgsextendsJournalProtocol.ReadCommandwithProductwithSerializable"></a>
       <a id="ReplayOutMsgs:ReplayOutMsgs"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -172,7 +185,7 @@ command.</p>
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="JournalProtocol$$ReplayOutMsgs.html"><span class="name">ReplayOutMsgs</span></a><span class="params">(<span name="channelId">channelId: <span class="extype" name="scala.Int">Int</span></span>, <span name="fromSequenceNr">fromSequenceNr: <span class="extype" name="scala.Long">Long</span></span>, <span name="toSequenceNr">toSequenceNr: <span class="extype" name="scala.Long">Long</span></span>, <span name="target">target: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="JournalProtocol$$ReplayOutMsgs.html"><span class="name">ReplayOutMsgs</span></a><span class="params">(<span name="channelId">channelId: <span class="extype" name="scala.Int">Int</span></span>, <span name="fromSequenceNr">fromSequenceNr: <span class="extype" name="scala.Long">Long</span></span>, <span name="toSequenceNr">toSequenceNr: <span class="extype" name="scala.Long">Long</span></span>, <span name="target">target: <span class="extype" name="akka.actor.ActorRef">ActorRef</span></span>)</span><span class="result"> extends <a href="JournalProtocol$$ReadCommand.html" class="extype" name="org.eligosource.eventsourced.core.JournalProtocol.ReadCommand">ReadCommand</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       <p class="comment cmt">Instructs a <code>Journal</code> to replay output messages for a single <code>ReliableChannel</code>.</p>
