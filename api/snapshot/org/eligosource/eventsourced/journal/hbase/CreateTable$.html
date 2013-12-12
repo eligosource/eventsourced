@@ -169,6 +169,21 @@
       </h4>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="org.eligosource.eventsourced.journal.hbase.CreateTable#apply" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="apply(config:org.apache.hadoop.conf.Configuration,tableName:String,partitionCount:Int,customizeCf:org.apache.hadoop.hbase.HColumnDescriptor=&gt;Unit):Unit"></a>
+      <a id="apply(Configuration,String,Int,(HColumnDescriptor)⇒Unit):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">apply</span><span class="params">(<span name="config">config: <span class="extype" name="org.apache.hadoop.conf.Configuration">Configuration</span></span>, <span name="tableName">tableName: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="partitionCount">partitionCount: <span class="extype" name="scala.Int">Int</span></span>, <span name="customizeCf">customizeCf: (<span class="extype" name="org.apache.hadoop.hbase.HColumnDescriptor">HColumnDescriptor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Creates an HBase event message table.</p><div class="fullcomment"><div class="comment cmt"><p>Creates an HBase event message table.
+</p></div><dl class="paramcmts block"><dt class="param">config</dt><dd class="cmt"><p>HBase configuration object.</p></dd><dt class="param">tableName</dt><dd class="cmt"><p>name of the event message table to be created.</p></dd><dt class="param">partitionCount</dt><dd class="cmt"><p>number of regions the event message table is pre-split.</p></dd><dt class="param">customizeCf</dt><dd class="cmt"><p>a function which takes the HColumnDescriptor as input; for customizing cf.
+</p></dd></dl></div>
+    </li><li name="org.eligosource.eventsourced.journal.hbase.CreateTable#apply" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="apply(config:org.apache.hadoop.conf.Configuration,tableName:String,partitionCount:Int):Unit"></a>
       <a id="apply(Configuration,String,Int):Unit"></a>
       <h4 class="signature">
