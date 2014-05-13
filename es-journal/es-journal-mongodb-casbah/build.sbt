@@ -9,7 +9,8 @@ resolvers += "Typesafe"               at "http://repo.typesafe.com/typesafe/rele
 libraryDependencies ++= Seq(
   "org.mongodb"         %% "casbah-core"               %  "2.6.2" % "compile",
   "org.mongodb"         %% "casbah-commons"            %  "2.6.2" % "compile",
-  "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo" %  "1.33"  % "test"
+  "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo" %  "1.33"  % "test",
+  "commons-collections" % "commons-collections"  % "3.2.1" % "test"
 )
 
 OsgiKeys.importPackage := Seq(

@@ -5,7 +5,8 @@ libraryDependencies in ThisBuild ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka"   %% "akka-actor"    % Version.Akka % "compile"
+  "org.spark-project.akka"   %% "akka-actor"    % Version.Akka % "compile",
+  "commons-collections" % "commons-collections"  % "3.2.1" % "compile"
 )
 
 OsgiKeys.importPackage := Seq(

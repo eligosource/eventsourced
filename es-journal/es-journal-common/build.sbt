@@ -1,6 +1,6 @@
 libraryDependencies ++= Seq(
-  "com.google.protobuf"  %  "protobuf-java" % "2.4.1"         % "compile",
-  "org.apache.hadoop"    %  "hadoop-core"   % Version.Hadoop  % "compile"
+  "com.google.protobuf"  %  "protobuf-java" % "2.5.0"         % "compile",
+  "org.apache.hadoop"    %  "hadoop-client"   % Version.Hadoop  % "compile"
     exclude("commons-httpclient", "commons-httpclient")
     exclude("commons-beanutils", "commons-beanutils-core")
     exclude("commons-collections", "commons-collections")
@@ -11,12 +11,13 @@ libraryDependencies ++= Seq(
     exclude("tomcat", "jasper-runtime")
     exclude("tomcat", "jasper-compiler")
     exclude("junit", "junit"),
-  "com.typesafe.akka"   %% "akka-remote"    % Version.Akka    % "test",
-  "commons-io"           % "commons-io"     % "2.3"           % "test"
+  "org.spark-project.akka"   %% "akka-remote"    % Version.Akka    % "test",
+  "commons-io"           % "commons-io"     % "2.3"           % "test",
+  "commons-collections" % "commons-collections"  % "3.2.1" % "test"
 )
 
 OsgiKeys.importPackage := Seq(
   "scala*;version=\"[2.10.0,2.11.0)\"",
   "akka*;version=\"[2.1.1,2.2.0)\"",
-  "com.google.protobuf*;version=\"[2.4.0,2.5.0)\""
+  "com.google.protobuf*;version=\"[2.5.0,2.6.0)\""
 )
